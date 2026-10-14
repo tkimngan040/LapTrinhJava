@@ -4,7 +4,6 @@
 
 **Java Programming** course project — Ho Chi Minh City University of Transport (UTH)
 
-🌐 [Phiên bản tiếng Việt](README.md)
 
 ---
 
