@@ -13,13 +13,13 @@ ScentStation is a web application that enables multiple perfume brands to operat
 
 Customers choose a fragrance on the machine's screen, pay by QR code, and the machine dispenses a small sample. Each brand signs in to the platform and sees only its own data: machines, bottle inventory, revenue and sales statistics.
 
-The project does not use physical hardware. The machine is replaced by a simulator that communicates with the server over the MQTT protocol.
+The deliverable device is a working prototype kiosk with at least four independently controlled fragrance slots. For development and automated testing, the same device tier is also realised by a Java simulator that speaks the identical MQTT contract, so the backend cannot tell the two apart. This lets the team reproduce failure scenarios that are impractical on real hardware.
 
 ## 2. Key Features
 
 | Feature | Description |
 |---|---|
-| Authentication and authorisation | Three roles: Administrator, Brand Manager, Staff |
+| Authentication and authorisation | Seven user groups: Platform Super Administrator, Brand Administrator, Operations Manager, Technician, Inventory Staff, Viewer, and Customer (see Report §1.4) |
 | Brand management | Create, update and delete brands and fragrance catalogues |
 | Machine management | Track machines, slots and operating status |
 | Ordering and payment | Customers select a fragrance and pay via simulated QR |
@@ -61,14 +61,23 @@ The project does not use physical hardware. The machine is replaced by a simulat
 
 ```
 LapTrinhJava/
-├── backend/        Spring Boot source code
-├── frontend/       Next.js source code
-├── Report/         Project report (chapters)
+├── Report/         Project report (chapters) and diagrams
 ├── Work Log/       Weekly work logs
 └── README.md
 ```
 
+Source code folders are not in the repository yet. They are added in Sprint 2:
+
+```
+├── backend/        Spring Boot API          (planned)
+├── frontend/       Next.js web and kiosk UI (planned)
+└── simulator/      Java MQTT device simulator (planned)
+```
+
 ## 6. Getting Started
+
+> The steps below apply once the source folders above exist. Until then only
+> Steps 1 and 2 can be followed.
 
 ### Prerequisites
 
