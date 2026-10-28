@@ -1,31 +1,33 @@
-# backend — Spring Boot API + cổng MQTT
+# backend — Spring Boot API and IoT gateway
 
-Tạo ở task **L1** (Long). Chạy: `./mvnw spring-boot:run` → http://localhost:8080
+Created in task **L1** (Long). Run with `./mvnw spring-boot:run` → http://localhost:8080
 
-## Ai sửa file nào
+## File ownership
 
-Trong mỗi package nghiệp vụ, **Trà My** giữ file `*Entity.java` và `*Repository.java`,
-người chủ package giữ `*Service.java` và `*Controller.java`. Khác file nên không xung đột git.
+Inside every business package, **Tra My** owns the `*Entity.java` and
+`*Repository.java` files; the package owner writes `*Service.java` and
+`*Controller.java`. Different files, so Git never conflicts.
 
-| Package | Chủ sở hữu | Task |
+| Package | Owner | Task |
 |---|---|---|
 | `config/`, `common/` | Long | L1 |
 | `security/` | Long | L2 |
 | `domain/order/` | Long | L3 |
 | `domain/dispensing/`, `iot/` | Long | L5 |
-| `domain/catalog/` | Trà My | M3 |
-| `domain/brand/`, `domain/user/` | Hoài Anh | A2 |
-| `domain/inventory/` | Hoài Anh | A3, A4 |
-| `domain/report/` | Hoài Anh | A5 |
-| `domain/alert/`, `domain/maintenance/`, `domain/audit/` | Hoài Anh | A7, A8 (làm thêm) |
-| `src/main/resources/db/migration/` | Trà My | M1, M2, M4 |
-| `src/test/` | Kim Ngân | N3, N4 |
+| `domain/catalog/` | Tra My | M3 |
+| `domain/brand/`, `domain/user/` | Hoai Anh | A2 |
+| `domain/inventory/` | Hoai Anh | A3, A4 |
+| `domain/report/` | Hoai Anh | A5 |
+| `domain/alert/`, `domain/maintenance/`, `domain/audit/` | Hoai Anh | A7, A8 (stretch) |
+| `src/main/resources/db/migration/` | Tra My | M1, M2, M4 |
+| `src/test/` | Kim Ngan | N3, N4 |
 
-## Quy tắc không được phá
+## Rules that must not be broken
 
-- Phân tầng một chiều: Controller → Service → Repository → Entity. Controller
-  không gọi thẳng Repository.
-- `iot/` chỉ gọi Service, **không** viết lại logic nghiệp vụ. Mỗi quy tắc nghiệp
-  vụ chỉ có đúng một cài đặt, dù đến từ web hay từ thiết bị (§2.8.2).
-- `ddl-auto: validate`. Mọi thay đổi schema đi qua file migration mới, không sửa
-  file migration đã push.
+- Layering flows one way: Controller → Service → Repository → Entity. A
+  controller never calls a repository directly.
+- `iot/` only calls services. It must not reimplement business logic. Each
+  business rule has exactly one implementation, whether it is reached from the
+  web or from a device (Report §2.8.2).
+- `ddl-auto: validate`. Every schema change goes into a new migration file.
+  Never edit a migration that has already been pushed.

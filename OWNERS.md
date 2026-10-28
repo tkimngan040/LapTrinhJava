@@ -1,45 +1,46 @@
-# Ai commit vào đâu
+# Code ownership
 
-Mở file này trước khi tạo file mới. Nếu phải sửa file trong vùng của người khác,
-nhắn nhóm trước — đừng sửa thẳng rồi để người ta phát hiện lúc merge.
+Check this file before creating new files. If you need to change something in
+someone else's area, tell the team first rather than letting them discover it
+at merge time.
 
-| Thư mục | Chủ sở hữu | Vai |
+| Path | Owner | Role |
 |---|---|---|
-| `backend/src/main/.../security/`, `config/`, `common/` | **Long** | BE-lõi |
-| `backend/src/main/.../domain/order/`, `domain/dispensing/`, `iot/` | **Long** | BE-lõi |
-| `backend/src/main/.../domain/brand/`, `user/`, `inventory/`, `alert/`, `maintenance/`, `audit/`, `report/` | **Hoài Anh** | BE-nghiệp vụ |
-| `backend/src/main/.../domain/catalog/` | **Trà My** | CSDL |
-| `backend/src/main/resources/db/migration/` | **Trà My** | CSDL |
-| mọi file `*Entity.java` và `*Repository.java` | **Trà My** | CSDL |
-| `simulator/` | **Long** (phần lõi) + **Kim Ngân** (FaultInjector) | |
-| `frontend/` | **Kim Tuyến** | FE |
-| `backend/src/test/` | **Kim Ngân** | Tester |
-| `docs/test-plan.md` | **Kim Ngân** | Tester |
-| `docs/api-contract.md` | **cả nhóm** — ai đổi thì nhắn | |
-| `Report/03.Implementation and Testing.md` | 3.1 Trà My · 3.2 Long · 3.3 Hoài Anh · 3.4 Kim Tuyến · 3.5–3.7 Kim Ngân | |
-| `Report/Diagram_image/Ch3/` | **Kim Tuyến** | ảnh mục 3.4 |
-| `Work Log/` | mỗi người file của mình | |
+| `backend/.../security/`, `config/`, `common/` | **Long** | Core backend |
+| `backend/.../domain/order/`, `domain/dispensing/`, `iot/` | **Long** | Core backend |
+| `backend/.../domain/brand/`, `user/`, `inventory/`, `alert/`, `maintenance/`, `audit/`, `report/` | **Hoai Anh** | Business backend |
+| `backend/.../domain/catalog/` | **Tra My** | Database |
+| `backend/src/main/resources/db/migration/` | **Tra My** | Database |
+| every `*Entity.java` and `*Repository.java` | **Tra My** | Database |
+| `simulator/` | **Long** (core) and **Kim Ngan** (FaultInjector) | |
+| `frontend/` | **Kim Tuyen** | Frontend |
+| `backend/src/test/` | **Kim Ngan** | Tester |
+| `docs/test-plan.md` | **Kim Ngan** | Tester |
+| `docs/api-contract.md` | **everyone** — announce any change | |
+| `Report/03.Implementation and Testing.md` | 3.1 Tra My · 3.2 Long · 3.3 Hoai Anh · 3.4 Kim Tuyen · 3.5–3.7 Kim Ngan | |
+| `Report/Diagram_image/Ch3/` | **Kim Tuyen** | screenshots for 3.4 |
+| `Work Log/` | each member edits only their own file | |
 
-## Quy tắc tránh xung đột
+## How two people share one package
 
-Trong một package nghiệp vụ có hai người cùng làm việc: Trà My viết Entity và
-Repository, người chủ package viết Service và Controller. Khác file nên git
-không bao giờ xung đột.
+Two people work inside the same business package: Tra My writes the Entity and
+Repository classes, the package owner writes the Service and Controller
+classes. Because these are separate files, Git never reports a conflict.
 
-## Nhánh và pull request
+## Branches and pull requests
 
 ```bash
 git checkout main && git pull
-git checkout -b feat/long-SCENT-12-jwt     # feat/<tên>-<mã Jira>-<việc>
-# ... code ...
-git add . && git commit -m "feat(security): dang nhap JWT va phan quyen 7 vai tro"
-git push -u origin feat/long-SCENT-12-jwt
+git checkout -b feat/long-SCENT-63-jwt        # feat/<name>-<jira key>-<topic>
+# ... write code ...
+git add . && git commit -m "feat(security): JWT login and role-based access control"
+git push -u origin feat/long-SCENT-63-jwt
 ```
 
-Mở Pull Request trên GitHub, một người review rồi mới merge vào `main`.
-Không push thẳng lên `main`.
+Open a pull request on GitHub. One teammate reviews it before it is merged into
+`main`. Never push directly to `main`.
 
-Tiền tố commit: `feat:` chức năng mới · `fix:` sửa lỗi · `docs:` tài liệu ·
-`test:` kiểm thử · `chore:` việc vặt.
+Commit prefixes: `feat:` new feature · `fix:` bug fix · `docs:` documentation ·
+`test:` tests · `chore:` housekeeping.
 
-Lịch sử commit sạch cũng là bằng chứng cho Chương 4 về cách nhóm làm việc.
+A clean commit history is also evidence for Chapter 4 on how the team worked.

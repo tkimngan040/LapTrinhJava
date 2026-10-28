@@ -1,4 +1,4 @@
-# Chạy: docker compose up -d
+# Run with: docker compose up -d
 services:
   db:
     image: postgres:16

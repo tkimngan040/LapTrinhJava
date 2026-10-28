@@ -1,12 +1,14 @@
-# Ảnh chụp màn hình cho mục 3.4
+# Screenshots for Report section 3.4
 
-Đặt tên theo mã màn hình của §2.10.2: `S01_login.png`, `S02_dashboard.png`,
-`S15_kiosk_01.png`…
+Name files after the screen numbers in §2.10.2: `S01_login.png`,
+`S02_dashboard.png`, `S15_kiosk_01.png`, and so on.
 
-Bốn quy tắc:
+Four rules:
 
-1. **Chụp ngay khi màn hình chạy được**, đừng dồn đến cuối. Để cuối mới chụp thì
-   dữ liệu đã thay đổi, số liệu giữa các ảnh lệch nhau, thầy nhìn ra ngay.
-2. **Phải có dữ liệu thật trong ảnh.** Màn hình trống trơn nhìn như chưa làm xong.
-3. Chụp trong **một phiên chạy liền mạch**, ảnh sau nối tiếp ảnh trước.
-4. Màn hình nào chưa làm thì **không chụp**. Ghi rõ ở mục 3.3 là chưa cài đặt.
+1. **Capture each screen as soon as it works.** Leaving it all to the end means
+   the data has changed and the figures no longer agree between screenshots.
+2. **The screen must contain real data.** An empty screen looks unfinished.
+3. Capture in **one continuous session** so each screenshot follows on from the
+   previous one.
+4. If a screen was never built, do **not** capture it. Record it as not
+   implemented in section 3.3 instead.

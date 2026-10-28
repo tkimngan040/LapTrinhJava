@@ -10,7 +10,7 @@ node_modules/
 out/
 *.tsbuildinfo
 
-# Biến môi trường — KHÔNG bao giờ commit mật khẩu hay khoá bí mật
+# Environment files — never commit passwords or secret keys
 .env
 .env.local
 *.env
@@ -20,10 +20,10 @@ out/
 .vscode/
 *.iml
 
-# Hệ điều hành
+# OS
 .DS_Store
 Thumbs.db
 
-# Log
+# Logs
 *.log
 logs/
