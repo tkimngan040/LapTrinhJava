@@ -1,45 +1,46 @@
-# Kế hoạch kiểm thử — Kim Ngân (N1)
+# Test plan — Kim Ngan (N1)
 
-Nguyên tắc: **mỗi ca phải chứng minh một quy tắc nghiệp vụ (BR) hoặc một luồng
-use case (UC)**. Test kiểu `assertEquals(2, 1+1)` không chứng minh gì cả.
+Principle: **every test case must prove one business rule (BR) or one use case
+flow (UC)**. A test like `assertEquals(2, 1+1)` proves nothing.
 
-## Kiểm thử đơn vị — mục 3.5
+## Unit tests — Report section 3.5
 
-| Mã | Lớp | Ca kiểm thử | Chứng minh |
+| ID | Class | Case | Proves |
 |---|---|---|---|
-| UT-01 | OrderStateMachine | 9 chuyển tiếp hợp lệ đều đi được | §2.9.2 |
-| UT-02 | OrderStateMachine | DISPENSED → bất kỳ đều ném lỗi | trạng thái kết thúc |
-| UT-03 | OrderStateMachine | UNCERTAIN không tự động rời đi | BR14, NFR4.5 |
-| UT-04 | CommandSigner | ký rồi kiểm lại → hợp lệ | NFR2.6 |
-| UT-05 | CommandSigner | đổi một ký tự → chữ ký sai | BR7 |
-| UT-06 | CommandSigner | quá 30 giây → hết hạn | BR7 |
-| UT-07 | OrderService | đổi giá sau khi đặt → đơn giữ giá cũ | BR4 |
-| UT-08 | InventoryService | trừ đúng số ml | BR10 |
-| UT-09 | InventoryService | trừ quá số còn lại → ném lỗi | BR10 |
-| UT-10 | JwtService | tăng token_version → token cũ hết hiệu lực | FR1.8 |
+| UT-01 | OrderStateMachine | all 9 valid transitions succeed | §2.9.2 |
+| UT-02 | OrderStateMachine | DISPENSED → anything throws | terminal state |
+| UT-03 | OrderStateMachine | UNCERTAIN cannot be left automatically | BR14, NFR4.5 |
+| UT-04 | CommandSigner | sign then verify → valid | NFR2.6 |
+| UT-05 | CommandSigner | one character changed → signature invalid | BR7 |
+| UT-06 | CommandSigner | older than 30 s → expired | BR7 |
+| UT-07 | OrderService | price changed after order → order keeps old price | BR4 |
+| UT-08 | InventoryService | deducts the correct millilitres | BR10 |
+| UT-09 | InventoryService | deducting more than remaining throws | BR10 |
+| UT-10 | JwtService | token_version incremented → old token rejected | FR1.8 |
 
-## Kiểm thử tích hợp — mục 3.6
+## Integration tests — Report section 3.6
 
-| Mã | Kịch bản | Kết quả mong đợi | Truy ngược |
+| ID | Scenario | Expected result | Traces to |
 |---|---|---|---|
-| IT-01 | luồng đầy đủ, không lỗi | DISPENSED, kho giảm đúng 1 lần | UC-05, UC-08, UC-09 |
-| IT-02 | thiết bị từ chối lệnh | FAILED, có lý do, mở sự cố | BR7 |
-| IT-03 | khoá an toàn chặn | FAILED, đổi trạng thái máy, sinh cảnh báo | BR8 |
-| IT-04 | không có result | UNCERTAIN, không sinh lệnh thứ hai | BR14, NFR4.5 |
-| IT-05 | result gửi hai lần | kho chỉ trừ một lần | NFR3.4 |
-| IT-06 | máy mất heartbeat | OFFLINE, từ chối đơn mới | BR9 |
-| IT-07 | BA của A đọc dữ liệu của B | nhận 404, không phải 200 | BR13, NFR2.2 |
-| IT-08 | Viewer gọi API ghi dữ liệu | nhận 403 | UC-17 |
-| IT-09 | webhook thanh toán gửi trùng | chỉ ghi một thanh toán | NFR3.3 |
+| IT-01 | full flow, no faults | order DISPENSED, stock reduced exactly once | UC-05, UC-08, UC-09 |
+| IT-02 | device rejects the command | order FAILED with reason, incident opened | BR7 |
+| IT-03 | safety interlock blocks actuation | order FAILED, machine status updated, alert raised | BR8 |
+| IT-04 | no result received | order UNCERTAIN, no second command issued | BR14, NFR4.5 |
+| IT-05 | result published twice | stock deducted exactly once | NFR3.4 |
+| IT-06 | machine stops sending heartbeats | machine OFFLINE, new orders refused | BR9 |
+| IT-07 | Brand A admin reads Brand B data | 404, not 200 | BR13, NFR2.2 |
+| IT-08 | Viewer calls a write endpoint | 403 | UC-17 |
+| IT-09 | duplicate payment webhook | only one payment recorded | NFR3.3 |
 
-**IT-04 và IT-05 là hai ca giá trị nhất của cả đồ án.** Nếu chỉ kịp làm hai ca
-tích hợp thì làm hai ca này.
+**IT-04 and IT-05 are the two most valuable cases in the project.** If there is
+only time for two integration tests, write these two.
 
-## Bảng kết quả — mục 3.7
+## Results table — Report section 3.7
 
-| Mã | Ca kiểm thử | Đầu vào | Kết quả mong đợi | Kết quả thực tế | Đạt |
+| ID | Test case | Input | Expected result | Actual result | Pass |
 |---|---|---|---|---|---|
-| IT-04 | Thiết bị không phản hồi (UC-08) | đơn đã thanh toán, giả lập `--fault=silent` | UNCERTAIN, không có lệnh thứ hai | | |
+| IT-04 | Device does not respond (UC-08) | paid order, simulator `--fault=silent` | UNCERTAIN, no second command | | |
 
-Ghi **đúng sự thật**. Ca nào trượt thì ghi trượt và đưa sang Chương 4 mục
-Limitations. Bảng 25 ca với 23 đạt đáng tin hơn nhiều so với bảng toàn xanh.
+Record the **actual** result honestly. A failing case goes into Chapter 4 under
+Limitations. A table of 25 cases with 23 passes is far more credible than one
+where everything passes.

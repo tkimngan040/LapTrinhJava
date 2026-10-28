@@ -1,18 +1,18 @@
-# Hợp đồng API
+# API contract
 
-Chốt **trước khi code**. Backend và frontend cùng sửa file này, ai đổi tên
-trường thì phải sửa ở đây và nhắn nhóm.
+Agree this **before writing code**. Backend and frontend both edit this file.
+If you change a field name, change it here and tell the team.
 
-Quy ước chung: JSON dùng `camelCase`, thời gian dùng ISO-8601 UTC
-(`2026-11-05T10:30:00Z`), tiền là số nguyên đơn vị đồng.
+Conventions: JSON uses `camelCase`, timestamps are ISO-8601 UTC
+(`2026-11-05T10:30:00Z`), money is an integer amount in VND.
 
-Lỗi trả về luôn cùng một hình dạng:
+Errors always have the same shape:
 
 ```json
-{ "timestamp": "...", "status": 400, "code": "SLOT_EMPTY", "message": "Slot không còn đủ dung tích" }
+{ "timestamp": "...", "status": 400, "code": "SLOT_EMPTY", "message": "Slot has insufficient volume" }
 ```
 
-## Đăng nhập — Long (L2)
+## Authentication — Long (L2)
 
 ```
 POST /api/auth/login
@@ -20,7 +20,7 @@ POST /api/auth/login
 ← { "token": "eyJ...", "user": { "id": 1, "fullName": "...", "brandId": 1, "roles": ["BRAND_ADMIN"] } }
 ```
 
-## Menu của máy — Trà My (M3)
+## Machine menu — Tra My (M3)
 
 ```
 GET /api/kiosk/machines/{deviceId}/menu
@@ -29,7 +29,7 @@ GET /api/kiosk/machines/{deviceId}/menu
                  "notes": "...", "imageUrl": "...", "price": 20000, "available": true } ] }
 ```
 
-## Đặt đơn — Long (L3)
+## Orders — Long (L3)
 
 ```
 POST /api/kiosk/orders   → { "deviceId": "...", "slotNumber": 1 }
@@ -39,5 +39,5 @@ GET /api/kiosk/orders/{id}/status
 ← { "orderId": 55, "status": "DISPENSING", "failureReason": null }
 ```
 
-> Thêm tiếp các endpoint còn lại khi làm tới. Mỗi endpoint ghi đủ: đường dẫn,
-> body gửi đi, body trả về, và ai làm.
+> Add the remaining endpoints as you build them. For each one record the path,
+> the request body, the response body, and who owns it.
