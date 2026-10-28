@@ -1,0 +1,24 @@
+# Chạy: docker compose up -d
+services:
+  db:
+    image: postgres:16
+    container_name: scent-db
+    environment:
+      POSTGRES_DB: scentstation
+      POSTGRES_USER: scent
+      POSTGRES_PASSWORD: scent
+    ports: ["5432:5432"]
+    volumes: ["scent-db-data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scent -d scentstation"]
+      interval: 5s
+      retries: 10
+
+  mqtt:
+    image: eclipse-mosquitto:2.0
+    container_name: scent-mqtt
+    ports: ["1883:1883"]
+    volumes: ["./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro"]
+
+volumes:
+  scent-db-data:
