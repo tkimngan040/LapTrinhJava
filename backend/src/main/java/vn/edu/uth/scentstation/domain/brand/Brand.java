@@ -1,45 +1,51 @@
-/*
- * Entity and repository files belong to Tra My (tasks M1, M2).
- * Written here so the security, ordering and dispensing code can run;
- * check the columns against Report section 2.7.2 before merging.
- */
 package vn.edu.uth.scentstation.domain.brand;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import lombok.*;
+import java.time.OffsetDateTime;
 
-import vn.edu.uth.scentstation.common.BaseEntity;
-
-/**
- * A tenant: one perfume brand. BR1 ties every machine to exactly one of these.
- */
 @Entity
 @Table(name = "brands")
-public class Brand extends BaseEntity {
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Brand {
 
-    @Column(nullable = false, length = 120)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true)
     private String name;
 
+    @Column(nullable = false, unique = true)
+    private String code;
+
+    private String description;
+
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false)
     private BrandStatus status;
 
-    public String getName() {
-        return name;
+    @Column(name = "created_at", updatable = false)
+    private OffsetDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private OffsetDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = OffsetDateTime.now();
+        this.updatedAt = OffsetDateTime.now();
+        if (this.status == null) {
+            this.status = BrandStatus.ACTIVE;
+        }
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public BrandStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(BrandStatus status) {
-        this.status = status;
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = OffsetDateTime.now();
     }
 }

@@ -1,11 +1,51 @@
-/*
- * Entity and repository files belong to Tra My (tasks M1, M2).
- * Written here so the security, ordering and dispensing code can run;
- * check the columns against Report section 2.7.2 before merging.
- */
 package vn.edu.uth.scentstation.domain.brand;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import jakarta.persistence.*;
+import lombok.*;
+import java.time.OffsetDateTime;
 
-public interface BrandRepository extends JpaRepository<Brand, Long> {
+@Entity
+@Table(name = "brands")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Brand {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true)
+    private String name;
+
+    @Column(nullable = false, unique = true)
+    private String code;
+
+    private String description;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private BrandStatus status;
+
+    @Column(name = "created_at", updatable = false)
+    private OffsetDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private OffsetDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = OffsetDateTime.now();
+        this.updatedAt = OffsetDateTime.now();
+        if (this.status == null) {
+            this.status = BrandStatus.ACTIVE;
+        }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = OffsetDateTime.now();
+    }
 }

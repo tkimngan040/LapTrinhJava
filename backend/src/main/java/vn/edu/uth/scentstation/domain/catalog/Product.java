@@ -1,106 +1,60 @@
-/*
- * Entity and repository files belong to Tra My (tasks M1, M2).
- * Written here so the security, ordering and dispensing code can run;
- * check the columns against Report section 2.7.2 before merging.
- */
 package vn.edu.uth.scentstation.domain.catalog;
 
-import jakarta.persistence.Column;
-import org.hibernate.annotations.Filter;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import vn.edu.uth.scentstation.domain.brand.Brand;
+import jakarta.persistence.*;
+import lombok.*;
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 
-import vn.edu.uth.scentstation.common.BaseEntity;
-
-/**
- * A fragrance in a brand catalogue.
- */
 @Entity
-@Table(name = "products")
-// Narrowed to the signed-in user's brand by TenantFilterAspect (BR13).
-@Filter(name = "brandFilter", condition = "brand_id = :brandId")
-public class Product extends BaseEntity {
+@Table(name = "perfumes")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Product {
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "brand_id", nullable = false)
-    private Brand brand;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    @Column(nullable = false, length = 160)
-    private String name;
-
-    @Column(length = 600)
-    private String description;
-
-    @Column(name = "fragrance_notes", length = 300)
-    private String fragranceNotes;
-
-    @Column(name = "image_url", length = 400)
-    private String imageUrl;
-
-    // Integer amount in VND, as agreed in docs/api-contract.md.
-    @Column(name = "default_price", nullable = false)
-    private long defaultPrice;
+    @Column(name = "brand_id", nullable = false)
+    private Long brandId;
 
     @Column(nullable = false)
-    private boolean active;
+    private String name;
 
-    public Brand getBrand() {
-        return brand;
+    @Column(name = "fragrance_notes")
+    private String fragranceNotes;
+
+    private String description;
+
+    @Column(name = "price_per_spray", nullable = false, precision = 12, scale = 2)
+    private BigDecimal pricePerSpray;
+
+    @Column(name = "image_url")
+    private String imageUrl;
+
+    @Column(nullable = false)
+    private String status;
+
+    @Column(name = "created_at", updatable = false)
+    private OffsetDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private OffsetDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = OffsetDateTime.now();
+        this.updatedAt = OffsetDateTime.now();
+        if (this.status == null) {
+            this.status = "AVAILABLE";
+        }
     }
 
-    public void setBrand(Brand brand) {
-        this.brand = brand;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getFragranceNotes() {
-        return fragranceNotes;
-    }
-
-    public void setFragranceNotes(String fragranceNotes) {
-        this.fragranceNotes = fragranceNotes;
-    }
-
-    public String getImageUrl() {
-        return imageUrl;
-    }
-
-    public void setImageUrl(String imageUrl) {
-        this.imageUrl = imageUrl;
-    }
-
-    public long getDefaultPrice() {
-        return defaultPrice;
-    }
-
-    public void setDefaultPrice(long defaultPrice) {
-        this.defaultPrice = defaultPrice;
-    }
-
-    public boolean isActive() {
-        return active;
-    }
-
-    public void setActive(boolean active) {
-        this.active = active;
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = OffsetDateTime.now();
     }
 }
