@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Java / Maven
 target/
 *.class
@@ -14,10 +15,30 @@ out/
 .env
 .env.local
 *.env
+=======
+﻿# Dependencies
+node_modules/
+.pnp
+.pnp.*
+
+# Next.js
+.next/
+out/
+
+# Build
+build/
+dist/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+>>>>>>> bf23d69 (chore(frontend): rename directory and add kiosk flow)
 
 # IDE
 .idea/
 .vscode/
+<<<<<<< HEAD
 *.iml
 
 # OS
@@ -27,3 +48,21 @@ Thumbs.db
 # Logs
 *.log
 logs/
+=======
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Java
+*.class
+target/
+
+# Backend test - do not upload
+scentstation-backend-test/
+>>>>>>> bf23d69 (chore(frontend): rename directory and add kiosk flow)
