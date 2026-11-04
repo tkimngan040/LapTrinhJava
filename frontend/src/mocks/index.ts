@@ -1,14 +1,9 @@
-<<<<<<< HEAD
-
-=======
->>>>>>> bf23d69 (chore(frontend): rename directory and add kiosk flow)
 export interface ApiError {
     timestamp: string;
     status: number;
     code: string;
     message: string;
 }
-
 
 export interface AuthUser {
     id: number;
@@ -23,18 +18,23 @@ export interface LoginResponse {
     user: AuthUser;
 }
 
-<<<<<<< HEAD
 export interface MachineMenuSlot {
     slotNumber: number;
-    productId: number;
+    productId?: string | number;
     productName: string;
     notes: string;
     imageUrl: string;
-    price: number;
+    price: number; // Kiosk Experience Price per spray in VND
     available: boolean;
+    retailPrice10ml?: number | null;
+    retailPriceSource?: string | null;
+    retailPriceCheckedAt?: string;
+    brand?: string;
+    concentration?: string;
+    audience?: "Men" | "Women" | "Unisex";
+    fragranceFamily?: string;
+    description?: string;
 }
-=======
->>>>>>> bf23d69 (chore(frontend): rename directory and add kiosk flow)
 
 export interface MachineMenuResponse {
     deviceId: string;
@@ -55,7 +55,6 @@ export interface OrderStatusResponse {
     status: string;
     failureReason: string | null;
 }
-
 
 interface MockAccount {
     email: string;
@@ -126,49 +125,10 @@ export function mockLogin(
     };
 }
 
-// Keep this export for existing mock data consumers
 export const mockLoginResponse: LoginResponse = {
     token: "mock-jwt-token-1",
     user: MOCK_ACCOUNTS[0].user,
 };
-
-
-<<<<<<< HEAD
-export const mockMachineMenu: MachineMenuResponse = {
-    deviceId: "KIOSK-001",
-    status: "ONLINE",
-    slots: [
-        {
-            slotNumber: 1,
-            productId: 10,
-            productName: "Rose Elegance",
-            notes: "A refined floral fragrance",
-            imageUrl: "/mock/rose-elegance.png",
-            price: 20000,
-            available: true,
-        },
-        {
-            slotNumber: 2,
-            productId: 11,
-            productName: "Citrus Breeze",
-            notes: "A fresh and vibrant fragrance",
-            imageUrl: "/mock/citrus-breeze.png",
-            price: 25000,
-            available: true,
-        },
-        {
-            slotNumber: 3,
-            productId: 12,
-            productName: "Midnight Oud",
-            notes: "A warm woody fragrance",
-            imageUrl: "/mock/midnight-oud.png",
-            price: 30000,
-            available: false,
-        },
-    ],
-};
-=======
->>>>>>> bf23d69 (chore(frontend): rename directory and add kiosk flow)
 
 export const mockCreateOrderResponse: CreateOrderResponse = {
     orderId: 55,
@@ -190,74 +150,14 @@ export const mockApiError: ApiError = {
     code: "SLOT_EMPTY",
     message: "Slot has insufficient volume",
 };
-<<<<<<< HEAD
-=======
-//Kiosk
-export interface ApiError {
-    timestamp: string;
-    status: number;
-    code: string;
-    message: string;
-}
 
-export interface AuthUser {
-    id: number;
-    fullName: string;
-    email: string;
-    brandId: number | null;
-    roles: string[];
-}
-
-export interface LoginResponse {
-    token: string;
-    user: AuthUser;
-}
-
-export interface MachineMenuSlot {
-    slotNumber: number;
-    productId?: string | number;
-    productName: string;
-    notes: string;
-    imageUrl: string;
-    price: number; // Kiosk Experience Price per spray in VND
-    available: boolean;
-    retailPrice10ml?: number | null;
-    retailPriceSource?: string | null;
-    retailPriceCheckedAt?: string;
-    brand?: string;
-    concentration?: string;
-    audience?: "Men" | "Women" | "Unisex";
-    fragranceFamily?: string;
-    description?: string;
-}
-
-export interface MachineMenuResponse {
-    deviceId: string;
-    status: string;
-    slots: MachineMenuSlot[];
-}
-
-export interface CreateOrderResponse {
-    orderId: number;
-    status: string;
-    price: number;
-    qrContent: string;
-    expiresAt: string;
-}
-
-export interface OrderStatusResponse {
-    orderId: number;
-    status: string;
-    failureReason: string | null;
-}
-
-let mockMachineMenu: MachineMenuResponse;
-mockMachineMenu = {
+export const mockMachineMenu: MachineMenuResponse = {
     deviceId: "demo-device",
     status: "ONLINE",
     slots: [
         {
             slotNumber: 1,
+            productId: "mcm-edp-01",
             productName: "MCM EDP",
             brand: "MCM",
             concentration: "Eau de Parfum",
@@ -269,7 +169,6 @@ mockMachineMenu = {
             available: true,
             imageUrl: "/images/mcm-edp.jpg"
         },
-
         {
             slotNumber: 3,
             productId: "dior-sauvage-03",
@@ -706,5 +605,5 @@ mockMachineMenu = {
         },
     ],
 };
-export default mockMachineMenu
->>>>>>> bf23d69 (chore(frontend): rename directory and add kiosk flow)
+
+export default mockMachineMenu;
