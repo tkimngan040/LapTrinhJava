@@ -1,0 +1,2014 @@
+/* =========================================================
+   SCENTSTATION - ULTRA-LUXURY EDITORIAL KIOSK STYLES
+   Optimized for 60FPS Hardware Acceleration & Compact Grid
+========================================================= */
+
+/* --- TRANG CHÍNH CÓ THANH CUỘN --- */
+.kioskPage {
+    position: relative;
+    width: 100vw;
+    min-height: 100vh;
+    background-color: #000000;
+    color: #ffffff;
+    font-family: var(--font-inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+    /* Đảm bảo dùng auto hoặc visible để trang cho phép cuộn dọc */
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* --- HEADER CỐ ĐỊNH LUÔN NẰM IM Ở TRÊN CÙNG --- */
+.kioskHeader {
+    position: sticky;
+    top: 0;
+    z-index: 1000; /* Đảm bảo luôn nằm trên các thành phần khác */
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 20px 40px;
+    width: 100%;
+}
+
+.headerInner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+.brandGroup {
+    display: flex;
+    flex-direction: column;
+}
+
+.brandName {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 0.15em;
+    margin: 0;
+    color: #ffffff;
+}
+
+.brandTagline {
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 4px 0 0 0;
+    text-transform: uppercase;
+}
+
+/* Status Panel */
+.statusContainer {
+    position: relative;
+}
+
+/* --- NÚT TRẠNG THÁI MACHINE STATUS (LUXURY REFINEMENT) --- */
+.machineStatus {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    padding: 12px 22px;
+    border-radius: 999px;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.machineStatus:hover {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.06) 100%);
+    border-color: rgba(212, 175, 55, 0.6); /* Ánh viền vàng kim nhẹ khi rê chuột/chạm */
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.6), 0 0 15px rgba(212, 175, 55, 0.2);
+    transform: translateY(-1px);
+}
+
+/* Hiệu ứng chấm đèn trạng thái phát sáng (Pulse Glow) */
+.statusPulse {
+    position: relative;
+    width: 10px;
+    height: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.statusDot {
+    width: 8px;
+    height: 8px;
+    background-color: #10b981;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #10b981, 0 0 20px #10b981; /* Tạo quầng sáng lung linh */
+    animation: pulseGlow 2s infinite ease-in-out;
+}
+
+@keyframes pulseGlow {
+    0% { transform: scale(0.95); opacity: 0.8; }
+    50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 14px #10b981, 0 0 28px #10b981; }
+    100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+/* --- BẢNG POPUP SYSTEM STATUS ĐẲNG CẤP HƠN --- */
+.statusPanel {
+    position: absolute;
+    top: calc(100% + 14px);
+    right: 0;
+    width: 340px;
+    background: rgba(12, 12, 12, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 24px 50px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    z-index: 101;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    animation: fadeInScale 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.statusPanelHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 12px;
+}
+
+.statusPanelEyebrow {
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    color: rgba(255, 255, 255, 0.4);
+    font-weight: 700;
+}
+
+.statusCloseButton {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.statusCloseButton:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: rotate(90deg);
+}
+
+.statusPanelBody {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.statusDetailRow {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+}
+
+.statusDetailRow span { color: rgba(255, 255, 255, 0.45); }
+.statusDetailRow strong { color: #ffffff; letter-spacing: 0.05em; font-weight: 600; }
+
+.statusDescription {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.65);
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* Hero Section */
+.heroSection {
+    padding: 80px 40px 40px 40px;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+.eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    margin: 0 0 16px 0;
+}
+
+.heroTitle {
+    font-size: clamp(40px, 6vw, 84px);
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    margin: 0 0 24px 0;
+    color: #ffffff;
+}
+
+.heroDescription {
+    font-size: 18px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.7);
+    max-width: 680px;
+    margin: 0 0 40px 0;
+}
+
+/* --- EDITORIAL MARQUEE (NÂNG CẤP HIỆU ỨNG SƯƠNG KHÓI) --- */
+.editorialMarquee {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    /* Nền gradient tối sâu tạo không gian huyền ảo */
+    background: radial-gradient(circle, #1a1a1a 0%, #050505 100%);
+    border-top: 1px solid rgba(212, 175, 55, 0.2);
+    border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+    padding: 18px 0;
+    margin-bottom: 40px;
+    box-shadow: inset 0 0 25px rgba(0, 0, 0, 0.9);
+}
+
+/* Hiệu ứng sương mờ dần (fade-out blur) ở hai mép trái/phải */
+.editorialMarquee::before,
+.editorialMarquee::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    width: 140px;
+    height: 100%;
+    z-index: 5;
+    pointer-events: none;
+}
+
+.editorialMarquee::before {
+    left: 0;
+    background: linear-gradient(to right, #000000 0%, transparent 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+.editorialMarquee::after {
+    right: 0;
+    background: linear-gradient(to left, #000000 0%, transparent 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+.editorialMarqueeTrack {
+    display: flex;
+    gap: 5rem;
+    white-space: nowrap;
+    animation: marqueeScroll 32s linear infinite;
+    font-size: 11px;
+    letter-spacing: 0.35em;
+    color: rgba(255, 255, 255, 0.75);
+    will-change: transform;
+    filter: blur(0.2px); /* Tạo độ nhòe nhẹ như hơi sương */
+}
+
+.editorialMarquee:hover .editorialMarqueeTrack {
+    animation-play-state: paused; /* Dừng nhẹ khi chạm vào màn hình kiosk */
+}
+
+@keyframes marqueeScroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+}
+/* --- HUY HIỆU THÔNG TIN THIẾT BỊ (DEVICE INFO BADGE) --- */
+.deviceInfo {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 10px 20px;
+    border-radius: 12px;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    margin-top: 20px;
+    transition: all 0.3s ease;
+}
+
+.deviceInfo:hover {
+    border-color: rgba(212, 175, 55, 0.4); /* Ánh viền vàng kim nhẹ khi chạm vào */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 15px rgba(212, 175, 55, 0.15);
+}
+
+.deviceInfo span {
+    color: rgba(255, 255, 255, 0.45);
+    font-weight: 600;
+}
+
+.deviceInfo strong {
+    color: #ffffff;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    background: linear-gradient(90deg, #ffffff 0%, #d4af37 100%); /* Hiệu ứng chữ ánh kim cao cấp */
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Catalogue Grid - Optimized compact layout (3 to 5 columns) */
+.collectionSection {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 0 40px 80px 40px;
+}
+
+.sectionHeading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 48px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 24px;
+}
+
+.sectionEyebrow {
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    color: rgba(255, 255, 255, 0.4);
+    margin: 0 0 8px 0;
+}
+
+.sectionHeading h2 {
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0;
+}
+
+.productCount {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.5);
+    letter-spacing: 0.05em;
+}
+
+.productGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 24px;
+}
+
+.productCard {
+    background: #0a0a0a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, background 0.2s ease;
+    will-change: transform;
+}
+
+.productCard:hover {
+    transform: translateY(-4px);
+    border-color: rgba(255, 255, 255, 0.3);
+    background: #121212;
+}
+
+.productCardAction {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    cursor: pointer;
+}
+
+.visualWrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background: #161616;
+    overflow: hidden;
+}
+
+.productVisual {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.productImage {
+    object-fit: cover;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform;
+}
+
+.productCard:hover .productImage {
+    transform: scale(1.04);
+}
+
+.imagePlaceholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 20px;
+    text-align: center;
+    background: linear-gradient(135deg, #111111, #1a1a1a);
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.imagePlaceholder span {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: rgba(255, 255, 255, 0.4);
+    margin-bottom: 6px;
+}
+
+.imagePlaceholder strong {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.imagePlaceholder small {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.productDetails {
+    padding: 20px;
+}
+
+.slotNumber {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: rgba(255, 255, 255, 0.4);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+}
+
+.productDetails h3 {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0 0 8px 0;
+    color: #ffffff;
+}
+
+.productNotes {
+    font-size: 12px;
+    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0 0 16px 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.productFooter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.priceLabel {
+    display: block;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: rgba(255, 255, 255, 0.4);
+    margin-bottom: 2px;
+}
+
+.price {
+    font-size: 15px;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+}
+
+.selectButton {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 8px 14px;
+    border-radius: 999px;
+    transition: background 0.2s ease;
+}
+
+.productCard:hover .selectButton {
+    background: #ffffff;
+    color: #000000;
+}
+
+/* Detail Section */
+.detailSection {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 40px 40px 80px 40px;
+    animation: fadeInScale 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* --- NÚT BACK TO CATALOGUE PHONG CÁCH LUXURY --- */
+.backButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05); /* Nền mờ kính cao cấp */
+    border: 1px solid rgba(255, 255, 255, 0.2); /* Viền sáng nhẹ */
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.25em; /* Giãn chữ rộng mang phong cách editorial */
+    text-transform: uppercase;
+    padding: 14px 28px;
+    border-radius: 999px; /* Bo tròn capsule hiện đại */
+    cursor: pointer;
+    margin-bottom: 32px;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.backButton:hover {
+    background: #ffffff; /* Đổi nền trắng khi khách chạm vào */
+    color: #000000;      /* Chữ chuyển sang đen tương phản mạnh */
+    border-color: #ffffff;
+    transform: translateY(-2px); /* Hiệu ứng nhấc nhẹ lên */
+    box-shadow: 0 6px 25px rgba(255, 255, 255, 0.25);
+}
+
+.backButton:active {
+    transform: translateY(0);
+}
+.detailLayout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 64px;
+    align-items: start;
+}
+
+.detailImagePanel {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    background: #111111;
+    border-radius: 20px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.detailImage {
+    object-fit: cover;
+    width: 100%;
+    height: 100%;
+}
+
+.detailContent {
+    display: flex;
+    flex-direction: column;
+}
+
+.detailBrand {
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    margin: 0 0 12px 0;
+}
+
+.detailTitle {
+    font-size: clamp(32px, 4vw, 48px);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    margin: 0 0 20px 0;
+}
+
+.detailDescription {
+    font-size: 15px;
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0 0 32px 0;
+}
+
+.detailFacts {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 24px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+
+.detailFacts div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.detailFacts span {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.detailFacts strong {
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.scentProfile {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 24px;
+    border-radius: 12px;
+    margin-bottom: 32px;
+}
+
+.scentProfile div {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+}
+
+.scentProfile span { color: rgba(255, 255, 255, 0.4); letter-spacing: 0.1em; font-size: 11px; }
+.scentProfile strong { color: #ffffff; font-weight: 500; text-align: right; max-width: 65%; }
+
+.sourcePriceRow {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding-top: 12px;
+    margin-top: 4px;
+}
+
+.detailPriceBlock {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #ffffff;
+    color: #000000;
+    padding: 24px 28px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+.detailPriceBlock div {
+    display: flex;
+    flex-direction: column;
+}
+
+.detailPriceBlock span {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: rgba(0, 0, 0, 0.6);
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.detailPriceBlock strong {
+    font-size: 28px;
+    font-weight: 800;
+}
+
+.detailConfirmButton {
+    width: 100%;
+    background: #ffffff;
+    color: #000000;
+    border: none;
+    padding: 20px;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.detailConfirmButton:hover {
+    transform: translateY(-2px);
+    opacity: 0.9;
+}
+
+.detailConfirmButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.detailDisclaimer {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.4);
+    text-align: center;
+    margin: 16px 0 0 0;
+}
+
+/* Flow Section / Checkout & QR */
+.flowSection {
+    max-width: 700px;
+    margin: 60px auto;
+    padding: 0 20px;
+}
+
+.flowCard {
+    background: #0d0d0d;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 24px;
+    padding: 48px;
+    text-align: center;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.9);
+}
+
+.flowEyebrow {
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    color: rgba(255, 255, 255, 0.4);
+    margin: 0 0 12px 0;
+}
+
+.flowTitle {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin: 0 0 8px 0;
+}
+
+.flowProduct {
+    font-size: 15px;
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0 0 32px 0;
+}
+
+.qrBox {
+    background: #ffffff;
+    padding: 24px;
+    border-radius: 16px;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 24px;
+    box-shadow: 0 10px 30px rgba(255, 255, 255, 0.1);
+}
+
+.countdownBox {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+
+.countdownLabel {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: rgba(255, 255, 255, 0.4);
+    margin-bottom: 4px;
+}
+
+.countdownValue {
+    font-size: 24px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.05em;
+}
+
+.countdownUrgent {
+    color: #ef4444;
+}
+
+.flowHint {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.5);
+    line-height: 1.5;
+    margin: 0 0 32px 0;
+}
+
+.flowActions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.demoButton {
+    background: #3b82f6;
+    color: #ffffff;
+    border: none;
+    padding: 16px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.demoButton:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+}
+
+.secondaryButton {
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 16px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.secondaryButton:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.primaryButton {
+    background: #ffffff;
+    color: #000000;
+    border: none;
+    padding: 18px 32px;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.15em;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.primaryButton:hover { transform: translateY(-1px); }
+
+/* Guidance & Dispensing */
+.guidanceBox {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 32px;
+    border-radius: 16px;
+    margin-bottom: 24px;
+}
+
+.guidanceIcon {
+    font-size: 36px;
+    margin-bottom: 16px;
+}
+
+.guidanceText {
+    font-size: 16px;
+    line-height: 1.5;
+    margin: 0 0 8px 0;
+}
+
+.guidanceSub {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0;
+}
+
+.pulseRing {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 24px auto;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: spinPulse 1s linear infinite;
+}
+
+@keyframes spinPulse {
+    to { transform: rotate(360deg); }
+}
+
+.successBadge {
+    display: inline-block;
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    padding: 6px 16px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    margin-bottom: 16px;
+}
+
+.successIcon, .errorIcon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    margin: 0 auto 24px auto;
+}
+
+.successIcon {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.errorIcon {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.orderRef {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0 0 24px 0;
+}
+
+.errorText {
+    color: #ef4444;
+    font-size: 13px;
+    margin: 0 0 16px 0;
+}
+
+/* Unavailable / Loading State */
+.unavailablePage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: #000000;
+    padding: 20px;
+}
+
+.unavailableContent {
+    text-align: center;
+    max-width: 480px;
+}
+
+.unavailableIcon {
+    width: 64px;
+    height: 64px;
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-weight: 800;
+    margin: 0 auto 24px auto;
+}
+
+.unavailableMessage {
+    font-size: 15px;
+    color: rgba(255, 255, 255, 0.6);
+    line-height: 1.6;
+    margin: 12px 0 24px 0;
+}
+
+.deviceReference {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.emptyState {
+    text-align: center;
+    padding: 80px 20px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+}
+
+.emptyState h3 {
+    font-size: 20px;
+    margin: 0 0 8px 0;
+}
+
+.emptyState p {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0;
+}
+
+/* Footer Đầy Đủ Thông Tin */
+.footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    background: #050505;
+    padding: 60px 40px 30px 40px;
+    margin-top: 80px;
+}
+
+.footerInner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 40px;
+    padding-bottom: 40px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.footerBrandBlock {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.footerBrandName {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+    color: #ffffff;
+    margin: 0;
+}
+
+.footerBrandDesc {
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0 0 12px 0;
+}
+
+.footerUnitBadge {
+    display: inline-block;
+    align-self: flex-start;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 6px 12px;
+    border-radius: 6px;
+}
+
+.footerCol {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.footerCol h4 {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: #ffffff;
+    margin: 0 0 8px 0;
+}
+
+.footerCol p {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0;
+    line-height: 1.6;
+}
+
+.footerBottom {
+    max-width: 1400px;
+    margin: 24px auto 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: rgba(255, 255, 255, 0.3);
+}
+
+@media (max-width: 900px) {
+    .footerInner {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+/* =========================================================
+   INTERACTIVE 3-VIDEO CAROUSEL BANNER
+========================================================= */
+.carouselContainer {
+    position: relative;
+    width: 100vw;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+    height: 480px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    margin-top: 30px;
+    margin-bottom: 40px;
+    background-color: #000000;
+    padding: 20px 0;
+}
+
+.carouselTrack {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    width: 100%;
+    height: 100%;
+    perspective: 1000px;
+}
+
+/* Khung chung cho mỗi item video */
+.carouselItem {
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.carouselVideo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* Video ĐƯỢC CHỌN (Nằm trung tâm, to rõ nét) */
+.activeItem {
+    width: 55vw;
+    height: 400px;
+    z-index: 3;
+    transform: scale(1);
+    filter: brightness(1) contrast(1.05);
+    border-color: rgba(212, 175, 55, 0.5); /* Viền ánh vàng cao cấp */
+}
+
+/* Video KHÔNG CHỌN (2 bên rìa, thu nhỏ, mờ nhẹ nhưng vẫn chạy) */
+.inactiveItem {
+    width: 20vw;
+    height: 300px;
+    z-index: 1;
+    transform: scale(0.88);
+    filter: blur(2px) opacity(0.45) grayscale(30%);
+}
+
+.inactiveItem:hover {
+    filter: blur(0px) opacity(0.75);
+    transform: scale(0.92);
+}
+
+/* Layer mờ đen lót trên video */
+.carouselOverlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    transition: background 0.5s ease;
+}
+
+.inactiveItem .carouselOverlay {
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.activeItem .carouselOverlay {
+    background: linear-gradient(180deg, transparent 60%, rgba(0,0,0,0.7) 100%);
+}
+
+/* Nhãn chữ tên dòng nước hoa trên video active */
+.carouselCaption {
+    position: absolute;
+    bottom: 25px;
+    left: 30px;
+    z-index: 4;
+    color: #ffffff;
+    pointer-events: none;
+}
+
+.captionSubtitle {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+.captionTitle {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    margin: 0;
+    color: #f5f5f5;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+    text-transform: uppercase;
+}
+
+/* Chấm tròn điều hướng bên dưới */
+.carouselDots {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    z-index: 5;
+}
+
+.dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.3);
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.activeDot {
+    background-color: #d4af37;
+    width: 28px;
+    border-radius: 6px;
+}
+.carouselItem {
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    /* Hiệu ứng chuyển động mượt mà khi đổi vị trí */
+    transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.activeItem {
+    width: 55vw;
+    height: 400px;
+    z-index: 3;
+    transform: scale(1);
+    filter: brightness(1) contrast(1.05);
+    border-color: rgba(212, 175, 55, 0.5);
+}
+
+.inactiveItem {
+    width: 20vw;
+    height: 300px;
+    z-index: 1;
+    transform: scale(0.88);
+    filter: blur(2px) opacity(0.45) grayscale(30%);
+}
+
+.inactiveItem:hover {
+    filter: blur(0px) opacity(0.75);
+    transform: scale(0.92);
+}
+/* --- GIAO DIỆN QR PAYMENT CAO CẤP (DARK LUXURY) --- */
+.flowCard {
+    background: rgba(15, 15, 15, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 24px;
+    padding: 42px 36px;
+    text-align: center;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+.flowEyebrow {
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    color: rgba(255, 255, 255, 0.4);
+    margin: 0 0 10px 0;
+    font-weight: 700;
+}
+
+.flowTitle {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin: 0 0 8px 0;
+    color: #ffffff;
+}
+
+.flowProduct {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0 0 30px 0;
+    letter-spacing: 0.05em;
+}
+
+.productDot {
+    color: #d4af37;
+    margin: 0 6px;
+}
+
+.productPriceText {
+    color: #ffffff;
+    font-weight: 700;
+}
+
+/* Khung bọc QR có viền ánh kim nhẹ */
+.qrBoxWrapper {
+    display: inline-block;
+    padding: 14px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(212, 175, 55, 0.15));
+    border-radius: 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6);
+}
+
+.qrBox {
+    background: #ffffff;
+    padding: 16px;
+    border-radius: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Hộp đếm ngược thời gian */
+.countdownBox {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 14px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+.countdownLabel {
+    display: block;
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    color: rgba(255, 255, 255, 0.4);
+    margin-bottom: 4px;
+}
+
+.countdownValue {
+    font-size: 22px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.1em;
+    color: #d4af37; /* Màu vàng kim sang trọng cho đồng hồ */
+}
+
+.countdownUrgent {
+    color: #ef4444;
+}
+
+.flowHint {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.45);
+    line-height: 1.5;
+    margin: 0 0 28px 0;
+    letter-spacing: 0.02em;
+}
+
+/* Nhóm các nút bấm mô phỏng */
+.flowActions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.primaryDemoButton {
+    background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
+    color: #000000;
+    border: none;
+    padding: 16px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
+}
+
+.primaryDemoButton:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 255, 255, 0.35);
+}
+
+.demoButtonGroup {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.subDemoButton {
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 14px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.subDemoButton:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.secondaryButton {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 14px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.secondaryButton:hover {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.3);
+}
+/* --- THẺ THÔNG TIN SẢN PHẨM TRÊN QR (LUXURY BADGE) --- */
+.paymentProductBadge {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 16px 20px;
+    margin: 16px 0 24px 0;
+    text-align: left;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.paymentBrandName {
+    display: block;
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    font-weight: 700;
+}
+
+.paymentProductName {
+    font-size: 16px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 0.05em;
+    margin: 0 0 12px 0;
+    text-transform: uppercase;
+}
+
+.paymentPriceDivider {
+    width: 100%;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+    margin-bottom: 10px;
+}
+
+.paymentPriceRow5 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.paymentPriceLabel {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: rgba(255, 255, 255, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.dotGold {
+    width: 5px;
+    height: 5px;
+    background-color: #d4af37;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #d4af37;
+}
+
+.paymentPriceValue {
+    font-size: 16px;
+    font-weight: 800;
+    color: #d4af37; /* Màu vàng kim sang trọng cho giá tiền */
+    letter-spacing: 0.05em;
+}
+/* --- GIAO DIỆN HƯỚNG DẪN SAU THANH TOÁN (DARK LUXURY GUIDANCE) --- */
+
+/* Huy hiệu xác nhận phát sáng */
+.successBadgeGlow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(16, 185, 129, 0.12);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    padding: 8px 18px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.25em;
+    margin-bottom: 20px;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+    text-transform: uppercase;
+}
+
+.successDotPulse {
+    width: 6px;
+    height: 6px;
+    background-color: #34d399;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #34d399;
+    animation: successPulse 1.5s infinite ease-in-out;
+}
+
+@keyframes successPulse {
+    0% { transform: scale(0.9); opacity: 0.7; }
+    50% { transform: scale(1.4); opacity: 1; box-shadow: 0 0 15px #34d399; }
+    100% { transform: scale(0.9); opacity: 0.7; }
+}
+
+/* Thẻ tên nước hoa */
+.guidanceProductTag {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 12px 20px;
+    margin-bottom: 24px;
+    display: inline-block;
+}
+
+.guidanceSubLabel {
+    display: block;
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    color: rgba(255, 255, 255, 0.4);
+    margin-bottom: 2px;
+}
+
+.guidanceProductName {
+    font-size: 15px;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+    letter-spacing: 0.05em;
+}
+
+/* Khung cảm biến mô phỏng vòi phun */
+.nozzleGuideBox {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(212, 175, 55, 0.02) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 32px 24px;
+    border-radius: 20px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.5);
+}
+
+/* Vòng tròn cảm biến xoay tròn */
+.nozzleSensorRing {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 20px auto;
+    border: 2px dashed rgba(212, 175, 55, 0.4);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: sensorSpin 10s linear infinite;
+}
+
+.sensorCore {
+    width: 24px;
+    height: 24px;
+    background: radial-gradient(circle, #d4af37 0%, rgba(212, 175, 55, 0.2) 100%);
+    border-radius: 50%;
+    box-shadow: 0 0 15px #d4af37;
+}
+
+@keyframes sensorSpin {
+    to { transform: rotate(360deg); }
+}
+
+.guidanceText {
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 0 0 8px 0;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.guidanceText strong {
+    color: #d4af37;
+    font-weight: 700;
+}
+
+.guidanceSub {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.45);
+    margin: 0;
+    letter-spacing: 0.02em;
+}
+
+/* Thanh trạng thái tiến trình nhỏ */
+.dispensingSequenceRow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.miniSpinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #d4af37;
+    border-radius: 50%;
+    animation: miniSpin 0.8s linear infinite;
+}
+
+@keyframes miniSpin {
+    to { transform: rotate(360deg); }
+}
+
+.flowHintInline {
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    margin: 0;
+}
+/* --- NÂNG CẤP GIAO DIỆN DISPENSING SCENT (ULTRA LUXURY) --- */
+
+.dispensingVisualWrapper {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    margin: 0 auto 24px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Vòng sóng lan tỏa ngoài */
+.pulseRingOuter {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    border-radius: 50%;
+    animation: luxuryPulseOuter 2.2s infinite cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Vòng sóng lan tỏa trong */
+.pulseRingInner {
+    position: absolute;
+    width: 70%;
+    height: 70%;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    animation: luxuryPulseInner 2.2s infinite cubic-bezier(0.16, 1, 0.3, 1) 0.5s;
+}
+
+/* Tâm điểm sáng vàng kim lấp lánh */
+.dispensingCoreIcon {
+    width: 42px;
+    height: 42px;
+    background: radial-gradient(circle, #f3e5ab 0%, #d4af37 50%, rgba(212, 175, 55, 0.2) 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #000000;
+    font-size: 16px;
+    font-weight: bold;
+    box-shadow: 0 0 30px #d4af37, 0 0 60px rgba(212, 175, 55, 0.4);
+    animation: coreGlow 1.8s infinite alternate ease-in-out;
+}
+
+@keyframes luxuryPulseOuter {
+    0% { transform: scale(0.7); opacity: 1; }
+    100% { transform: scale(1.5); opacity: 0; }
+}
+
+@keyframes luxuryPulseInner {
+    0% { transform: scale(0.6); opacity: 0.8; }
+    100% { transform: scale(1.3); opacity: 0; }
+}
+
+@keyframes coreGlow {
+    0% { transform: scale(0.92); box-shadow: 0 0 15px #d4af37; }
+    100% { transform: scale(1.06); box-shadow: 0 0 35px #d4af37, 0 0 60px rgba(212, 175, 55, 0.6); }
+}
+
+/* Thẻ sản phẩm nâng cấp với đường viền tinh xảo */
+.dispensingProductBadge {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+    border: 1px solid rgba(212, 175, 55, 0.25); /* Viền ánh kim nhẹ sang trọng */
+    border-radius: 16px;
+    padding: 18px 24px;
+    margin: 0 auto 24px auto;
+    max-width: 380px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.badgeSubText {
+    display: block;
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    color: rgba(212, 175, 55, 0.8); /* Chữ tiêu đề phụ màu vàng kim nhẹ */
+    margin-bottom: 6px;
+    font-weight: 700;
+}
+
+.badgeProductName {
+    font-size: 16px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 0.08em;
+    margin: 0 0 14px 0;
+    text-transform: uppercase;
+}
+
+/* Thanh tiến trình (Progress Bar) mô phỏng dòng chảy tinh chất */
+.dispensingProgressBar {
+    width: 100%;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.dispensingProgressFill {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, #d4af37, #ffffff, #d4af37);
+    border-radius: 999px;
+    animation: progressAnimation 2.5s infinite linear;
+}
+
+@keyframes progressAnimation {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+/* --- NÂNG CẤP GIAO DIỆN SUCCESS / EXPERIENCE COMPLETE (DARK LUXURY) --- */
+
+.successCompleteIconWrapper {
+    position: relative;
+    width: 76px;
+    height: 76px;
+    margin: 0 auto 24px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Quầng sáng lan tỏa xanh ngọc */
+.successPulseRing {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border: 1px solid rgba(52, 211, 153, 0.4);
+    border-radius: 50%;
+    animation: successRingPulse 2s infinite cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes successRingPulse {
+    0% { transform: scale(0.8); opacity: 1; }
+    100% { transform: scale(1.45); opacity: 0; }
+}
+
+.successCheckSymbol {
+    width: 52px;
+    height: 52px;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.05) 100%);
+    border: 1px solid rgba(52, 211, 153, 0.6);
+    color: #34d399;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: bold;
+    box-shadow: 0 0 25px rgba(52, 211, 153, 0.3);
+}
+
+/* Thẻ tên sản phẩm hoàn tất */
+.completeProductBadge {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(212, 175, 55, 0.02) 100%);
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    border-radius: 16px;
+    padding: 16px 24px;
+    margin: 0 auto 20px auto;
+    max-width: 400px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.completeSubLabel {
+    display: block;
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    color: #34d399; /* Nhấn nhá màu xanh ngọc thành công */
+    margin-bottom: 4px;
+    font-weight: 700;
+}
+
+.completeProductName {
+    font-size: 16px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 0.08em;
+    margin: 0;
+    text-transform: uppercase;
+}
+
+.completeThankYouText {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.55);
+    line-height: 1.6;
+    margin: 0 0 32px 0;
+    letter-spacing: 0.02em;
+}
+
+/* Nút hoàn tất bấm về catalogue phong cách cao cấp */
+.completeFinishButton {
+    background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
+    color: #000000;
+    border: none;
+    padding: 16px 32px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.25em;
+    border-radius: 999px; /* Bo tròn capsule hoàn hảo */
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 6px 20px rgba(255, 255, 255, 0.25);
+    width: 100%;
+}
+
+.completeFinishButton:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(255, 255, 255, 0.4);
+    background: #d4af37; /* Đổi sang ánh vàng kim khi chạm vào cực kỳ sang trọng */
+    color: #000000;
+}
+
+.completeFinishButton:active {
+    transform: translateY(0);
+}
+/* --- BỘ CSS DÀNH RIÊNG CHO MÀN HÌNH FAILED & UNCERTAIN --- */
+
+/* Vùng chứa icon cảnh báo */
+.errorIconWrapper {
+    position: relative;
+    width: 76px;
+    height: 76px;
+    margin: 0 auto 24px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* --- TRẠNG THÁI FAILED (MÀU ĐỎ CẢNH BÁO) --- */
+.errorPulseRing {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    border-radius: 50%;
+    animation: alertRingPulse 2s infinite cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.errorSymbol {
+    width: 52px;
+    height: 52px;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0.05) 100%);
+    border: 1px solid rgba(239, 68, 68, 0.6);
+    color: #ef4444;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: bold;
+    box-shadow: 0 0 25px rgba(239, 68, 68, 0.3);
+}
+
+/* --- TRẠNG THÁI UNCERTAIN (MÀU VÀNG HỔ PHÁCH ĐỐI SOÁT) --- */
+.uncertainPulseRing {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    border-radius: 50%;
+    animation: alertRingPulse 2s infinite cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.uncertainSymbol {
+    width: 52px;
+    height: 52px;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.05) 100%);
+    border: 1px solid rgba(245, 158, 11, 0.6);
+    color: #f59e0b;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: bold;
+    box-shadow: 0 0 25px rgba(245, 158, 11, 0.3);
+}
+
+@keyframes alertRingPulse {
+    0% { transform: scale(0.8); opacity: 1; }
+    100% { transform: scale(1.45); opacity: 0; }
+}
+
+/* --- THẺ MÃ THAM CHIẾU ĐƠN HÀNG (ORDER REFERENCE BADGE) --- */
+.referenceBadge {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 14px 20px;
+    margin: 20px 0 32px 0;
+    display: inline-block;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.referenceLabel {
+    display: block;
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    color: rgba(255, 255, 255, 0.4);
+    margin-bottom: 4px;
+    font-weight: 700;
+}
+
+.referenceValue {
+    font-size: 14px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 0.1em;
+    font-family: monospace;
+}
+
+/* --- NÚT BẤM QUAY LẠI CAPSULE SANG TRỌNG --- */
+.errorActionButton {
+    background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
+    color: #000000;
+    border: none;
+    padding: 18px 36px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.25em;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    width: 100%;
+}
+
+.errorActionButton:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(135deg, #d4af37 0%, #f3e5ab 100%);
+    color: #000000;
+    box-shadow: 0 12px 35px rgba(212, 175, 55, 0.35);
+}
+
+.errorActionButton:active {
+    transform: translateY(0);
+}
