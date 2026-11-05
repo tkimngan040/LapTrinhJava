@@ -58,6 +58,14 @@
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
 
+        <!-- Health check. SecurityConfig lets /actuator/health through
+             unauthenticated, and docker-compose and the team's own smoke test
+             both call it, so the endpoint has to exist. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
         <!-- Security -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
