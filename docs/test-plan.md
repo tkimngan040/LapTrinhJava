@@ -122,6 +122,24 @@ Run backend unit tests from `backend/`:
 mvn test
 ```
 
+Run integration tests from `backend/`:
+
+```shell
+mvn verify
+```
+
+The two phases are separated by the file name rather than by a tag: Surefire
+runs `*Test.java` on `mvn test`, Failsafe runs `*IT.java` on `mvn verify`.
+Name an integration case `SomethingIT.java`, so that `mvn test` stays runnable
+by every member on every change, including on a machine with no Docker.
+
+What the build provides: `spring-boot-starter-test` brings JUnit 5, Mockito
+and AssertJ; `spring-security-test` brings the authentication helpers that
+IT-07 and IT-08 need; `spring-boot-testcontainers` with the Testcontainers
+PostgreSQL module brings the database for the cases that need the real
+indexes, the real migrations and the real tenant filter. The simulator
+declares JUnit 5 of its own, having no Spring parent to inherit it from.
+
 Integration tests that use Testcontainers additionally require Docker to be
 available. Tests that launch the simulator require a reachable Mosquitto
 broker; do not start a production payment provider or physical device.
