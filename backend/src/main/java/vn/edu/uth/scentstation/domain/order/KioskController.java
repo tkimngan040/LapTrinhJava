@@ -17,6 +17,7 @@ import vn.edu.uth.scentstation.domain.catalog.MachineSlot;
 import vn.edu.uth.scentstation.domain.catalog.MachineSlotRepository;
 import vn.edu.uth.scentstation.common.ApiException;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -44,7 +45,8 @@ public class KioskController {
     }
 
     public record SlotView(int slotNumber, Long productId, String productName,
-                           String notes, String imageUrl, long price, boolean available) {
+                           String notes, String imageUrl, BigDecimal price,
+                           boolean available) {
     }
 
     public record MenuView(String deviceId, String status, List<SlotView> slots) {
@@ -55,7 +57,7 @@ public class KioskController {
             @Min(1) int slotNumber) {
     }
 
-    public record OrderView(Long orderId, String status, long price, String currency,
+    public record OrderView(Long orderId, String status, BigDecimal price, String currency,
                             String qrContent, String expiresAt, String failureReason) {
     }
 
@@ -68,7 +70,7 @@ public class KioskController {
      */
     @GetMapping("/machines/{deviceId}/menu")
     public MenuView menu(@PathVariable String deviceId) {
-        Machine machine = machineRepository.findByDeviceId(deviceId)
+        Machine machine = machineRepository.findByDeviceIdentity(deviceId)
                 .orElseThrow(() -> ApiException.notFound("MACHINE_NOT_FOUND",
                         "No machine with device id " + deviceId));
 
@@ -77,7 +79,9 @@ public class KioskController {
             if (slot.getProduct() == null) {
                 continue;
             }
-            boolean sellable = machine.acceptsOrders() && slot.isAvailable();
+            boolean sellable = machine.acceptsOrders()
+                    && slot.isSellable()
+                    && slot.getProduct().isSellable();
             slots.add(new SlotView(
                     slot.getSlotNumber(),
                     slot.getProduct().getId(),
@@ -88,8 +92,8 @@ public class KioskController {
                     sellable));
         }
 
-        return new MenuView(machine.getDeviceId(),
-                machine.getConnectivityStatus().name(), slots);
+        return new MenuView(machine.getDeviceIdentity(),
+                machine.getConnectionStatus().name(), slots);
     }
 
     @PostMapping("/orders")

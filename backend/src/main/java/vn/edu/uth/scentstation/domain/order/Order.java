@@ -5,6 +5,7 @@
  */
 package vn.edu.uth.scentstation.domain.order;
 
+import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import org.hibernate.annotations.Filter;
 import jakarta.persistence.Entity;
@@ -14,13 +15,14 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import java.time.Instant;
 import vn.edu.uth.scentstation.domain.brand.Brand;
 import vn.edu.uth.scentstation.domain.catalog.Machine;
 import vn.edu.uth.scentstation.domain.catalog.MachineSlot;
 import vn.edu.uth.scentstation.domain.catalog.Product;
 
-import vn.edu.uth.scentstation.common.BaseEntity;
+import vn.edu.uth.scentstation.common.TimestampedEntity;
 
 /**
  * One customer purchase, from selection to spray.
@@ -31,9 +33,10 @@ import vn.edu.uth.scentstation.common.BaseEntity;
  */
 @Entity
 @Table(name = "orders")
+@AttributeOverride(name = "id", column = @Column(name = "order_id"))
 // Narrowed to the signed-in user's brand by TenantFilterAspect (BR13).
 @Filter(name = "brandFilter", condition = "brand_id = :brandId")
-public class Order extends BaseEntity {
+public class Order extends TimestampedEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "brand_id", nullable = false)
@@ -57,8 +60,8 @@ public class Order extends BaseEntity {
 
     // BR4: the price as it stood when the order was created. A later price
     // change on the product never reaches an order that already exists.
-    @Column(name = "price_snapshot", nullable = false)
-    private long priceSnapshot;
+    @Column(name = "price_snapshot", nullable = false, precision = 12, scale = 2)
+    private BigDecimal priceSnapshot;
 
     @Column(nullable = false, length = 3)
     private String currency;
@@ -116,11 +119,11 @@ public class Order extends BaseEntity {
         this.status = status;
     }
 
-    public long getPriceSnapshot() {
+    public BigDecimal getPriceSnapshot() {
         return priceSnapshot;
     }
 
-    public void setPriceSnapshot(long priceSnapshot) {
+    public void setPriceSnapshot(BigDecimal priceSnapshot) {
         this.priceSnapshot = priceSnapshot;
     }
 

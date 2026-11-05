@@ -14,6 +14,8 @@ import vn.edu.uth.scentstation.common.ApiException;
 import vn.edu.uth.scentstation.config.ScentStationProperties;
 import vn.edu.uth.scentstation.iot.CommandSigner;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -50,7 +52,7 @@ public class PaymentWebhookController {
             @NotBlank String provider,
             @NotBlank String providerReference,
             @NotBlank String paymentRef,
-            @Positive long amount,
+            @Positive BigDecimal amount,
             @NotBlank String currency,
             @NotBlank String status,
             @NotBlank String signature) {
@@ -91,10 +93,28 @@ public class PaymentWebhookController {
         fields.put("provider", request.provider());
         fields.put("providerReference", request.providerReference());
         fields.put("paymentRef", request.paymentRef());
-        fields.put("amount", request.amount());
+        fields.put("amount", money(request.amount()));
         fields.put("currency", request.currency());
         fields.put("status", request.status());
         fields.put("signature", request.signature());
         return fields;
+    }
+
+    /**
+     * The one textual form of an amount that is ever signed.
+     *
+     * <p>An HMAC is computed over bytes, so the two sides have to agree on the
+     * exact characters. A {@code BigDecimal} does not give that on its own:
+     * 35000, 35000.00 and 3.5E+4 are the same amount and three different
+     * strings, and which one arrives depends on how the provider wrote its
+     * JSON. Fixing the scale and refusing exponent notation makes the signed
+     * string a function of the value alone.
+     *
+     * <p>It is also why the amount goes into the signed payload as a string:
+     * {@code CanonicalJson} accepts only the types a device payload uses, and
+     * a decimal is not one of them.
+     */
+    static String money(BigDecimal amount) {
+        return amount.setScale(2, RoundingMode.HALF_UP).toPlainString();
     }
 }

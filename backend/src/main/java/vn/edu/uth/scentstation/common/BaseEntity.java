@@ -1,16 +1,28 @@
 package vn.edu.uth.scentstation.common;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 
-import java.time.Instant;
-
-/** Identifier and audit timestamps shared by every persisted entity. */
+/**
+ * The surrogate identifier every persisted entity has.
+ *
+ * <p>The ERD in Report figure 2.6 names each table's primary key after its
+ * entity: {@code brand_id}, {@code machine_id}, {@code slot_id} and so on. The
+ * Java attribute is called {@code id} in all of them, and each entity renames
+ * the column with
+ * {@code @AttributeOverride(name = "id", column = @Column(name = "..."))}.
+ *
+ * <p>That split is deliberate. The database keeps the naming the report
+ * documents, while the code keeps one {@code getId()} that works on any entity,
+ * so a generic repository or a log statement does not need to know which table
+ * it is looking at.
+ *
+ * <p>No audit timestamps live here. Only some tables carry {@code created_at}
+ * in the ERD; those extend {@link TimestampedEntity} instead. A table that the
+ * diagram gives no timestamp does not get one silently.
+ */
 @MappedSuperclass
 public abstract class BaseEntity {
 
@@ -18,37 +30,11 @@ public abstract class BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private Instant updatedAt;
-
-    @PrePersist
-    void onCreate() {
-        Instant now = Instant.now();
-        this.createdAt = now;
-        this.updatedAt = now;
-    }
-
-    @PreUpdate
-    void onUpdate() {
-        this.updatedAt = Instant.now();
-    }
-
     public Long getId() {
         return id;
     }
 
     public void setId(Long id) {
         this.id = id;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
     }
 }

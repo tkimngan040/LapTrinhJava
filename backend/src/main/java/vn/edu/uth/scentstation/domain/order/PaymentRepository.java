@@ -5,9 +5,12 @@
  */
 package vn.edu.uth.scentstation.domain.order;
 
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     boolean existsByProviderAndProviderReference(String provider, String providerReference);
+
+    Optional<Payment> findFirstByOrderIdAndStatus(Long orderId, PaymentStatus status);
 }

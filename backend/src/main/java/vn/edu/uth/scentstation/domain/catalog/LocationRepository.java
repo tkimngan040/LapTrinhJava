@@ -1,11 +1,13 @@
 /*
- * Entity and repository files belong to Tra My (tasks M1, M2).
- * Written here so the security, ordering and dispensing code can run;
- * check the columns against Report section 2.7.2 before merging.
+ * Task M1 — repository for group B of Report section 2.7.2.
  */
 package vn.edu.uth.scentstation.domain.catalog;
+
+import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface LocationRepository extends JpaRepository<Location, Long> {
+
+    List<Location> findByBrandIdOrderByNameAsc(Long brandId);
 }

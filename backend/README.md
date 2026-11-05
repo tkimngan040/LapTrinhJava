@@ -32,10 +32,30 @@ after that everyone can use `./mvnw` and get the same Maven version.
 | L2 | Authentication and authorisation | `security/` — `JwtService`, `JwtAuthenticationFilter`, `SecurityConfig`, `TenantContext`, `TenantFilterAspect` |
 | L3 | Order state machine, ordering, payment | `domain/order/` — `OrderStatus`, `OrderStateMachine`, `OrderService`, `PaymentService`, `KioskController`, `PaymentWebhookController`, `FakePaymentProvider` |
 | L5 | MQTT gateway and dispensing | `iot/` and `domain/dispensing/` — `Topics`, `CanonicalJson`, `CommandSigner`, `MqttDeviceGateway`, `DeviceMessageHandler`, `DispenseService`, `DeviceWatchdog` |
+| L7 | Review of UNCERTAIN and FAILED orders, refunds, audit trail | `domain/order/` — `ReviewService`, `ReviewController`, `PaymentRefund`, `RefundGateway`, `FakeRefundGateway`; `domain/audit/` — `AuditService`, `AuditLog`; `db/migration/V3__refunds_and_audit.sql` |
+| M1 | Core schema, entities, repositories | `db/migration/V1__core.sql` and the eight entities of groups A and B of Report section 2.7.2, with their repositories |
 
-Written so the above can run, but owned by other tasks: the migrations and the
-entity and repository classes (M1, M2 — Tra My) and `InventoryService`
-(A4 — Hoai Anh). Each carries a note saying so.
+Written so the above can run, but owned by other tasks and marked as drafts in
+the files themselves: `V2__transaction.sql` (M2 — Tra My) and
+`InventoryService` (A4 — Hoai Anh).
+
+### Conventions the schema follows
+
+Worth knowing before writing a new entity, because `ddl-auto: validate`
+refuses to start the application over any of them:
+
+- **a table's primary key is named after its entity** — `brand_id`,
+  `machine_id`, `slot_id` — as the ERD shows it. The Java attribute stays
+  `id`, inherited from `BaseEntity`, and each entity renames the column with
+  `@AttributeOverride(name = "id", column = @Column(name = "..."))`;
+- **there is no `updated_at` column anywhere.** A table that the ERD gives a
+  `created_at` extends `TimestampedEntity`; one that it does not extends
+  `BaseEntity` and has no timestamp. Who changed what is in `AUDIT_LOGS`;
+- **money and quantities are `NUMERIC` and `BigDecimal`,** never `double` and
+  never an integer count of dong. Compare two amounts with `compareTo`, not
+  `equals`, which also compares the scale;
+- **every enumeration has a CHECK constraint** listing exactly the constants
+  of its Java enum, so a value Hibernate could not map never reaches a row.
 
 ## File ownership inside this project
 
@@ -54,7 +74,7 @@ In every business package, **Tra My** owns the `*Entity.java` and
 | `domain/inventory/` | Hoai Anh | A3, A4 |
 | `domain/report/` | Hoai Anh | A5 |
 | `domain/alert/`, `domain/maintenance/`, `domain/audit/` | Hoai Anh | A7, A8 (stretch) |
-| `src/main/resources/db/migration/` | Tra My | M1, M2, M4 |
+| `src/main/resources/db/migration/` | Tra My | M1, M2, M4 (V3 is taken by L7; M4 uses V4) |
 | `src/test/` | Kim Ngan | N3, N4 |
 
 ## Three rules that must not be broken
@@ -108,16 +128,49 @@ Everything lives under `scentstation` in `application.yml`.
 | `mqtt.command-secret` | a development value | **Must match the simulator's `--secret`**, or every command is refused on its signature |
 | `mqtt.heartbeat-timeout-seconds` | 45 | After this a machine is marked OFFLINE (FR5.2) |
 
-## Checking the database constraints
+## Checking the database
 
-`src/test/resources/constraint-check.sql` proves the four partial unique
-indexes of Report section 2.7.4 refuse what they are meant to refuse, and
-still allow the legitimate cases: reusing a slot after the bottle is removed,
-and issuing a new command once the previous one has finished.
+Four checks, none of which needs the application to be running. All four
+produce output worth a screenshot for Report section 3.6.
+
+**The partial unique indexes.** `src/test/resources/constraint-check.sql`
+proves the four indexes of Report section 2.7.4 refuse what they are meant to
+refuse, and still allow the legitimate cases: reusing a slot after the bottle
+is removed, and issuing a new command once the previous one has finished.
 
 ```bash
 psql -h localhost -U scent -d scentstation -f src/test/resources/constraint-check.sql
 ```
 
-Every marked block must print `BLOCKED`. The output is worth a screenshot for
-Report section 3.6.
+**The core schema and its seed.** `src/test/resources/m1-schema-check.sql`
+checks what task M1 promised: the seven roles and the administrator account
+are there with a real BCrypt hash, `uq_slot_number_per_machine` refuses a
+repeated slot number on one machine and allows the same number on another,
+and the CHECK constraints refuse an unknown status and a negative price.
+
+```bash
+psql -h localhost -U scent -d scentstation -f src/test/resources/m1-schema-check.sql
+```
+
+**Refunds and the audit trail.** `src/test/resources/l7-schema-check.sql`
+checks V3: a refund reference cannot be recorded twice, so a retried request
+cannot refund twice, one refund may move PENDING → FAILED → COMPLETED on the
+same row, a zero amount and an unknown status are refused, and an audit line
+keeps its before and after JSON.
+
+```bash
+psql -h localhost -U scent -d scentstation -f src/test/resources/l7-schema-check.sql
+```
+
+Every line marked `EXPECT` must read as its label says, and every block marked
+`EXPECT BLOCKED` must print `BLOCKED`. The script runs inside a transaction it
+rolls back, so it writes nothing.
+
+**The entities against the tables.** `tools/check_schema_mapping.py` compares
+every mapped column, type, nullability and enum with the live database and
+reports all the disagreements at once, instead of the one column a failed
+Hibernate start-up would name.
+
+```bash
+python3 -I ../tools/check_schema_mapping.py scentstation
+```
