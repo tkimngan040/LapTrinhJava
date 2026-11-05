@@ -5,6 +5,7 @@
  */
 package vn.edu.uth.scentstation.domain.inventory;
 
+import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -15,14 +16,15 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import vn.edu.uth.scentstation.domain.catalog.MachineSlot;
 
-import vn.edu.uth.scentstation.common.BaseEntity;
+import vn.edu.uth.scentstation.common.TimestampedEntity;
 
 /**
  * Every change to a bottle quantity, so the history is complete (FR6.13).
  */
 @Entity
 @Table(name = "inventory_movements")
-public class InventoryMovement extends BaseEntity {
+@AttributeOverride(name = "id", column = @Column(name = "movement_id"))
+public class InventoryMovement extends TimestampedEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "bottle_id", nullable = false)

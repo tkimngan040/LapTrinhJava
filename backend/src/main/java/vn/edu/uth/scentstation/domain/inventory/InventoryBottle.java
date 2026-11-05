@@ -5,6 +5,7 @@
  */
 package vn.edu.uth.scentstation.domain.inventory;
 
+import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -17,14 +18,15 @@ import java.time.Instant;
 import vn.edu.uth.scentstation.domain.catalog.MachineSlot;
 import vn.edu.uth.scentstation.domain.catalog.Product;
 
-import vn.edu.uth.scentstation.common.BaseEntity;
+import vn.edu.uth.scentstation.common.TimestampedEntity;
 
 /**
  * A bottle or cartridge, and how much is left in it.
  */
 @Entity
 @Table(name = "inventory_bottles")
-public class InventoryBottle extends BaseEntity {
+@AttributeOverride(name = "id", column = @Column(name = "bottle_id"))
+public class InventoryBottle extends TimestampedEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "product_id", nullable = false)

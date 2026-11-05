@@ -16,7 +16,7 @@ java -jar target/simulator.jar --device=KIOSK-001
 
 | Flag | Default | Meaning |
 |---|---|---|
-| `--device` | `KIOSK-001` | Must match a machine's `device_id` in the database |
+| `--device` | `KIOSK-001` | Must match a machine's `device_identity` in the database |
 | `--broker` | `tcp://localhost:1883` | Mosquitto |
 | `--secret` | `dev-command-signing-secret` | **Must match the backend's `scentstation.mqtt.command-secret`** |
 | `--slots` | `4` | FR2.3 requires at least four |
@@ -74,14 +74,17 @@ projects and **the two copies must stay byte-identical** in their code. Edit
 one without the other and every signature fails; the symptom (every command
 refused) points nowhere near the cause.
 
-Checking they are still in step, from the repository root:
+Checking they are still in step, from the repository root. The filter drops
+the package declaration and every comment line, because the class Javadoc is
+allowed to differ — each copy says which project it was duplicated from — and
+a comment cannot change a signature:
 
 ```bash
 for f in Topics CanonicalJson CommandSigner; do
-  diff <(sed '/^package/d' backend/src/main/java/vn/edu/uth/scentstation/iot/$f.java) \
-       <(sed '/^package/d' simulator/src/main/java/vn/edu/uth/scentstation/simulator/$f.java) \
+  diff <(grep -vE '^[[:space:]]*(package |//|/\*|\*)' backend/src/main/java/vn/edu/uth/scentstation/iot/$f.java) \
+       <(grep -vE '^[[:space:]]*(package |//|/\*|\*)' simulator/src/main/java/vn/edu/uth/scentstation/simulator/$f.java) \
     && echo "$f: in step"
 done
 ```
 
-Only the package line and the class Javadoc may differ.
+Three lines of "in step" and no diff output is the result to expect.

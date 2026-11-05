@@ -1,173 +1,283 @@
-# -*- coding: utf-8 -*-
-"""Đối chiếu entity JPA với schema thật trong PostgreSQL.
+#!/usr/bin/env python3
+"""Compare the JPA entities against the schema the migrations actually built.
 
-Hibernate chạy với ddl-auto: validate, nên bất kỳ chỗ lệch nào cũng làm ứng
-dụng không khởi động được. Script này bắt lỗi đó trước khi chạy.
+The application runs with ``ddl-auto: validate``, so a single disagreement
+between an entity and its table stops Spring from starting, with a message
+that names one column and not the rest. This script reports all of them at
+once, against a live database, before anyone waits for a failed start-up.
 
-Chạy: python3 -I check_schema_mapping.py
+It is the check behind the "done when" of task M1: *the application starts
+with ddl-auto: validate and reports no schema drift*.
+
+What it compares, per entity:
+
+* the table exists;
+* every mapped column exists, including the primary key under whatever name
+  ``@AttributeOverride`` gave it and the foreign keys from ``@JoinColumn``;
+* the SQL type is one Hibernate would accept for the Java type;
+* a column the entity declares ``nullable = false`` is NOT NULL in the
+  database, so a missing value fails on insert rather than silently passing;
+* for an ``@Enumerated(EnumType.STRING)`` field, the enum's constants and the
+  column's CHECK constraint list exactly the same values.
+
+Usage:
+
+    python3 -I tools/check_schema_mapping.py [database] [--quiet]
+
+Defaults to the database ``scentstation`` on localhost:55432 as user
+``scent``; override with SCENT_PGHOST, SCENT_PGPORT and SCENT_PGUSER.
 """
+
+import os
 import re
 import subprocess
 import sys
 from pathlib import Path
 
-SRC = Path('/home/claude/work/scent/backend/src/main/java/vn/edu/uth/scentstation')
-PSQL = ['psql', '-h', '/tmp', '-p', '55432', '-U', 'scent', '-d', 'scentstation', '-tAF|', '-c']
+ROOT = Path(__file__).resolve().parent.parent
+SRC = ROOT / "backend/src/main/java/vn/edu/uth/scentstation"
 
-# Cột do BaseEntity khai báo, mọi entity đều có.
-INHERITED = {'id', 'created_at', 'updated_at'}
+DATABASE = "scentstation"
+QUIET = False
+for arg in sys.argv[1:]:
+    if arg == "--quiet":
+        QUIET = True
+    elif not arg.startswith("-"):
+        DATABASE = arg
+
+PSQL = [
+    "psql",
+    "-h", os.environ.get("SCENT_PGHOST", "localhost"),
+    "-p", os.environ.get("SCENT_PGPORT", "55432"),
+    "-U", os.environ.get("SCENT_PGUSER", "scent"),
+    "-d", DATABASE,
+    "-tAF|", "-v", "ON_ERROR_STOP=1", "-c",
+]
+
+# Which SQL types Hibernate will accept for which Java type. Hibernate compares
+# JDBC type codes, so several SQL spellings map to one Java type.
+TYPES = {
+    "String": {"character varying", "text", "character"},
+    "int": {"integer"},
+    "Integer": {"integer"},
+    "long": {"bigint"},
+    "Long": {"bigint"},
+    "short": {"smallint"},
+    "boolean": {"boolean"},
+    "Boolean": {"boolean"},
+    "BigDecimal": {"numeric"},
+    "Instant": {"timestamp with time zone"},
+    "LocalDate": {"date"},
+    "LocalDateTime": {"timestamp without time zone"},
+}
+
+# A @ManyToOne to another entity is a bigint foreign key.
+RELATION_TYPE = {"bigint"}
 
 
-def camel_to_snake(name):
-    return re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
+def query(sql):
+    result = subprocess.run(PSQL + [sql], capture_output=True, text=True)
+    if result.returncode != 0:
+        sys.exit(f"psql failed against database '{DATABASE}':\n{result.stderr.strip()}")
+    return [line.split("|") for line in result.stdout.strip().splitlines() if line]
 
 
 def db_columns():
-    out = subprocess.run(
-        PSQL + ["SELECT table_name, column_name, is_nullable FROM information_schema.columns "
-                "WHERE table_schema='public' ORDER BY table_name, ordinal_position;"],
-        capture_output=True, text=True, check=True).stdout
+    rows = query(
+        "SELECT table_name, column_name, data_type, is_nullable "
+        "FROM information_schema.columns WHERE table_schema = 'public' "
+        "ORDER BY table_name, ordinal_position;")
     tables = {}
-    for line in out.strip().splitlines():
-        table, column, nullable = line.split('|')
-        tables.setdefault(table, {})[column] = (nullable == 'YES')
+    for table, column, data_type, nullable in rows:
+        tables.setdefault(table, {})[column] = (data_type, nullable == "YES")
     return tables
 
 
-def db_enum_checks():
-    """Giá trị hợp lệ của mỗi cột enum, lấy từ ràng buộc CHECK."""
-    out = subprocess.run(
-        PSQL + ["SELECT rel.relname, pg_get_constraintdef(con.oid) "
-                "FROM pg_constraint con JOIN pg_class rel ON rel.oid = con.conrelid "
-                "JOIN pg_namespace ns ON ns.oid = rel.relnamespace "
-                "WHERE con.contype='c' AND ns.nspname='public';"],
-        capture_output=True, text=True, check=True).stdout
+def db_check_values():
+    """The values each CHECK constraint allows, per table."""
+    rows = query(
+        "SELECT rel.relname, pg_get_constraintdef(con.oid) FROM pg_constraint con "
+        "JOIN pg_class rel ON rel.oid = con.conrelid "
+        "JOIN pg_namespace ns ON ns.oid = rel.relnamespace "
+        "WHERE con.contype = 'c' AND ns.nspname = 'public';")
     checks = {}
-    for line in out.strip().splitlines():
-        table, definition = line.split('|', 1)
-        match = re.search(r'\(\(?(\w+)\)?::text = ANY \(\(?ARRAY\[(.+?)\]', definition)
-        if match:
-            column = match.group(1)
-            values = set(re.findall(r"'([^']+)'", match.group(2)))
-            checks[(table, column)] = values
+    for table, definition in rows:
+        # PostgreSQL renders the literals with a cast whose spelling depends on
+        # the column type: ARRAY['ACTIVE'::character varying, ...] for a
+        # VARCHAR column, ::text for a TEXT one.
+        values = set(re.findall(
+            r"'([A-Z][A-Z0-9_]*)'::(?:text|character varying|bpchar|character)", definition))
+        if values:
+            checks.setdefault(table, []).append(values)
     return checks
 
 
-def parse_entities():
-    """Mỗi entity: tên bảng, các cột, và tên enum của cột enum."""
-    entities = []
-    for path in SRC.rglob('*.java'):
-        text = path.read_text(encoding='utf-8')
-        if '@Entity' not in text:
+def enum_constants(name):
+    """The constants of one of our own enums, found by file name."""
+    for path in SRC.rglob(f"{name}.java"):
+        # Comments go first. A Javadoc block holds braces of its own, in
+        # {@link ...}, and prose such as "(BR9)" reads exactly like a constant,
+        # so splitting before stripping finds words that are not there.
+        text = strip_comments(path.read_text(encoding="utf-8"))
+        declaration = re.search(r"\benum\s+" + name + r"\b[^{]*\{", text)
+        if not declaration:
             continue
-        table = re.search(r'@Table\(name = "(\w+)"\)', text)
-        if not table:
-            print(f'  ! {path.name}: @Entity nhưng không có @Table')
-            continue
-
-        columns = []
-        # @Column(name = "x") hoặc @Column(...) rồi tới tên trường
-        for match in re.finditer(
-                r'@(Column|JoinColumn)\(([^)]*)\)\s*(?:@\w+(?:\([^)]*\))?\s*)*'
-                r'private\s+([\w<>, .]+?)\s+(\w+)\s*(?:=[^;]+)?;', text):
-            anno, attrs, java_type, field = match.groups()
-            named = re.search(r'name\s*=\s*"(\w+)"', attrs)
-            column = named.group(1) if named else camel_to_snake(field)
-            nullable_false = 'nullable = false' in attrs
-            optional_false = False
-            enum_type = None
-            # Trường ngay trên có @Enumerated không?
-            window = text[max(0, match.start() - 260):match.start()]
-            if '@Enumerated' in window.split('@Column')[0] or '@Enumerated' in window:
-                enum_type = java_type.strip()
-            columns.append((column, field, nullable_false or optional_false, enum_type))
-
-        entities.append((path, table.group(1), columns))
-    return entities
+        body = text[declaration.end():]
+        body = re.split(r"[;}]", body)[0]
+        found = re.findall(r"\b([A-Z][A-Z0-9_]+)\b", body)
+        if found:
+            return set(found)
+    return None
 
 
 def strip_comments(text):
-    """Bỏ /* ... */ và // ... — nếu không, mã quy tắc như BR14 trong chú thích
-    sẽ bị nhặt nhầm thành hằng số enum."""
-    text = re.sub(r'/\*.*?\*/', '', text, flags=re.DOTALL)
-    return re.sub(r'//[^\n]*', '', text)
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+    return re.sub(r"//[^\n]*", "", text)
 
 
-def enum_values(enum_name):
-    for path in SRC.rglob(f'{enum_name}.java'):
-        text = strip_comments(path.read_text(encoding='utf-8'))
-        if not re.search(r'\benum\s+' + re.escape(enum_name) + r'\b', text):
+def camel_to_snake(name):
+    return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
+
+
+def parse_entity(path):
+    """Everything this file says about how it maps onto a table."""
+    raw = path.read_text(encoding="utf-8")
+    text = strip_comments(raw)
+    if "@Entity" not in text:
+        return None
+
+    table = re.search(r'@Table\(name\s*=\s*"([a-z_]+)"\)', text)
+    if not table:
+        return None
+
+    entity = {
+        "file": path.relative_to(ROOT),
+        "name": path.stem,
+        "table": table.group(1),
+        "columns": [],      # (column, java_type, nullable_allowed, enum_name)
+    }
+
+    # The primary key, renamed per entity by @AttributeOverride.
+    override = re.search(
+        r'@AttributeOverride\(\s*name\s*=\s*"id"\s*,\s*column\s*=\s*@Column\(name\s*=\s*"([a-z_]+)"\)',
+        text)
+    entity["columns"].append((override.group(1) if override else "id", "Long", False, None))
+
+    # created_at comes from TimestampedEntity; BaseEntity carries no timestamp.
+    if re.search(r"extends\s+TimestampedEntity\b", text):
+        entity["columns"].append(("created_at", "Instant", False, None))
+
+    # Field declarations, each with the annotations written above it.
+    body = text.split("{", 1)[1]
+    for match in re.finditer(
+            r"((?:@[A-Za-z]+(?:\([^()]*(?:\([^()]*\)[^()]*)*\))?\s*)*)"
+            r"private\s+(?:final\s+)?([A-Za-z0-9_<>, .]+?)\s+([A-Za-z0-9_]+)\s*(?:=|;)",
+            body):
+        annotations, java_type, field = match.group(1), match.group(2).strip(), match.group(3)
+
+        if "@Transient" in annotations:
             continue
-        body = text.split('{', 1)[1] if '{' in text else ''
-        body = body.split(';')[0]
-        values = re.findall(r'\b([A-Z][A-Z0-9_]{2,})\b', body)
-        if values:
-            return set(values)
-    return None
+        # A @ManyToMany lives in its own join table, not in a column here.
+        if "@ManyToMany" in annotations or "@OneToMany" in annotations:
+            continue
+        if "@" not in annotations:
+            continue  # not a mapped field
+
+        named = re.search(r'@(?:Join)?Column\(\s*(?:[^()]*?,\s*)?name\s*=\s*"([a-z_]+)"', annotations)
+        column = named.group(1) if named else camel_to_snake(field)
+
+        nullable_allowed = "nullable = false" not in annotations
+        if "@JoinColumn" in annotations and "optional = false" in annotations:
+            nullable_allowed = False
+
+        enum_name = None
+        if "@Enumerated" in annotations:
+            enum_name = java_type
+            java_type = "String"
+        elif java_type not in TYPES:
+            java_type = "_relation_"   # @ManyToOne to another entity
+
+        entity["columns"].append((column, java_type, nullable_allowed, enum_name))
+
+    return entity
 
 
 def main():
     tables = db_columns()
-    checks = db_enum_checks()
+    checks = db_check_values()
+
+    entities = []
+    for path in sorted(SRC.rglob("*.java")):
+        parsed = parse_entity(path)
+        if parsed:
+            entities.append(parsed)
+
     problems = []
     checked_columns = 0
 
-    for path, table, columns in parse_entities():
+    for entity in entities:
+        table = entity["table"]
         if table not in tables:
-            problems.append(f'{path.name}: bảng "{table}" không có trong CSDL')
+            problems.append(f"{entity['name']}: table '{table}' does not exist")
             continue
+        actual = tables[table]
 
-        for column, field, not_null, enum_type in columns:
+        for column, java_type, nullable_allowed, enum_name in entity["columns"]:
             checked_columns += 1
-            if column not in tables[table]:
+            where = f"{entity['name']}.{column}"
+
+            if column not in actual:
                 problems.append(
-                    f'{path.name}: cột "{table}.{column}" (trường {field}) không có trong CSDL. '
-                    f'Cột đang có: {", ".join(sorted(tables[table]))}')
+                    f"{where}: no such column in '{table}' "
+                    f"(it has {', '.join(sorted(actual))})")
                 continue
 
-            db_nullable = tables[table][column]
-            if not_null and db_nullable:
+            data_type, db_nullable = actual[column]
+
+            expected = RELATION_TYPE if java_type == "_relation_" else TYPES[java_type]
+            if data_type not in expected:
                 problems.append(
-                    f'{path.name}: {table}.{column} khai báo nullable = false '
-                    f'nhưng cột trong CSDL cho phép NULL')
+                    f"{where}: mapped as {java_type} but the column is {data_type} "
+                    f"(expected one of {', '.join(sorted(expected))})")
 
-            if enum_type:
-                allowed = checks.get((table, column))
-                declared = enum_values(enum_type)
-                if allowed and declared and declared != allowed:
-                    missing = declared - allowed
-                    extra = allowed - declared
-                    detail = []
-                    if missing:
-                        detail.append(f'enum có mà CHECK thiếu: {sorted(missing)}')
-                    if extra:
-                        detail.append(f'CHECK có mà enum thiếu: {sorted(extra)}')
-                    problems.append(
-                        f'{path.name}: {table}.{column} lệch giá trị enum {enum_type} — '
-                        + '; '.join(detail))
+            if not nullable_allowed and db_nullable:
+                problems.append(
+                    f"{where}: the entity says nullable = false but the column allows NULL")
 
-    # Chiều ngược lại: cột NOT NULL không mặc định mà entity không hề nhắc tới
-    mapped = {}
-    for _, table, columns in parse_entities():
-        mapped.setdefault(table, set()).update(c for c, _, _, _ in columns)
-    for table, columns in tables.items():
-        if table in ('flyway_schema_history', 'user_roles') or table not in mapped:
-            continue
-        for column, nullable in columns.items():
-            if column in INHERITED or nullable or column in mapped[table]:
-                continue
-            problems.append(
-                f'bảng {table}: cột NOT NULL "{column}" không entity nào ánh xạ — '
-                f'thêm vào entity hoặc cho cột một giá trị mặc định')
+            if enum_name:
+                constants = enum_constants(enum_name)
+                if constants is None:
+                    problems.append(f"{where}: enum {enum_name} not found in the sources")
+                else:
+                    matching = [v for v in checks.get(table, []) if v & constants]
+                    if not matching:
+                        problems.append(
+                            f"{where}: no CHECK constraint guards this enum column, so the "
+                            f"database would accept a value {enum_name} cannot map")
+                    else:
+                        allowed = matching[0]
+                        if allowed != constants:
+                            problems.append(
+                                f"{where}: {enum_name} has {sorted(constants)} but the CHECK "
+                                f"constraint allows {sorted(allowed)}")
 
-    print(f'Đã kiểm {checked_columns} cột trên {len(parse_entities())} entity.')
+    if not QUIET:
+        for entity in entities:
+            print(f"  {entity['name']:22s} -> {entity['table']:20s} "
+                  f"{len(entity['columns'])} columns")
+
+    print(f"\n{len(entities)} entities, {checked_columns} columns checked "
+          f"against database '{DATABASE}'")
+
     if problems:
-        print(f'\n{len(problems)} chỗ lệch:')
+        print(f"\n{len(problems)} problem(s):")
         for problem in problems:
-            print('  -', problem)
-        sys.exit(1)
-    print('Entity khớp hoàn toàn với schema.')
+            print(f"  - {problem}")
+        return 1
+
+    print("No drift: every entity matches its table, and every enum matches its CHECK.")
+    return 0
 
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    sys.exit(main())

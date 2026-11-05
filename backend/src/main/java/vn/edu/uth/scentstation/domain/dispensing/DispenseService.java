@@ -88,7 +88,11 @@ public class DispenseService {
         command.setMachine(order.getMachine());
         command.setSlot(slot);
         command.setIdempotencyKey(newIdempotencyKey());
-        command.setDoseMl(slot.getDoseMl());
+        // The dose comes from configuration, not from the slot: the ERD gives
+        // MACHINE_SLOTS no dose column, because a slot is calibrated by its
+        // spray duration. Stamping the dose on the command is what makes the
+        // deduction auditable afterwards, whatever the setting is changed to.
+        command.setDoseMl(properties.getDispensing().getDoseMl());
         command.setSprayDurationMs(slot.getSprayDurationMs());
         command.setStatus(CommandStatus.ISSUED);
         command.setIssuedAt(now);
@@ -117,10 +121,10 @@ public class DispenseService {
         stateMachine.transition(order, OrderStatus.DISPENSING);
         orderRepository.save(order);
 
-        deviceGateway.publishCommand(order.getMachine().getDeviceId(), payload);
+        deviceGateway.publishCommand(order.getMachine().getDeviceIdentity(), payload);
         log.info("Command {} issued for order {} on {} slot {}",
                 saved.getId(), order.getId(),
-                order.getMachine().getDeviceId(), slot.getSlotNumber());
+                order.getMachine().getDeviceIdentity(), slot.getSlotNumber());
         return saved;
     }
 
@@ -260,7 +264,10 @@ public class DispenseService {
      */
     private Map<String, Object> payloadOf(DispenseCommand command) {
         Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("deviceId", command.getMachine().getDeviceId());
+        // The JSON key stays "deviceId": it is part of the wire contract the
+        // simulator verifies against (Report section 2.8.3). Only the column
+        // behind it is named device_identity.
+        payload.put("deviceId", command.getMachine().getDeviceIdentity());
         payload.put("commandId", command.getId());
         payload.put("slotNumber", command.getSlot().getSlotNumber());
         payload.put("doseMl", command.getDoseMl());

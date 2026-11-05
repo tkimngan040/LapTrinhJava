@@ -1,26 +1,30 @@
 /*
- * Entity and repository files belong to Tra My (tasks M1, M2).
- * Written here so the security, ordering and dispensing code can run;
- * check the columns against Report section 2.7.2 before merging.
+ * Task M1 — group B of the entity inventory in Report section 2.7.2.
+ * Column names, types and keys follow the ERD in figure 2.6.
  */
 package vn.edu.uth.scentstation.domain.catalog;
 
+import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
-import org.hibernate.annotations.Filter;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import vn.edu.uth.scentstation.domain.brand.Brand;
+
+import org.hibernate.annotations.Filter;
 
 import vn.edu.uth.scentstation.common.BaseEntity;
+import vn.edu.uth.scentstation.domain.brand.Brand;
 
 /**
- * Where a machine stands.
+ * A site where machines stand: a mall, an office lobby, a hotel.
  */
 @Entity
 @Table(name = "locations")
+@AttributeOverride(name = "id", column = @Column(name = "location_id"))
 // Narrowed to the signed-in user's brand by TenantFilterAspect (BR13).
 @Filter(name = "brandFilter", condition = "brand_id = :brandId")
 public class Location extends BaseEntity {
@@ -32,8 +36,12 @@ public class Location extends BaseEntity {
     @Column(nullable = false, length = 160)
     private String name;
 
-    @Column(length = 255)
+    @Column
     private String address;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private LocationStatus status;
 
     public Brand getBrand() {
         return brand;
@@ -57,5 +65,13 @@ public class Location extends BaseEntity {
 
     public void setAddress(String address) {
         this.address = address;
+    }
+
+    public LocationStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(LocationStatus status) {
+        this.status = status;
     }
 }

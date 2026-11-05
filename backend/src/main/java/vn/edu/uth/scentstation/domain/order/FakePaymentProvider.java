@@ -94,7 +94,8 @@ public class FakePaymentProvider {
         fields.put("provider", PROVIDER_NAME);
         fields.put("providerReference", providerReference);
         fields.put("paymentRef", order.getPaymentRef());
-        fields.put("amount", order.getPriceSnapshot());
+        // Signed in exactly the form the webhook will verify it in.
+        fields.put("amount", PaymentWebhookController.money(order.getPriceSnapshot()));
         fields.put("currency", order.getCurrency());
         fields.put("status", status);
         String signature = webhookSigner.sign(fields);

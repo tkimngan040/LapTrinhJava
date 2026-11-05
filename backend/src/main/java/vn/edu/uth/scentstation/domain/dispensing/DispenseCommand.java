@@ -5,6 +5,7 @@
  */
 package vn.edu.uth.scentstation.domain.dispensing;
 
+import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -18,14 +19,15 @@ import vn.edu.uth.scentstation.domain.catalog.Machine;
 import vn.edu.uth.scentstation.domain.catalog.MachineSlot;
 import vn.edu.uth.scentstation.domain.order.Order;
 
-import vn.edu.uth.scentstation.common.BaseEntity;
+import vn.edu.uth.scentstation.common.TimestampedEntity;
 
 /**
  * One signed instruction to spray once, and what the device reported back.
  */
 @Entity
 @Table(name = "dispense_commands")
-public class DispenseCommand extends BaseEntity {
+@AttributeOverride(name = "id", column = @Column(name = "command_id"))
+public class DispenseCommand extends TimestampedEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "order_id", nullable = false)

@@ -38,7 +38,7 @@ public class MachineService {
     /** FR5.1: the machine is alive. */
     @Transactional
     public void recordHeartbeat(String deviceId) {
-        Optional<Machine> found = machineRepository.findByDeviceId(deviceId);
+        Optional<Machine> found = machineRepository.findByDeviceIdentity(deviceId);
         if (found.isEmpty()) {
             // FR5.11: traffic from a machine that is not registered is refused
             // rather than silently creating one.
@@ -48,9 +48,9 @@ public class MachineService {
 
         Machine machine = found.get();
         machine.setLastSeenAt(clock.instant());
-        if (machine.getConnectivityStatus() != ConnectivityStatus.ONLINE) {
+        if (machine.getConnectionStatus() != ConnectionStatus.ONLINE) {
             log.info("Machine {} is back ONLINE", deviceId);
-            machine.setConnectivityStatus(ConnectivityStatus.ONLINE);
+            machine.setConnectionStatus(ConnectionStatus.ONLINE);
         }
         machineRepository.save(machine);
     }
@@ -83,17 +83,17 @@ public class MachineService {
                 .minusSeconds(properties.getMqtt().getHeartbeatTimeoutSeconds());
 
         List<Machine> machines =
-                machineRepository.findByConnectivityStatusNot(ConnectivityStatus.OFFLINE);
+                machineRepository.findByConnectionStatusNot(ConnectionStatus.OFFLINE);
 
         int changed = 0;
         for (Machine machine : machines) {
             Instant lastSeen = machine.getLastSeenAt();
             if (lastSeen == null || lastSeen.isBefore(cutoff)) {
-                machine.setConnectivityStatus(ConnectivityStatus.OFFLINE);
+                machine.setConnectionStatus(ConnectionStatus.OFFLINE);
                 machineRepository.save(machine);
                 changed++;
                 log.warn("Machine {} marked OFFLINE: no heartbeat since {}",
-                        machine.getDeviceId(), lastSeen);
+                        machine.getDeviceIdentity(), lastSeen);
             }
         }
         return changed;

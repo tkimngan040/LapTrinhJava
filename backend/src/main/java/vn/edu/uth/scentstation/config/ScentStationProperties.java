@@ -104,6 +104,25 @@ public class ScentStationProperties {
         private long commandTtlSeconds = 30;
         private long resultTimeoutSeconds = 60;
 
+        /**
+         * Millilitres deducted from the bottle for one confirmed spray.
+         *
+         * <p>Configuration rather than a column: the ERD calibrates a slot by
+         * its spray duration, and the volume that duration delivers is a
+         * property of the pump, the same across every machine in this build.
+         * The value in force is copied onto each command, so changing it never
+         * rewrites what an earlier spray was recorded as having used.
+         */
+        private int doseMl = 1;
+
+        public int getDoseMl() {
+            return doseMl;
+        }
+
+        public void setDoseMl(int doseMl) {
+            this.doseMl = doseMl;
+        }
+
         public long getCommandTtlSeconds() {
             return commandTtlSeconds;
         }

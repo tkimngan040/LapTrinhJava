@@ -1,51 +1,13 @@
+/*
+ * Task M1 — repository for group A of Report section 2.7.2.
+ */
 package vn.edu.uth.scentstation.domain.brand;
 
-import jakarta.persistence.*;
-import lombok.*;
-import java.time.OffsetDateTime;
+import java.util.Optional;
 
-@Entity
-@Table(name = "brands")
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-public class Brand {
+import org.springframework.data.jpa.repository.JpaRepository;
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public interface BrandRepository extends JpaRepository<Brand, Long> {
 
-    @Column(nullable = false, unique = true)
-    private String name;
-
-    @Column(nullable = false, unique = true)
-    private String code;
-
-    private String description;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private BrandStatus status;
-
-    @Column(name = "created_at", updatable = false)
-    private OffsetDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private OffsetDateTime updatedAt;
-
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = OffsetDateTime.now();
-        this.updatedAt = OffsetDateTime.now();
-        if (this.status == null) {
-            this.status = BrandStatus.ACTIVE;
-        }
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = OffsetDateTime.now();
-    }
+    Optional<Brand> findByNameIgnoreCase(String name);
 }

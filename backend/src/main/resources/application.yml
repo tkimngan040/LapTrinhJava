@@ -53,6 +53,10 @@ scentstation:
     webhook-secret: ${PAYMENT_WEBHOOK_SECRET:dev-payment-webhook-secret}
 
   dispensing:
+    # Millilitres one confirmed spray takes out of the bottle. The value in
+    # force is stamped onto every command, so changing it does not rewrite
+    # what an earlier spray was recorded as having used.
+    dose-ml: 1
     # Command validity window in seconds (Report section 2.9.3 step 6, BR7).
     command-ttl-seconds: 30
     # How long to wait for a device result before an order becomes UNCERTAIN

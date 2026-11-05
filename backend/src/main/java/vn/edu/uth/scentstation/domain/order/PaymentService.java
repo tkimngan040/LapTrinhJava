@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.edu.uth.scentstation.common.ApiException;
 import vn.edu.uth.scentstation.domain.dispensing.DispenseService;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 
 /**
@@ -56,7 +57,7 @@ public class PaymentService {
     public boolean recordSuccessfulPayment(String provider,
                                            String providerReference,
                                            String paymentRef,
-                                           long amount,
+                                           BigDecimal amount,
                                            String currency) {
         if (paymentRepository.existsByProviderAndProviderReference(provider, providerReference)) {
             log.info("Duplicate webhook for {} {} ignored", provider, providerReference);
@@ -70,7 +71,10 @@ public class PaymentService {
         // FR3.7: the amount and currency must match what the order was created
         // with, so a tampered notification cannot pay a cheap order for an
         // expensive spray.
-        if (amount != order.getPriceSnapshot()) {
+        // compareTo, not equals: BigDecimal.equals is also comparing the scale,
+        // so 35000 and 35000.00 would be "different" amounts and every payment
+        // whose scale did not match the column's would be refused.
+        if (amount.compareTo(order.getPriceSnapshot()) != 0) {
             throw ApiException.badRequest("AMOUNT_MISMATCH",
                     "Paid amount does not match the order");
         }

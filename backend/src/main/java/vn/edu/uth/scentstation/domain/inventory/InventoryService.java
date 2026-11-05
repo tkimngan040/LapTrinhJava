@@ -7,7 +7,10 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.edu.uth.scentstation.common.ApiException;
 import vn.edu.uth.scentstation.domain.catalog.MachineSlot;
 import vn.edu.uth.scentstation.domain.catalog.MachineSlotRepository;
+import vn.edu.uth.scentstation.domain.catalog.SlotStatus;
 import vn.edu.uth.scentstation.domain.dispensing.DispenseCommand;
+
+import java.math.BigDecimal;
 
 /**
  * Stock deduction after a confirmed spray.
@@ -87,7 +90,7 @@ public class InventoryService {
         movement.setReason("Confirmed spray for order " + command.getOrder().getId());
         movementRepository.save(movement);
 
-        applyLowStockRules(bottle, slot);
+        applyLowStockRules(bottle, slot, dose);
         bottleRepository.save(bottle);
 
         log.info("Deducted {} ml from bottle {}; {} ml left",
@@ -97,20 +100,33 @@ public class InventoryService {
     /**
      * FR6.8 and FR6.9: flag a bottle that is running low, and take the slot out
      * of service once it can no longer give one more full dose.
+     *
+     * <p>The dose is passed in rather than read from the slot. The ERD gives
+     * MACHINE_SLOTS no dose column — a slot is calibrated by
+     * {@code spray_duration_ms} — so the only authoritative dose is the one
+     * stamped on the command that was actually executed.
      */
-    private void applyLowStockRules(InventoryBottle bottle, MachineSlot slot) {
-        if (bottle.getRemainingQuantityMl() < slot.getDoseMl()) {
+    private void applyLowStockRules(InventoryBottle bottle, MachineSlot slot, int dose) {
+        if (bottle.getRemainingQuantityMl() < dose) {
             bottle.setStatus(BottleStatus.EMPTY);
-            slot.setAvailable(false);
+            // EMPTY, not DISABLED: nothing is wrong with the slot, it has run
+            // out. A refill brings it back without anyone re-enabling it.
+            slot.setStatus(SlotStatus.EMPTY);
             slotRepository.save(slot);
-            log.warn("Slot {} is out of service: bottle {} cannot give another dose",
+            log.warn("Slot {} is out of stock: bottle {} cannot give another dose",
                     slot.getSlotNumber(), bottle.getBottleCode());
             return;
         }
 
-        if (bottle.getRemainingQuantityMl() <= slot.getLowStockThresholdMl()
+        BigDecimal remaining = BigDecimal.valueOf(bottle.getRemainingQuantityMl());
+        if (remaining.compareTo(slot.getLowStockThreshold()) <= 0
                 && bottle.getStatus() != BottleStatus.NEARLY_EMPTY) {
             bottle.setStatus(BottleStatus.NEARLY_EMPTY);
+            // LOW still sells (see MachineSlot.isSellable). The customer in
+            // front of the machine can be served; the refill is someone
+            // else's problem, and this is how they hear about it.
+            slot.setStatus(SlotStatus.LOW);
+            slotRepository.save(slot);
             log.info("Bottle {} is nearly empty ({} ml left)",
                     bottle.getBottleCode(), bottle.getRemainingQuantityMl());
             // Hoai Anh (A4): raise a LOW_STOCK alert here once AlertService exists.

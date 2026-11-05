@@ -1,10 +1,14 @@
+/*
+ * Task M1 — repository for group A of Report section 2.7.2.
+ */
 package vn.edu.uth.scentstation.domain.user;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
-@Repository
+import org.springframework.data.jpa.repository.JpaRepository;
+
 public interface RoleRepository extends JpaRepository<Role, Long> {
-    Optional<Role> findByName(String name);
+
+    /** The seven rows are seeded by V1__core.sql; nothing creates one at runtime. */
+    Optional<Role> findByRoleName(String roleName);
 }

@@ -5,6 +5,7 @@
  */
 package vn.edu.uth.scentstation.domain.order;
 
+import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -13,16 +14,18 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import java.time.Instant;
 
-import vn.edu.uth.scentstation.common.BaseEntity;
+import vn.edu.uth.scentstation.common.TimestampedEntity;
 
 /**
  * A payment the provider confirmed. Only this proves an order was paid (BR5).
  */
 @Entity
 @Table(name = "payments")
-public class Payment extends BaseEntity {
+@AttributeOverride(name = "id", column = @Column(name = "payment_id"))
+public class Payment extends TimestampedEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "order_id", nullable = false)
@@ -35,8 +38,8 @@ public class Payment extends BaseEntity {
     @Column(name = "provider_reference", nullable = false, length = 120)
     private String providerReference;
 
-    @Column(nullable = false)
-    private long amount;
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal amount;
 
     @Column(nullable = false, length = 3)
     private String currency;
@@ -72,11 +75,11 @@ public class Payment extends BaseEntity {
         this.providerReference = providerReference;
     }
 
-    public long getAmount() {
+    public BigDecimal getAmount() {
         return amount;
     }
 
-    public void setAmount(long amount) {
+    public void setAmount(BigDecimal amount) {
         this.amount = amount;
     }
 

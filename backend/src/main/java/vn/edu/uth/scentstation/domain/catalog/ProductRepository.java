@@ -1,10 +1,15 @@
+/*
+ * Task M1 — repository for group B of Report section 2.7.2.
+ */
 package vn.edu.uth.scentstation.domain.catalog;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 import java.util.List;
 
-@Repository
+import org.springframework.data.jpa.repository.JpaRepository;
+
 public interface ProductRepository extends JpaRepository<Product, Long> {
-    List<Product> findByBrandId(Long brandId);
+
+    List<Product> findByBrandIdOrderByNameAsc(Long brandId);
+
+    List<Product> findByStatus(ProductStatus status);
 }

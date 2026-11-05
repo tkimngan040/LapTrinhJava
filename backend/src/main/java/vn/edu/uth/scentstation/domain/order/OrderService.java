@@ -64,7 +64,7 @@ public class OrderService {
      */
     @Transactional
     public Order createOrder(String deviceId, int slotNumber) {
-        Machine machine = machineRepository.findByDeviceId(deviceId)
+        Machine machine = machineRepository.findByDeviceIdentity(deviceId)
                 .orElseThrow(() -> ApiException.notFound("MACHINE_NOT_FOUND",
                         "No machine with device id " + deviceId));
 
@@ -80,8 +80,11 @@ public class OrderService {
                 .orElseThrow(() -> ApiException.notFound("SLOT_NOT_FOUND",
                         "Machine " + deviceId + " has no slot " + slotNumber));
 
-        if (!slot.isAvailable() || slot.getProduct() == null) {
-            // BR3: only an available product in an operational machine is sellable.
+        // BR3: only an available product in an operational machine is sellable.
+        // All three have to hold: the slot has a product, the slot is in a
+        // sellable state, and the product has not been retired from the
+        // catalogue since the slot was configured.
+        if (slot.getProduct() == null || !slot.isSellable() || !slot.getProduct().isSellable()) {
             throw ApiException.conflict("SLOT_UNAVAILABLE",
                     "That fragrance is not available on this machine");
         }
