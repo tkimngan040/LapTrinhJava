@@ -18,7 +18,7 @@ public interface DispenseCommandRepository extends JpaRepository<DispenseCommand
     /** The newest command of an order, which is the one review decides about. */
     Optional<DispenseCommand> findFirstByOrderIdOrderByIdDesc(Long orderId);
 
-    List<DispenseCommand> findByStatusInAndIssuedAtBefore(
+    List<DispenseCommand> findByStatusInAndCreatedAtBefore(
             Collection<CommandStatus> statuses, Instant cutoff);
 
     boolean existsByOrderIdAndStatusIn(Long orderId, Collection<CommandStatus> statuses);

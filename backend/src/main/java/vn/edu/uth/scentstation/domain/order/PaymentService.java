@@ -59,7 +59,7 @@ public class PaymentService {
                                            String paymentRef,
                                            BigDecimal amount,
                                            String currency) {
-        if (paymentRepository.existsByProviderAndProviderReference(provider, providerReference)) {
+        if (paymentRepository.existsByProviderReference(providerReference)) {
             log.info("Duplicate webhook for {} {} ignored", provider, providerReference);
             return false;
         }
@@ -84,8 +84,9 @@ public class PaymentService {
         }
 
         Payment payment = new Payment();
+        payment.setBrand(order.getBrand());
         payment.setOrder(order);
-        payment.setProvider(provider);
+        payment.setPaymentMethod(provider);
         payment.setProviderReference(providerReference);
         payment.setAmount(amount);
         payment.setCurrency(order.getCurrency());
@@ -120,13 +121,14 @@ public class PaymentService {
                 .orElseThrow(() -> ApiException.notFound("ORDER_NOT_FOUND",
                         "No order with payment reference " + paymentRef));
 
-        if (paymentRepository.existsByProviderAndProviderReference(provider, providerReference)) {
+        if (paymentRepository.existsByProviderReference(providerReference)) {
             return;
         }
 
         Payment payment = new Payment();
+        payment.setBrand(order.getBrand());
         payment.setOrder(order);
-        payment.setProvider(provider);
+        payment.setPaymentMethod(provider);
         payment.setProviderReference(providerReference);
         payment.setAmount(order.getPriceSnapshot());
         payment.setCurrency(order.getCurrency());

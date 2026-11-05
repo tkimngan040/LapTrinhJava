@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.edu.uth.scentstation.common.ApiException;
+import vn.edu.uth.scentstation.config.ScentStationProperties;
 import vn.edu.uth.scentstation.domain.catalog.MachineSlot;
 import vn.edu.uth.scentstation.domain.catalog.MachineSlotRepository;
 import vn.edu.uth.scentstation.domain.catalog.SlotStatus;
@@ -39,13 +40,26 @@ public class InventoryService {
     private final InventoryBottleRepository bottleRepository;
     private final InventoryMovementRepository movementRepository;
     private final MachineSlotRepository slotRepository;
+    private final ScentStationProperties properties;
 
     public InventoryService(InventoryBottleRepository bottleRepository,
                             InventoryMovementRepository movementRepository,
-                            MachineSlotRepository slotRepository) {
+                            MachineSlotRepository slotRepository,
+                            ScentStationProperties properties) {
         this.bottleRepository = bottleRepository;
         this.movementRepository = movementRepository;
         this.slotRepository = slotRepository;
+        this.properties = properties;
+    }
+
+    /**
+     * One dose, in millilitres. It comes from configuration because neither
+     * MACHINE_SLOTS nor DISPENSE_COMMANDS carries a dose in the ERD: a slot is
+     * calibrated by its spray duration, and what was actually dispensed is
+     * recorded by the movement this service writes.
+     */
+    private BigDecimal dose() {
+        return BigDecimal.valueOf(properties.getDispensing().getDoseMl());
     }
 
     /**
@@ -69,24 +83,28 @@ public class InventoryService {
                 .orElseThrow(() -> ApiException.conflict("NO_INSTALLED_BOTTLE",
                         "Slot " + slot.getSlotNumber() + " holds no installed bottle"));
 
-        int dose = command.getDoseMl();
-        if (bottle.getRemainingQuantityMl() < dose) {
+        BigDecimal dose = dose();
+        if (!bottle.holdsAtLeast(dose)) {
             // Refused rather than clamped to zero: a spray that could not have
             // happened must not be recorded as if it did.
             throw ApiException.conflict("INSUFFICIENT_VOLUME",
                     "Bottle " + bottle.getBottleCode() + " has "
-                            + bottle.getRemainingQuantityMl() + " ml left, less than one "
-                            + dose + " ml dose");
+                            + bottle.getRemainingQuantity().toPlainString() + " ml left, less than one "
+                            + dose.toPlainString() + " ml dose");
         }
 
-        bottle.setRemainingQuantityMl(bottle.getRemainingQuantityMl() - dose);
+        BigDecimal before = bottle.getRemainingQuantity();
+        BigDecimal after = before.subtract(dose);
+        bottle.setRemainingQuantity(after);
 
         InventoryMovement movement = new InventoryMovement();
+        movement.setBrand(bottle.getBrand());
         movement.setBottle(bottle);
-        movement.setSlot(slot);
         movement.setCommandId(command.getId());
         movement.setMovementType(MovementType.DISPENSE);
-        movement.setQuantityMl(-dose);
+        movement.setQuantity(dose.negate());
+        movement.setQuantityBefore(before);
+        movement.setQuantityAfter(after);
         movement.setReason("Confirmed spray for order " + command.getOrder().getId());
         movementRepository.save(movement);
 
@@ -94,7 +112,8 @@ public class InventoryService {
         bottleRepository.save(bottle);
 
         log.info("Deducted {} ml from bottle {}; {} ml left",
-                dose, bottle.getBottleCode(), bottle.getRemainingQuantityMl());
+                dose.toPlainString(), bottle.getBottleCode(),
+                after.toPlainString());
     }
 
     /**
@@ -106,8 +125,10 @@ public class InventoryService {
      * {@code spray_duration_ms} — so the only authoritative dose is the one
      * stamped on the command that was actually executed.
      */
-    private void applyLowStockRules(InventoryBottle bottle, MachineSlot slot, int dose) {
-        if (bottle.getRemainingQuantityMl() < dose) {
+    private void applyLowStockRules(InventoryBottle bottle, MachineSlot slot, BigDecimal dose) {
+        BigDecimal remaining = bottle.getRemainingQuantity();
+
+        if (remaining.compareTo(dose) < 0) {
             bottle.setStatus(BottleStatus.EMPTY);
             // EMPTY, not DISABLED: nothing is wrong with the slot, it has run
             // out. A refill brings it back without anyone re-enabling it.
@@ -118,7 +139,6 @@ public class InventoryService {
             return;
         }
 
-        BigDecimal remaining = BigDecimal.valueOf(bottle.getRemainingQuantityMl());
         if (remaining.compareTo(slot.getLowStockThreshold()) <= 0
                 && bottle.getStatus() != BottleStatus.NEARLY_EMPTY) {
             bottle.setStatus(BottleStatus.NEARLY_EMPTY);
@@ -128,7 +148,7 @@ public class InventoryService {
             slot.setStatus(SlotStatus.LOW);
             slotRepository.save(slot);
             log.info("Bottle {} is nearly empty ({} ml left)",
-                    bottle.getBottleCode(), bottle.getRemainingQuantityMl());
+                    bottle.getBottleCode(), remaining.toPlainString());
             // Hoai Anh (A4): raise a LOW_STOCK alert here once AlertService exists.
         }
     }

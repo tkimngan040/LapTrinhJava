@@ -84,18 +84,13 @@ public class DispenseService {
         Instant expiresAt = now.plusSeconds(properties.getDispensing().getCommandTtlSeconds());
 
         DispenseCommand command = new DispenseCommand();
+        command.setBrand(order.getBrand());
         command.setOrder(order);
-        command.setMachine(order.getMachine());
         command.setSlot(slot);
+        command.setCommandReference(newCommandReference());
         command.setIdempotencyKey(newIdempotencyKey());
-        // The dose comes from configuration, not from the slot: the ERD gives
-        // MACHINE_SLOTS no dose column, because a slot is calibrated by its
-        // spray duration. Stamping the dose on the command is what makes the
-        // deduction auditable afterwards, whatever the setting is changed to.
-        command.setDoseMl(properties.getDispensing().getDoseMl());
-        command.setSprayDurationMs(slot.getSprayDurationMs());
         command.setStatus(CommandStatus.ISSUED);
-        command.setIssuedAt(now);
+        command.setCreatedAt(now);
         command.setExpiresAt(expiresAt);
         command.setInventoryApplied(false);
         command.setSignature("pending");
@@ -145,7 +140,7 @@ public class DispenseService {
             return;
         }
 
-        command.setAcknowledgedAt(clock.instant());
+        command.setAckedAt(clock.instant());
 
         if (accepted) {
             command.setStatus(CommandStatus.ACKNOWLEDGED);
@@ -156,7 +151,7 @@ public class DispenseService {
 
         command.setStatus(CommandStatus.REJECTED);
         command.setFailureReason(reason);
-        command.setCompletedAt(clock.instant());
+        command.setExecutedAt(clock.instant());
         commandRepository.save(command);
 
         Order order = command.getOrder();
@@ -186,13 +181,16 @@ public class DispenseService {
             return;
         }
 
-        command.setCompletedAt(clock.instant());
-        command.setResultCode(resultCode);
+        command.setExecutedAt(clock.instant());
         Order order = command.getOrder();
 
         if (!success) {
             command.setStatus(CommandStatus.FAILED);
-            command.setFailureReason(reason);
+            // The device's result code is kept with the reason rather than in a
+            // column of its own: the ERD gives DISPENSE_COMMANDS one
+            // failure_reason, and an operator reads the two together anyway.
+            command.setFailureReason(resultCode == null || resultCode.isBlank()
+                    ? reason : resultCode + ": " + reason);
             commandRepository.save(command);
             stateMachine.transition(order, OrderStatus.FAILED,
                     reason == null ? "The device reported a failure" : reason);
@@ -229,12 +227,12 @@ public class DispenseService {
         Instant cutoff = clock.instant()
                 .minusSeconds(properties.getDispensing().getResultTimeoutSeconds());
 
-        List<DispenseCommand> stale = commandRepository.findByStatusInAndIssuedAtBefore(
+        List<DispenseCommand> stale = commandRepository.findByStatusInAndCreatedAtBefore(
                 List.of(CommandStatus.ISSUED, CommandStatus.ACKNOWLEDGED), cutoff);
 
         for (DispenseCommand command : stale) {
             command.setStatus(CommandStatus.TIMED_OUT);
-            command.setCompletedAt(clock.instant());
+            command.setExecutedAt(clock.instant());
             command.setFailureReason("No result received before the timeout");
             commandRepository.save(command);
 
@@ -270,8 +268,8 @@ public class DispenseService {
         payload.put("deviceId", command.getMachine().getDeviceIdentity());
         payload.put("commandId", command.getId());
         payload.put("slotNumber", command.getSlot().getSlotNumber());
-        payload.put("doseMl", command.getDoseMl());
-        payload.put("sprayDurationMs", command.getSprayDurationMs());
+        payload.put("doseMl", properties.getDispensing().getDoseMl());
+        payload.put("sprayDurationMs", command.getSlot().getSprayDurationMs());
         payload.put("idempotencyKey", command.getIdempotencyKey());
         payload.put("expiresAt", command.getExpiresAt().toString());
         return payload;
@@ -279,5 +277,11 @@ public class DispenseService {
 
     private String newIdempotencyKey() {
         return UUID.randomUUID().toString();
+    }
+
+    /** The reference an operator quotes when asking about one command. */
+    private String newCommandReference() {
+        return "CMD-" + UUID.randomUUID().toString().replace("-", "")
+                .substring(0, 16).toUpperCase();
     }
 }

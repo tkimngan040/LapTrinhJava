@@ -1,7 +1,5 @@
 /*
  * Entity and repository files belong to Tra My (tasks M1, M2).
- * Written here so the security, ordering and dispensing code can run;
- * check the columns against Report section 2.7.2 before merging.
  */
 package vn.edu.uth.scentstation.domain.dispensing;
 
@@ -15,41 +13,47 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import org.hibernate.annotations.Filter;
+import vn.edu.uth.scentstation.common.TimestampedEntity;
+import vn.edu.uth.scentstation.domain.brand.Brand;
 import vn.edu.uth.scentstation.domain.catalog.Machine;
 import vn.edu.uth.scentstation.domain.catalog.MachineSlot;
 import vn.edu.uth.scentstation.domain.order.Order;
 
-import vn.edu.uth.scentstation.common.TimestampedEntity;
-
 /**
  * One signed instruction to spray once, and what the device reported back.
+ *
+ * <p>There is no machine, no dose and no spray duration here, which is the
+ * ERD's design rather than an omission: the machine and the duration are
+ * properties of the slot, and what was actually dispensed is recorded by the
+ * inventory movement the result produced. A second copy of any of them could
+ * disagree with the first.
  */
 @Entity
 @Table(name = "dispense_commands")
 @AttributeOverride(name = "id", column = @Column(name = "command_id"))
+@Filter(name = "brandFilter", condition = "brand_id = :brandId")
 public class DispenseCommand extends TimestampedEntity {
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "brand_id", nullable = false)
+    private Brand brand;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "order_id", nullable = false)
     private Order order;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "machine_id", nullable = false)
-    private Machine machine;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "slot_id", nullable = false)
     private MachineSlot slot;
+
+    // The reference an operator quotes when asking about one command (FR10.6).
+    @Column(name = "command_reference", nullable = false, length = 80)
+    private String commandReference;
 
     // NFR3.4: the device echoes this back, so a repeated result is a no-op.
     @Column(name = "idempotency_key", nullable = false, length = 80)
     private String idempotencyKey;
-
-    @Column(name = "dose_ml", nullable = false)
-    private int doseMl;
-
-    @Column(name = "spray_duration_ms", nullable = false)
-    private int sprayDurationMs;
 
     @Column(nullable = false, length = 120)
     private String signature;
@@ -58,27 +62,37 @@ public class DispenseCommand extends TimestampedEntity {
     @Column(nullable = false, length = 20)
     private CommandStatus status;
 
-    @Column(name = "issued_at", nullable = false)
-    private Instant issuedAt;
-
     @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
 
-    @Column(name = "acknowledged_at")
-    private Instant acknowledgedAt;
+    @Column(name = "acked_at")
+    private Instant ackedAt;
 
-    @Column(name = "completed_at")
-    private Instant completedAt;
+    @Column(name = "executed_at")
+    private Instant executedAt;
 
-    @Column(name = "result_code", length = 60)
-    private String resultCode;
-
-    @Column(name = "failure_reason", length = 200)
+    @Column(name = "failure_reason")
     private String failureReason;
 
     // Set once the stock deduction for this command has been written (BR10).
     @Column(name = "inventory_applied", nullable = false)
     private boolean inventoryApplied;
+
+    /**
+     * The machine this command is addressed to, reached through the slot.
+     * Derived, not stored, which is why there is no setter.
+     */
+    public Machine getMachine() {
+        return slot == null ? null : slot.getMachine();
+    }
+
+    public Brand getBrand() {
+        return brand;
+    }
+
+    public void setBrand(Brand brand) {
+        this.brand = brand;
+    }
 
     public Order getOrder() {
         return order;
@@ -86,14 +100,6 @@ public class DispenseCommand extends TimestampedEntity {
 
     public void setOrder(Order order) {
         this.order = order;
-    }
-
-    public Machine getMachine() {
-        return machine;
-    }
-
-    public void setMachine(Machine machine) {
-        this.machine = machine;
     }
 
     public MachineSlot getSlot() {
@@ -104,28 +110,20 @@ public class DispenseCommand extends TimestampedEntity {
         this.slot = slot;
     }
 
+    public String getCommandReference() {
+        return commandReference;
+    }
+
+    public void setCommandReference(String commandReference) {
+        this.commandReference = commandReference;
+    }
+
     public String getIdempotencyKey() {
         return idempotencyKey;
     }
 
     public void setIdempotencyKey(String idempotencyKey) {
         this.idempotencyKey = idempotencyKey;
-    }
-
-    public int getDoseMl() {
-        return doseMl;
-    }
-
-    public void setDoseMl(int doseMl) {
-        this.doseMl = doseMl;
-    }
-
-    public int getSprayDurationMs() {
-        return sprayDurationMs;
-    }
-
-    public void setSprayDurationMs(int sprayDurationMs) {
-        this.sprayDurationMs = sprayDurationMs;
     }
 
     public String getSignature() {
@@ -144,14 +142,6 @@ public class DispenseCommand extends TimestampedEntity {
         this.status = status;
     }
 
-    public Instant getIssuedAt() {
-        return issuedAt;
-    }
-
-    public void setIssuedAt(Instant issuedAt) {
-        this.issuedAt = issuedAt;
-    }
-
     public Instant getExpiresAt() {
         return expiresAt;
     }
@@ -160,28 +150,20 @@ public class DispenseCommand extends TimestampedEntity {
         this.expiresAt = expiresAt;
     }
 
-    public Instant getAcknowledgedAt() {
-        return acknowledgedAt;
+    public Instant getAckedAt() {
+        return ackedAt;
     }
 
-    public void setAcknowledgedAt(Instant acknowledgedAt) {
-        this.acknowledgedAt = acknowledgedAt;
+    public void setAckedAt(Instant ackedAt) {
+        this.ackedAt = ackedAt;
     }
 
-    public Instant getCompletedAt() {
-        return completedAt;
+    public Instant getExecutedAt() {
+        return executedAt;
     }
 
-    public void setCompletedAt(Instant completedAt) {
-        this.completedAt = completedAt;
-    }
-
-    public String getResultCode() {
-        return resultCode;
-    }
-
-    public void setResultCode(String resultCode) {
-        this.resultCode = resultCode;
+    public void setExecutedAt(Instant executedAt) {
+        this.executedAt = executedAt;
     }
 
     public String getFailureReason() {
@@ -200,8 +182,8 @@ public class DispenseCommand extends TimestampedEntity {
         this.inventoryApplied = inventoryApplied;
     }
 
+    /** ISSUED and ACKNOWLEDGED are the two in-flight statuses (BR6). */
     public boolean isInFlight() {
         return status == CommandStatus.ISSUED || status == CommandStatus.ACKNOWLEDGED;
     }
-
 }

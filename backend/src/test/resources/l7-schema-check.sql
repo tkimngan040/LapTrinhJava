@@ -29,8 +29,9 @@ SELECT m.brand_id, m.machine_id, s.slot_id, s.product_id, 'FAILED', 20000.00, 'L
        NOW() + INTERVAL '3 minutes', NOW()
 FROM machines m JOIN machine_slots s ON s.machine_id = m.machine_id WHERE m.device_identity = 'KIOSK-L7';
 
-INSERT INTO payments (order_id, provider, provider_reference, amount, status, paid_at, created_at)
-SELECT order_id, 'FAKEPAY', 'PROV-L7-1', 20000.00, 'SUCCEEDED', NOW(), NOW()
+INSERT INTO payments (brand_id, order_id, payment_method, provider_reference,
+                      amount, status, paid_at, created_at)
+SELECT brand_id, order_id, 'FAKEPAY', 'PROV-L7-1', 20000.00, 'SUCCEEDED', NOW(), NOW()
 FROM orders WHERE payment_ref = 'L7-REF-1';
 
 \echo '--- uq_refund_reference'

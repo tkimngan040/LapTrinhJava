@@ -102,6 +102,12 @@ def db_check_values():
         "WHERE con.contype = 'c' AND ns.nspname = 'public';")
     checks = {}
     for table, definition in rows:
+        # Only an "is one of this list" constraint describes an enum. A rule
+        # that merely mentions one constant — "an ADJUST movement must carry a
+        # reason" — names a single value and would otherwise be read as a
+        # one-value enum list, so the membership test has to be explicit.
+        if not re.search(r"= ANY \(+ARRAY\[|\bIN \(", definition):
+            continue
         # PostgreSQL renders the literals with a cast whose spelling depends on
         # the column type: ARRAY['ACTIVE'::character varying, ...] for a
         # VARCHAR column, ::text for a TEXT one.

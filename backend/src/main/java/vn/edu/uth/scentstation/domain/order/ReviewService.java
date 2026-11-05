@@ -209,7 +209,7 @@ public class ReviewService {
         PaymentRefund refund = refundRepository.findByRefundReference(reference)
                 .orElseGet(() -> newRefund(order, payment, reference, reason));
 
-        RefundStatus result = refundGateway.submit(reference, payment.getProvider(),
+        RefundStatus result = refundGateway.submit(reference, payment.getPaymentMethod(),
                 payment.getProviderReference(), refund.getAmount());
         refund.setStatus(result);
 

@@ -16,8 +16,10 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.Instant;
+import org.hibernate.annotations.Filter;
 
 import vn.edu.uth.scentstation.common.TimestampedEntity;
+import vn.edu.uth.scentstation.domain.brand.Brand;
 
 /**
  * A payment the provider confirmed. Only this proves an order was paid (BR5).
@@ -25,14 +27,21 @@ import vn.edu.uth.scentstation.common.TimestampedEntity;
 @Entity
 @Table(name = "payments")
 @AttributeOverride(name = "id", column = @Column(name = "payment_id"))
+@Filter(name = "brandFilter", condition = "brand_id = :brandId")
 public class Payment extends TimestampedEntity {
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "brand_id", nullable = false)
+    private Brand brand;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "order_id", nullable = false)
     private Order order;
 
-    @Column(nullable = false, length = 40)
-    private String provider;
+    // The ERD's name for which rail the money came over: FAKEPAY here, a bank
+    // or wallet in production.
+    @Column(name = "payment_method", nullable = false, length = 40)
+    private String paymentMethod;
 
     // NFR3.3: unique per provider, so a repeated webhook is absorbed.
     @Column(name = "provider_reference", nullable = false, length = 120)
@@ -51,6 +60,14 @@ public class Payment extends TimestampedEntity {
     @Column(name = "paid_at")
     private Instant paidAt;
 
+    public Brand getBrand() {
+        return brand;
+    }
+
+    public void setBrand(Brand brand) {
+        this.brand = brand;
+    }
+
     public Order getOrder() {
         return order;
     }
@@ -59,12 +76,12 @@ public class Payment extends TimestampedEntity {
         this.order = order;
     }
 
-    public String getProvider() {
-        return provider;
+    public String getPaymentMethod() {
+        return paymentMethod;
     }
 
-    public void setProvider(String provider) {
-        this.provider = provider;
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
     }
 
     public String getProviderReference() {
