@@ -10,7 +10,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
-    boolean existsByProviderAndProviderReference(String provider, String providerReference);
+    boolean existsByProviderReference(String providerReference);
 
     Optional<Payment> findFirstByOrderIdAndStatus(Long orderId, PaymentStatus status);
 }

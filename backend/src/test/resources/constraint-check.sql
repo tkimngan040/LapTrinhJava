@@ -49,9 +49,9 @@ WHERE m.device_identity = 'KIOSK-CHK';
 
 \echo '--- BR2 uq_bottle_active_slot'
 
-INSERT INTO inventory_bottles (product_id, slot_id, bottle_code, initial_quantity_ml,
-                               remaining_quantity_ml, status, installed_at, created_at)
-SELECT s.product_id, s.slot_id, 'BTL-CHK-1', 100, 100, 'INSTALLED', NOW(), NOW()
+INSERT INTO inventory_bottles (brand_id, slot_id, bottle_code, initial_quantity,
+                               remaining_quantity, status, installed_at)
+SELECT s.brand_id, s.slot_id, 'BTL-CHK-1', 100, 100, 'INSTALLED', NOW()
 FROM machine_slots s JOIN machines m ON m.machine_id = s.machine_id
 WHERE m.device_identity = 'KIOSK-CHK';
 
@@ -59,9 +59,9 @@ SAVEPOINT br2;
 \echo 'EXPECT BLOCKED: a second bottle installed in the same slot'
 DO $$
 BEGIN
-    INSERT INTO inventory_bottles (product_id, slot_id, bottle_code, initial_quantity_ml,
-                                   remaining_quantity_ml, status, installed_at, created_at)
-    SELECT s.product_id, s.slot_id, 'BTL-CHK-2', 100, 100, 'INSTALLED', NOW(), NOW()
+    INSERT INTO inventory_bottles (brand_id, slot_id, bottle_code, initial_quantity,
+                                   remaining_quantity, status, installed_at)
+    SELECT s.brand_id, s.slot_id, 'BTL-CHK-2', 100, 100, 'INSTALLED', NOW()
     FROM machine_slots s JOIN machines m ON m.machine_id = s.machine_id
     WHERE m.device_identity = 'KIOSK-CHK';
     RAISE EXCEPTION 'NOT BLOCKED — uq_bottle_active_slot did not fire';
@@ -76,9 +76,9 @@ ROLLBACK TO SAVEPOINT br2;
 UPDATE inventory_bottles SET status = 'EMPTY', slot_id = NULL, removed_at = NOW()
 WHERE bottle_code = 'BTL-CHK-1';
 
-INSERT INTO inventory_bottles (product_id, slot_id, bottle_code, initial_quantity_ml,
-                               remaining_quantity_ml, status, installed_at, created_at)
-SELECT s.product_id, s.slot_id, 'BTL-CHK-3', 100, 100, 'INSTALLED', NOW(), NOW()
+INSERT INTO inventory_bottles (brand_id, slot_id, bottle_code, initial_quantity,
+                               remaining_quantity, status, installed_at)
+SELECT s.brand_id, s.slot_id, 'BTL-CHK-3', 100, 100, 'INSTALLED', NOW()
 FROM machine_slots s JOIN machines m ON m.machine_id = s.machine_id
 WHERE m.device_identity = 'KIOSK-CHK';
 
@@ -86,16 +86,18 @@ WHERE m.device_identity = 'KIOSK-CHK';
 
 \echo '--- NFR3.3 uq_payment_provider_ref'
 
-INSERT INTO payments (order_id, provider, provider_reference, amount, status, paid_at, created_at)
-SELECT order_id, 'FAKEPAY', 'PROV-CHK-1', 20000.00, 'SUCCEEDED', NOW(), NOW()
+INSERT INTO payments (brand_id, order_id, payment_method, provider_reference,
+                      amount, status, paid_at, created_at)
+SELECT brand_id, order_id, 'FAKEPAY', 'PROV-CHK-1', 20000.00, 'SUCCEEDED', NOW(), NOW()
 FROM orders WHERE payment_ref = 'CHK-REF-1';
 
 SAVEPOINT nfr33;
 \echo 'EXPECT BLOCKED: the same provider reference recorded twice'
 DO $$
 BEGIN
-    INSERT INTO payments (order_id, provider, provider_reference, amount, status, paid_at, created_at)
-    SELECT order_id, 'FAKEPAY', 'PROV-CHK-1', 20000.00, 'SUCCEEDED', NOW(), NOW()
+    INSERT INTO payments (brand_id, order_id, payment_method, provider_reference,
+                          amount, status, paid_at, created_at)
+    SELECT brand_id, order_id, 'FAKEPAY', 'PROV-CHK-1', 20000.00, 'SUCCEEDED', NOW(), NOW()
     FROM orders WHERE payment_ref = 'CHK-REF-1';
     RAISE EXCEPTION 'NOT BLOCKED — uq_payment_provider_ref did not fire';
 EXCEPTION
@@ -107,22 +109,22 @@ ROLLBACK TO SAVEPOINT nfr33;
 
 \echo '--- BR6 uq_command_active_order'
 
-INSERT INTO dispense_commands (order_id, machine_id, slot_id, idempotency_key, dose_ml,
-                               spray_duration_ms, signature, status, issued_at,
+INSERT INTO dispense_commands (brand_id, order_id, slot_id, command_reference,
+                               idempotency_key, signature, status,
                                expires_at, created_at)
-SELECT o.order_id, o.machine_id, o.slot_id, 'IDEM-CHK-1', 1, 800, 'sig', 'ISSUED',
-       NOW(), NOW() + INTERVAL '30 seconds', NOW()
+SELECT o.brand_id, o.order_id, o.slot_id, 'CMD-CHK-1', 'IDEM-CHK-1', 'sig', 'ISSUED',
+       NOW() + INTERVAL '30 seconds', NOW()
 FROM orders o WHERE o.payment_ref = 'CHK-REF-1';
 
 SAVEPOINT br6;
 \echo 'EXPECT BLOCKED: a second command while the first is still in flight'
 DO $$
 BEGIN
-    INSERT INTO dispense_commands (order_id, machine_id, slot_id, idempotency_key, dose_ml,
-                                   spray_duration_ms, signature, status, issued_at,
+    INSERT INTO dispense_commands (brand_id, order_id, slot_id, command_reference,
+                                   idempotency_key, signature, status,
                                    expires_at, created_at)
-    SELECT o.order_id, o.machine_id, o.slot_id, 'IDEM-CHK-2', 1, 800, 'sig', 'ISSUED',
-           NOW(), NOW() + INTERVAL '30 seconds', NOW()
+    SELECT o.brand_id, o.order_id, o.slot_id, 'CMD-CHK-2', 'IDEM-CHK-2', 'sig', 'ISSUED',
+           NOW() + INTERVAL '30 seconds', NOW()
     FROM orders o WHERE o.payment_ref = 'CHK-REF-1';
     RAISE EXCEPTION 'NOT BLOCKED — uq_command_active_order did not fire';
 EXCEPTION
@@ -138,11 +140,11 @@ SAVEPOINT nfr34;
 \echo 'EXPECT BLOCKED: a command reusing an idempotency key already seen'
 DO $$
 BEGIN
-    INSERT INTO dispense_commands (order_id, machine_id, slot_id, idempotency_key, dose_ml,
-                                   spray_duration_ms, signature, status, issued_at,
+    INSERT INTO dispense_commands (brand_id, order_id, slot_id, command_reference,
+                                   idempotency_key, signature, status,
                                    expires_at, created_at)
-    SELECT o.order_id, o.machine_id, o.slot_id, 'IDEM-CHK-1', 1, 800, 'sig', 'SUCCEEDED',
-           NOW(), NOW() + INTERVAL '30 seconds', NOW()
+    SELECT o.brand_id, o.order_id, o.slot_id, 'CMD-CHK-3', 'IDEM-CHK-1', 'sig', 'SUCCEEDED',
+           NOW() + INTERVAL '30 seconds', NOW()
     FROM orders o WHERE o.payment_ref = 'CHK-REF-1';
     RAISE EXCEPTION 'NOT BLOCKED — uq_command_idempotency did not fire';
 EXCEPTION
@@ -155,11 +157,11 @@ ROLLBACK TO SAVEPOINT nfr34;
 \echo 'EXPECT ALLOWED: a new command once the first one has finished'
 UPDATE dispense_commands SET status = 'TIMED_OUT' WHERE idempotency_key = 'IDEM-CHK-1';
 
-INSERT INTO dispense_commands (order_id, machine_id, slot_id, idempotency_key, dose_ml,
-                               spray_duration_ms, signature, status, issued_at,
+INSERT INTO dispense_commands (brand_id, order_id, slot_id, command_reference,
+                               idempotency_key, signature, status,
                                expires_at, created_at)
-SELECT o.order_id, o.machine_id, o.slot_id, 'IDEM-CHK-9', 1, 800, 'sig', 'ISSUED',
-       NOW(), NOW() + INTERVAL '30 seconds', NOW()
+SELECT o.brand_id, o.order_id, o.slot_id, 'CMD-CHK-9', 'IDEM-CHK-9', 'sig', 'ISSUED',
+       NOW() + INTERVAL '30 seconds', NOW()
 FROM orders o WHERE o.payment_ref = 'CHK-REF-1';
 
 ROLLBACK;

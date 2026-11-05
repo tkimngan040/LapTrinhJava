@@ -11,15 +11,7 @@ docker compose up -d          # PostgreSQL 16 and Mosquitto 2.0
 cd backend && mvn spring-boot:run
 ```
 
-The API comes up on http://localhost:8080, and
-`curl localhost:8080/actuator/health` answers `{"status":"UP"}` once it has.
-
-`main` sets the JVM time zone to UTC before Spring builds the data source.
-That is not a style choice: the PostgreSQL JDBC driver sends the machine's own
-zone in its start-up packet, and `postgres:16` refuses `Asia/Saigon`, which is
-what every machine in this team reports. Without it the application stops with
-`FATAL: invalid value for parameter "TimeZone"` before Flyway can run. The
-schema stores every instant in UTC anyway (`hibernate.jdbc.time_zone`). Flyway applies the migrations on
+The API comes up on http://localhost:8080. Flyway applies the migrations on
 first start; `ddl-auto: validate` then refuses to start if any entity has
 drifted from its table, which is the point of using Flyway rather than
 `ddl-auto: update`.
@@ -42,10 +34,11 @@ after that everyone can use `./mvnw` and get the same Maven version.
 | L5 | MQTT gateway and dispensing | `iot/` and `domain/dispensing/` — `Topics`, `CanonicalJson`, `CommandSigner`, `MqttDeviceGateway`, `DeviceMessageHandler`, `DispenseService`, `DeviceWatchdog` |
 | L7 | Review of UNCERTAIN and FAILED orders, refunds, audit trail | `domain/order/` — `ReviewService`, `ReviewController`, `PaymentRefund`, `RefundGateway`, `FakeRefundGateway`; `domain/audit/` — `AuditService`, `AuditLog`; `db/migration/V3__refunds_and_audit.sql` |
 | M1 | Core schema, entities, repositories | `db/migration/V1__core.sql` and the eight entities of groups A and B of Report section 2.7.2, with their repositories |
+| M2 | Transaction and inventory schema | `db/migration/V2__transaction.sql`, the four partial unique indexes of section 2.7.4, and the order, payment, command and inventory entities |
 
-Written so the above can run, but owned by other tasks and marked as drafts in
-the files themselves: `V2__transaction.sql` (M2 — Tra My) and
-`InventoryService` (A4 — Hoai Anh).
+Written so the above can run, but owned by another task: `InventoryService`
+(A4 — Hoai Anh) deducts stock and applies the low-stock rules; the alerting it
+should raise is still to come.
 
 ### Conventions the schema follows
 
@@ -138,7 +131,7 @@ Everything lives under `scentstation` in `application.yml`.
 
 ## Checking the database
 
-Four checks, none of which needs the application to be running. All four
+Five checks, none of which needs the application to be running. All five
 produce output worth a screenshot for Report section 3.6.
 
 **The partial unique indexes.** `src/test/resources/constraint-check.sql`
@@ -173,6 +166,16 @@ psql -h localhost -U scent -d scentstation -f src/test/resources/l7-schema-check
 Every line marked `EXPECT` must read as its label says, and every block marked
 `EXPECT BLOCKED` must print `BLOCKED`. The script runs inside a transaction it
 rolls back, so it writes nothing.
+
+**The transaction and inventory schema.** `src/test/resources/m2-schema-check.sql`
+checks what task M2 promised of V2: every transaction and inventory table
+carries `brand_id`, a movement cannot disagree with its own arithmetic or take
+a bottle below zero, an adjustment cannot be made without a reason, quantities
+keep their fraction, and one `command_reference` cannot be used twice.
+
+```bash
+psql -h localhost -U scent -d scentstation -f src/test/resources/m2-schema-check.sql
+```
 
 **The entities against the tables.** `tools/check_schema_mapping.py` compares
 every mapped column, type, nullability and enum with the live database and
