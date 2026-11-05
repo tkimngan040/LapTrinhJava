@@ -11,7 +11,15 @@ docker compose up -d          # PostgreSQL 16 and Mosquitto 2.0
 cd backend && mvn spring-boot:run
 ```
 
-The API comes up on http://localhost:8080. Flyway applies the migrations on
+The API comes up on http://localhost:8080, and
+`curl localhost:8080/actuator/health` answers `{"status":"UP"}` once it has.
+
+`main` sets the JVM time zone to UTC before Spring builds the data source.
+That is not a style choice: the PostgreSQL JDBC driver sends the machine's own
+zone in its start-up packet, and `postgres:16` refuses `Asia/Saigon`, which is
+what every machine in this team reports. Without it the application stops with
+`FATAL: invalid value for parameter "TimeZone"` before Flyway can run. The
+schema stores every instant in UTC anyway (`hibernate.jdbc.time_zone`). Flyway applies the migrations on
 first start; `ddl-auto: validate` then refuses to start if any entity has
 drifted from its table, which is the point of using Flyway rather than
 `ddl-auto: update`.

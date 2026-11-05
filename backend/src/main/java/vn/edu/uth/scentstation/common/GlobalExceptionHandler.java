@@ -9,6 +9,8 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.stream.Collectors;
 
@@ -51,6 +53,21 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(ApiError.of(403, "FORBIDDEN", "You are not allowed to perform this action"));
+    }
+
+    /**
+     * A request to a path no controller serves.
+     *
+     * <p>Without this it falls through to the catch-all below and is answered
+     * 500, which says the server is broken when the caller simply asked for
+     * something that is not there. It also hid a real mistake: the security
+     * chain lets {@code /actuator/health} through, but the actuator dependency
+     * was missing, so the health check answered 500 rather than 404.
+     */
+    @ExceptionHandler({NoResourceFoundException.class, NoHandlerFoundException.class})
+    public ResponseEntity<ApiError> handleNotFound(Exception ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiError.of(404, "NOT_FOUND", "No such endpoint"));
     }
 
     @ExceptionHandler(Exception.class)
