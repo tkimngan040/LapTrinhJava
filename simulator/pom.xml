@@ -19,6 +19,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <paho.version>1.2.5</paho.version>
         <jackson.version>2.17.2</jackson.version>
+        <junit.version>5.10.2</junit.version>
+        <surefire.version>3.2.5</surefire.version>
     </properties>
 
     <dependencies>
@@ -32,6 +34,16 @@
             <artifactId>jackson-databind</artifactId>
             <version>${jackson.version}</version>
         </dependency>
+
+        <!-- The simulator has no Spring parent, so JUnit 5 is declared here.
+             CommandVerifier and SafetyInterlock are the two classes test case
+             UT-06 and the fault modes of task N2 exercise. -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -39,6 +51,11 @@
         <plugins>
             <!-- One runnable jar with its dependencies inside, so the simulator
                  starts with a single java -jar and no classpath to assemble. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${surefire.version}</version>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>

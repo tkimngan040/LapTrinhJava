@@ -58,14 +58,6 @@
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
 
-        <!-- Health check. SecurityConfig lets /actuator/health through
-             unauthenticated, and docker-compose and the team's own smoke test
-             both call it, so the endpoint has to exist. -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-actuator</artifactId>
-        </dependency>
-
         <!-- Security -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -96,7 +88,10 @@
             <version>${paho.version}</version>
         </dependency>
 
-        <!-- Tests -->
+        <!-- Tests.
+             spring-boot-starter-test brings JUnit 5, Mockito, AssertJ and
+             MockMvc, so none of them is declared again here with a version
+             that could drift from the one Spring Boot tested against. -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -107,6 +102,26 @@
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!-- Integration tests run against a real PostgreSQL in a container,
+             because the four partial unique indexes and the brand filter are
+             the things under test and an in-memory database does not have
+             them. Versions come from the Spring Boot bill of materials. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -114,6 +129,30 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+
+            <!-- Unit tests: mvn test. Surefire's own defaults already pick up
+                 *Test, *Tests and Test*, and already leave *IT alone, so the
+                 two kinds never run as one batch by accident. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+            </plugin>
+
+            <!-- Integration tests: mvn verify. They need Docker for
+                 Testcontainers, so they are kept out of mvn test, which every
+                 member runs on every change. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
