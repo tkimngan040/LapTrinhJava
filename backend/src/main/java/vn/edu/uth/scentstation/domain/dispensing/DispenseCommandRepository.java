@@ -15,6 +15,9 @@ public interface DispenseCommandRepository extends JpaRepository<DispenseCommand
 
     Optional<DispenseCommand> findByIdempotencyKey(String idempotencyKey);
 
+    /** The newest command of an order, which is the one review decides about. */
+    Optional<DispenseCommand> findFirstByOrderIdOrderByIdDesc(Long orderId);
+
     List<DispenseCommand> findByStatusInAndIssuedAtBefore(
             Collection<CommandStatus> statuses, Instant cutoff);
 

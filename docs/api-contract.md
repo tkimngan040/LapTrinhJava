@@ -80,5 +80,57 @@ POST /api/kiosk/orders/{id}/cancel
 the countdown runs; `UNCERTAIN` means a person has to check the machine, so
 the screen should say so rather than claiming success or failure.
 
+## Review and refunds — Long (L7)
+
+Signed-in operators only (`Authorization: Bearer <token>`). Reading the queue
+is open to every role, a Viewer included. Deciding and refunding need
+`OPERATIONS_MANAGER`, `BRAND_ADMIN` or `PLATFORM_SUPER_ADMIN` (FR1.9). An order
+that belongs to another brand answers `404 ORDER_NOT_FOUND`, exactly as if it
+did not exist (BR13).
+
+```
+GET /api/review/orders
+← [ { "orderId": 55, "status": "UNCERTAIN", "deviceId": "KIOSK-001",
+      "slotNumber": 1, "productName": "...", "amount": 20000.00,
+      "currency": "VND", "failureReason": "...", "reviewNote": null,
+      "createdAt": "2026-11-05T10:30:00Z" } ]
+```
+
+The queue holds every order in `UNCERTAIN` or `FAILED` that the caller's brand
+owns.
+
+```
+POST /api/review/orders/{id}/resolve
+→ { "outcome": "DISPENSED", "note": "Customer confirmed the spray" }
+← { "orderId": 55, "status": "DISPENSED", "reviewNote": "Customer confirmed the spray" }
+```
+
+`outcome` is `DISPENSED` (the spray is proven to have happened, so stock is
+deducted once) or `FAILED` (it is proven not to have happened). `note` is
+required. Only an `UNCERTAIN` order can be resolved; any other state answers
+`409 ILLEGAL_ORDER_TRANSITION`. No dispensing command is ever sent from here
+(BR14).
+
+```
+POST /api/review/orders/{id}/refund
+→ { "reason": "Device jammed, no spray" }
+← { "orderId": 55, "orderStatus": "REFUNDED",
+    "refundReference": "RF-70", "refundStatus": "COMPLETED" }
+```
+
+Only a `FAILED` order can be refunded (`409 ORDER_NOT_REFUNDABLE` otherwise).
+The order becomes `REFUNDED` only when `refundStatus` is `COMPLETED`; with
+`PENDING` or `FAILED` the order stays `FAILED`, and calling again retries the
+same refund under the same `refundReference`, so the customer is never
+refunded twice. A refused request is recorded in the audit log.
+
+| Code | Status | Meaning |
+|---|---|---|
+| `INVALID_OUTCOME` | 400 | `outcome` was not `DISPENSED` or `FAILED` |
+| `NOTE_REQUIRED` | 400 | a review needs a written note |
+| `REASON_REQUIRED` | 400 | a refund needs a reason |
+| `NO_COMMAND` | 409 | no dispensing command exists to confirm |
+| `NO_PAYMENT_TO_REFUND` | 409 | the order has no confirmed payment |
+
 > Add the remaining endpoints as you build them. For each one record the path,
 > the request body, the response body, and who owns it.

@@ -32,6 +32,7 @@ after that everyone can use `./mvnw` and get the same Maven version.
 | L2 | Authentication and authorisation | `security/` — `JwtService`, `JwtAuthenticationFilter`, `SecurityConfig`, `TenantContext`, `TenantFilterAspect` |
 | L3 | Order state machine, ordering, payment | `domain/order/` — `OrderStatus`, `OrderStateMachine`, `OrderService`, `PaymentService`, `KioskController`, `PaymentWebhookController`, `FakePaymentProvider` |
 | L5 | MQTT gateway and dispensing | `iot/` and `domain/dispensing/` — `Topics`, `CanonicalJson`, `CommandSigner`, `MqttDeviceGateway`, `DeviceMessageHandler`, `DispenseService`, `DeviceWatchdog` |
+| L7 | Review of UNCERTAIN and FAILED orders, refunds, audit trail | `domain/order/` — `ReviewService`, `ReviewController`, `PaymentRefund`, `RefundGateway`, `FakeRefundGateway`; `domain/audit/` — `AuditService`, `AuditLog`; `db/migration/V3__refunds_and_audit.sql` |
 | M1 | Core schema, entities, repositories | `db/migration/V1__core.sql` and the eight entities of groups A and B of Report section 2.7.2, with their repositories |
 
 Written so the above can run, but owned by other tasks and marked as drafts in
@@ -73,7 +74,7 @@ In every business package, **Tra My** owns the `*Entity.java` and
 | `domain/inventory/` | Hoai Anh | A3, A4 |
 | `domain/report/` | Hoai Anh | A5 |
 | `domain/alert/`, `domain/maintenance/`, `domain/audit/` | Hoai Anh | A7, A8 (stretch) |
-| `src/main/resources/db/migration/` | Tra My | M1, M2, M4 |
+| `src/main/resources/db/migration/` | Tra My | M1, M2, M4 (V3 is taken by L7; M4 uses V4) |
 | `src/test/` | Kim Ngan | N3, N4 |
 
 ## Three rules that must not be broken
@@ -129,7 +130,7 @@ Everything lives under `scentstation` in `application.yml`.
 
 ## Checking the database
 
-Three checks, none of which needs the application to be running. All three
+Four checks, none of which needs the application to be running. All four
 produce output worth a screenshot for Report section 3.6.
 
 **The partial unique indexes.** `src/test/resources/constraint-check.sql`
@@ -149,6 +150,16 @@ and the CHECK constraints refuse an unknown status and a negative price.
 
 ```bash
 psql -h localhost -U scent -d scentstation -f src/test/resources/m1-schema-check.sql
+```
+
+**Refunds and the audit trail.** `src/test/resources/l7-schema-check.sql`
+checks V3: a refund reference cannot be recorded twice, so a retried request
+cannot refund twice, one refund may move PENDING → FAILED → COMPLETED on the
+same row, a zero amount and an unknown status are refused, and an audit line
+keeps its before and after JSON.
+
+```bash
+psql -h localhost -U scent -d scentstation -f src/test/resources/l7-schema-check.sql
 ```
 
 Every line marked `EXPECT` must read as its label says, and every block marked

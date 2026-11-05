@@ -17,8 +17,9 @@
 -- forgotten:
 --   * PAYMENTS, DISPENSE_COMMANDS and the three inventory tables need their
 --     brand_id column (rule 1 of section 2.7.1);
---   * PAYMENT_REFUNDS, DEVICE_EVENTS and TELEMETRY_READINGS are not created
---     yet (they belong to V3__ops.sql, task M4);
+--   * PAYMENT_REFUNDS and AUDIT_LOGS now exist, in V3__refunds_and_audit.sql
+--     (task L7). DEVICE_EVENTS and TELEMETRY_READINGS are not created yet:
+--     they go in V4__ops.sql, task M4, because V3 is taken;
 --   * the ERD names the inventory quantities quantity / initial_quantity /
 --     remaining_quantity as NUMERIC; this file still has the _ml integer
 --     columns the dispensing code was written against;

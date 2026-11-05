@@ -191,7 +191,10 @@ def parse_entity(path):
             nullable_allowed = False
 
         enum_name = None
-        if "@Enumerated" in annotations:
+        if "@JdbcTypeCode(SqlTypes.JSON)" in annotations:
+            # A String held as JSON: Hibernate writes it to a json/jsonb column.
+            java_type = "_json_"
+        elif "@Enumerated" in annotations:
             enum_name = java_type
             java_type = "String"
         elif java_type not in TYPES:
@@ -234,7 +237,12 @@ def main():
 
             data_type, db_nullable = actual[column]
 
-            expected = RELATION_TYPE if java_type == "_relation_" else TYPES[java_type]
+            if java_type == "_json_":
+                expected = {"json", "jsonb"}
+            elif java_type == "_relation_":
+                expected = RELATION_TYPE
+            else:
+                expected = TYPES[java_type]
             if data_type not in expected:
                 problems.append(
                     f"{where}: mapped as {java_type} but the column is {data_type} "
