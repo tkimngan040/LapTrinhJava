@@ -1,5 +1,5 @@
 "use client";
-import { mockLogin } from "@/mocks";
+import { login } from "@/lib/auth-api";
 import {
     useState,
     type FormEvent,
@@ -63,7 +63,7 @@ export default function LoginPage() {
         setLoading(true);
 
         try {
-            const response = mockLogin(email, password);
+            const response = await login(email, password);
 
             sessionStorage.setItem("scentstation-token", response.token);
             sessionStorage.setItem("scentstation-user", JSON.stringify(response.user));
@@ -75,6 +75,8 @@ export default function LoginPage() {
 
             router.push("/dashboard");
         } catch (err) {
+            // The backend answers 401 with its own message for a wrong email
+            // or password; anything else is usually the API not running.
             setError(
                 err instanceof Error
                     ? err.message

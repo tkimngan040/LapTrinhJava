@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Committed on purpose: the example file carries no secrets and tells a new
+# checkout which variables exist.
+!.env.local.example
