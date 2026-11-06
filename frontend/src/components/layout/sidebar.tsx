@@ -1,21 +1,35 @@
-
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import {
+    LayoutDashboard,
+    Sparkles,
+    Users,
+    FlaskConical,
+    Cpu,
+    Boxes,
+    ArrowLeftRight,
+    Wrench,
+    BellRing,
+    BarChart3,
+    ChevronLeft,
+    ChevronRight,
+    Zap
+} from "lucide-react";
 
 const menuItems = [
-    { label: "Dashboard", href: "/dashboard", icon: "▦" },
-    { label: "Brands", href: "/brands", icon: "◇" },
-    { label: "Users & Access", href: "/users", icon: "♙" },
-    { label: "Products", href: "/products", icon: "♢" },
-    { label: "Machines", href: "/machines", icon: "▣" },
-    { label: "Inventory", href: "/inventory", icon: "▤" },
-    { label: "Transactions", href: "/transactions", icon: "⇄" },
-    { label: "Maintenance", href: "/maintenance", icon: "⚙" },
-    { label: "Alerts", href: "/alerts", icon: "♧" },
-    { label: "Reports", href: "/reports", icon: "▥" },
+    { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { label: "Brands", href: "/brands", icon: Sparkles },
+    { label: "Users & Access", href: "/users", icon: Users },
+    { label: "Products", href: "/products", icon: FlaskConical },
+    { label: "Machines", href: "/machines", icon: Cpu },
+    { label: "Inventory", href: "/inventory", icon: Boxes },
+    { label: "Transactions", href: "/transactions", icon: ArrowLeftRight },
+    { label: "Maintenance", href: "/maintenance", icon: Wrench },
+    { label: "Alerts", href: "/alerts", icon: BellRing },
+    { label: "Reports", href: "/reports", icon: BarChart3 },
 ];
 
 type SidebarProps = {
@@ -38,7 +52,6 @@ export default function Sidebar({
     }, []);
 
     const role = roleProp ?? storedRole;
-
     const visibleItems =
         role === null
             ? []
@@ -52,97 +65,89 @@ export default function Sidebar({
 
     return (
         <aside
-            className={`relative isolate flex min-h-screen shrink-0 flex-col overflow-hidden bg-[#28190f] text-white transition-[width] duration-300 ${
-                collapsed ? "w-[76px]" : "w-[300px]"
+            className={`relative isolate flex min-h-screen shrink-0 flex-col overflow-hidden bg-[#07070C] border-r border-[rgba(212,175,55,0.18)] text-white transition-all duration-300 ${
+                collapsed ? "w-[80px]" : "w-[280px]"
             }`}
+            style={{
+                boxShadow: "5px 0 30px rgba(0, 0, 0, 0.8)"
+            }}
         >
-            {/* Luxury background image */}
+            {/* Background Radial Glow & Noise Effect tinh tế */}
             <div
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-0 z-0 bg-no-repeat"
+                className="pointer-events-none absolute inset-0 z-0 opacity-30 bg-no-repeat"
                 style={{
                     backgroundImage: "url('/images/sidebar-luxury.png')",
-                    backgroundSize: "auto 100%",
-                    backgroundPosition: "65% center",
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
                 }}
             />
-
-            {/* Dark overlay */}
             <div
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-[#28170f]/95 via-[#28170f]/80 to-[#28170f]/40"
+                className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-[#0A0A10]/95 via-[#07070C]/90 to-[#030305]"
             />
 
+            {/* Hiệu ứng ánh sáng điểm nhấn góc trên */}
+            <div
+                aria-hidden="true"
+                className="pointer-events-none absolute -top-20 -left-20 w-40 h-40 rounded-full bg-[rgba(212,175,55,0.15)] blur-[50px] z-0"
+            />
 
-
-            {/* Toggle button */}
+            {/* Toggle button thu gọn / mở rộng sắc nét */}
             <button
                 type="button"
                 onClick={onToggleAction}
                 aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
                 title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-
-                className={`absolute top-8 z-30 flex h-12 w-12 items-center justify-center
-    rounded-full border border-[#f0c982]/80
-    bg-gradient-to-br from-[#b98549] to-[#80502d]
-    text-3xl font-light text-[#fff4dc]
-    shadow-[0_4px_14px_rgba(0,0,0,0.3)]
-    transition-all duration-200
-    hover:scale-105 hover:from-[#d5a766] hover:to-[#9b6336]
-    hover:shadow-[0_0_16px_rgba(229,182,111,0.3)]
-    focus-visible:outline-none focus-visible:ring-2
-    focus-visible:ring-[#f0c982]/70
-    ${
-                    collapsed
-                        ? "left-1/2 -translate-x-1/2"
-                        : "right-4"
-                }`}
-
+                className={`absolute top-7 z-30 flex h-9 w-9 items-center justify-center
+                rounded-xl border border-[rgba(212,175,55,0.4)]
+                bg-[#12121A] text-[#D4AF37]
+                shadow-[0_0_15px_rgba(212,175,55,0.2)]
+                transition-all duration-200
+                hover:scale-105 hover:bg-[#1E1E2C] hover:border-[#D4AF37] hover:shadow-[0_0_20px_rgba(212,175,55,0.4)]
+                focus-visible:outline-none
+                ${collapsed ? "left-1/2 -translate-x-1/2" : "right-4"}`}
             >
-                {collapsed ? "›" : "‹"}
+                {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
             </button>
 
-
-
-            {/* Brand */}
+            {/* Brand Header */}
             <div
-                className={`relative z-10 flex min-h-[105px] items-center border-b border-white/10 ${
-                    collapsed
-                        ? "justify-center px-2"
-                        : "px-5 py-6 pr-14"
+                className={`relative z-10 flex min-h-[90px] items-center border-b border-[rgba(255,255,255,0.08)] ${
+                    collapsed ? "justify-center px-2" : "px-6 py-5 pr-14"
                 }`}
             >
                 {collapsed ? (
-                    <span className="text-2xl font-bold text-[#e5b66f]">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[rgba(212,175,55,0.15)] border border-[rgba(212,175,55,0.4)] text-[#D4AF37] font-bold text-lg shadow-[0_0_15px_rgba(212,175,55,0.2)]">
                         S
-                    </span>
+                    </div>
                 ) : (
                     <div>
-                        <h1 className="text-[28px] font-bold tracking-wide text-[#e5b66f]">
+                        <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-white via-[#F3E7C4] to-[#D4AF37] bg-clip-text text-transparent">
                             ScentStation
                         </h1>
-                        <p className="mt-2 text-sm text-white/70">
-                            Perfume Experience Platform
+                        <p className="mt-0.5 text-xs tracking-wider text-[#94A3B8] font-medium uppercase">
+                            Experience Platform
                         </p>
                     </div>
                 )}
             </div>
 
-            {/* Navigation */}
-            <div
-                className={`relative z-10 flex-1 py-5 ${
-                    collapsed ? "px-2" : "px-4"
-                }`}
-            >
+            {/* Navigation Menu */}
+            <div className={`relative z-10 flex-1 py-6 ${collapsed ? "px-2.5" : "px-4"}`}>
                 {!collapsed && (
-                    <p className="mb-4 px-2 text-sm font-semibold uppercase tracking-[0.18em] text-[#d2bda5]/85">
-                        Workspace
-                    </p>
+                    <div className="mb-3 px-3 flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#94A3B8]">
+                            Workspace
+                        </span>
+                        <Zap size={12} className="text-[#D4AF37] animate-pulse" />
+                    </div>
                 )}
 
                 <nav className="space-y-1.5">
                     {visibleItems.map((item) => {
                         const active = pathname === item.href;
+                        const IconComponent = item.icon;
 
                         return (
                             <Link
@@ -150,34 +155,35 @@ export default function Sidebar({
                                 href={item.href}
                                 aria-current={active ? "page" : undefined}
                                 title={collapsed ? item.label : undefined}
-                                className={`group flex items-center gap-3 rounded-xl border py-3.5 text-base transition duration-200 ${
-                                    collapsed
-                                        ? "justify-center px-2"
-                                        : "px-4"
+                                className={`group relative flex items-center gap-3.5 rounded-xl border py-3 text-sm font-medium transition-all duration-200 ${
+                                    collapsed ? "justify-center px-2" : "px-3.5"
                                 } ${
                                     active
-                                        ? "border-[#e7bd7b]/60 bg-[#8b5a32]/90 font-semibold text-[#fff5e5] shadow-md"
-                                        : "border-transparent text-white/85 hover:border-white/15 hover:bg-white/10 hover:text-white"
+                                        ? "border-[rgba(212,175,55,0.5)] bg-[rgba(212,175,55,0.12)] text-[#F3E7C4] shadow-[0_0_20px_rgba(212,175,55,0.18)]"
+                                        : "border-transparent text-[#94A3B8] hover:border-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.04)] hover:text-white"
                                 }`}
                             >
-                                <span
-                                    className={`flex w-5 shrink-0 items-center justify-center text-lg ${
-                                        active
-                                            ? "text-[#ffdda0]"
-                                            : "text-[#d7b98e] group-hover:text-[#ffdda0]"
+                                {/* Hiệu ứng thanh phát quang bên trái khi active */}
+                                {active && (
+                                    <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-[#D4AF37] shadow-[0_0_10px_#D4AF37]" />
+                                )}
+
+                                <IconComponent
+                                    size={20}
+                                    strokeWidth={active ? 2.2 : 1.7}
+                                    className={`shrink-0 transition-transform duration-200 group-hover:scale-110 ${
+                                        active ? "text-[#D4AF37]" : "text-[#64748B] group-hover:text-[#D4AF37]"
                                     }`}
-                                >
-                                    {item.icon}
-                                </span>
+                                />
 
                                 {!collapsed && (
-                                    <span className="whitespace-nowrap">
+                                    <span className="whitespace-nowrap tracking-wide">
                                         {item.label}
                                     </span>
                                 )}
 
                                 {active && !collapsed && (
-                                    <span className="ml-auto h-5 w-1 rounded-full bg-[#e5b66f]" />
+                                    <span className="ml-auto flex h-2 w-2 rounded-full bg-[#D4AF37] shadow-[0_0_8px_#D4AF37]" />
                                 )}
                             </Link>
                         );
@@ -185,8 +191,21 @@ export default function Sidebar({
                 </nav>
             </div>
 
-            {/* Footer */}
-
+            {/* Footer trạng thái hệ thống nhỏ gọn sống động */}
+            {!collapsed && (
+                <div className="relative z-10 p-4 m-3 rounded-xl border border-[rgba(212,175,55,0.15)] bg-[rgba(10,10,16,0.6)] backdrop-blur-md">
+                    <div className="flex items-center gap-3">
+                        <div className="relative flex h-2.5 w-2.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-[11px] font-semibold text-white tracking-wider">IoT Network Active</span>
+                            <span className="text-[10px] text-[#94A3B8]">4 Slots Synchronized</span>
+                        </div>
+                    </div>
+                </div>
+            )}
         </aside>
     );
 }

@@ -1,0 +1,513 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+.container {
+    min-height: 100vh;
+    background-color: #030305;
+    background-image:
+            radial-gradient(circle at 10% 20%, rgba(212, 175, 55, 0.07) 0%, transparent 40%),
+            radial-gradient(circle at 90% 80%, rgba(188, 19, 254, 0.04) 0%, transparent 40%);
+    color: #F8F8F8;
+    padding: 2.5rem 3rem;
+    font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+}
+
+.header {
+    margin-bottom: 2.25rem;
+}
+
+.title {
+    font-size: 2.25rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.03em !important;
+    background: linear-gradient(135deg, #FFFFFF 0%, #F3E7C4 50%, #D4AF37 100%) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    line-height: 1.2 !important;
+}
+
+.subtitle {
+    font-size: 0.9rem !important;
+    color: #94A3B8 !important; /* Đổi từ màu xanh dương thành màu xám khói sang trọng chuẩn Dark Luxury */
+    margin-top: 0.4rem !important;
+    font-weight: 400 !important;
+}
+
+/* --- WIDGET THỐNG KÊ CHUẨN SAAS THƯƠNG MẠI --- */
+.statsGrid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 2.25rem;
+}
+
+@media (min-width: 640px) {
+    .statsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1024px) {
+    .statsGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+.statCard {
+    background: linear-gradient(135deg, rgba(16, 16, 24, 0.95) 0%, rgba(10, 10, 15, 0.98) 100%);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    border-radius: 18px;
+    padding: 1.5rem;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.statCard:hover {
+    transform: translateY(-4px);
+    border-color: rgba(212, 175, 55, 0.5);
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 25px rgba(212, 175, 55, 0.15);
+}
+
+/* Thanh chỉ báo ánh sáng ở cạnh trái */
+.statCard::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; width: 4px; height: 100%;
+    background: #D4AF37;
+    box-shadow: 0 0 12px #D4AF37;
+}
+
+.statOnline::before {
+    background: #4ADE80;
+    box-shadow: 0 0 15px #4ADE80;
+}
+.statMaintenance::before {
+    background: #F59E0B;
+    box-shadow: 0 0 15px #F59E0B;
+}
+.statOffline::before {
+    background: #F87171;
+    box-shadow: 0 0 15px #F87171;
+}
+
+.statLabel {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #94A3B8;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-family: 'Space Grotesk', -apple-system, sans-serif;
+    margin-bottom: 0.4rem;
+}
+
+.statValue {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #FFF;
+    font-family: 'Space Grotesk', -apple-system, sans-serif;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    text-shadow: 0 0 15px rgba(255, 255, 255, 0.15);
+}
+
+.statIconBox {
+    width: 3.25rem;
+    height: 3.25rem;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+    transition: all 0.3s ease;
+}
+
+/* 1. Tổng số Kiosks */
+.statCard:first-child .statIconBox {
+    color: #D4AF37;
+    background: rgba(212, 175, 55, 0.08);
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.15);
+}
+
+/* 2. ONLINE & ACTIVE: Đường nét sóng tín hiệu bên trong tự chạy mượt mà (Flowing Wave Animation) */
+.statOnline .statIconBox {
+    color: #4ADE80;
+    background: rgba(74, 222, 128, 0.08);
+    box-shadow: 0 0 18px rgba(74, 222, 128, 0.25);
+}
+
+.statOnline .statIconBox svg path {
+    stroke-dasharray: 50;
+    animation: strokeFlow 1.8s linear infinite;
+}
+
+@keyframes strokeFlow {
+    0% {
+        stroke-dashoffset: 50;
+        opacity: 0.3;
+    }
+    50% {
+        opacity: 1;
+        filter: drop-shadow(0 0 4px rgba(74, 222, 128, 0.9));
+    }
+    100% {
+        stroke-dashoffset: 0;
+        opacity: 0.3;
+    }
+}
+
+/* 3. UNDER MAINTENANCE (Đã chuẩn, giữ nguyên) */
+.statMaintenance .statIconBox {
+    color: #F59E0B;
+    background: rgba(245, 158, 11, 0.08);
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
+}
+
+.statMaintenance .statIconBox svg {
+    animation: maintenancePulse 1.8s ease-in-out infinite;
+}
+
+@keyframes maintenancePulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.8)); }
+}
+
+/* 4. OFFLINE / DISCONNECTED: Sóng wifi chớp nhắt ngắt quãng đứt đoạn tín hiệu */
+.statOffline .statIconBox {
+    color: #F87171;
+    background: rgba(248, 113, 113, 0.08);
+    box-shadow: 0 0 15px rgba(248, 113, 113, 0.2);
+}
+
+.statOffline .statIconBox svg {
+    animation: wifiFlickerSignal 1.5s steps(2, start) infinite;
+}
+
+@keyframes wifiFlickerSignal {
+    0%, 100% { opacity: 0.2; }
+    50% { opacity: 0.9; filter: drop-shadow(0 0 6px rgba(248, 113, 113, 0.7)); }
+}
+
+.filterBar {
+    background: rgba(15, 15, 22, 0.85);
+    backdrop-filter: blur(25px);
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    border-radius: 16px;
+    padding: 1.25rem;
+    margin-bottom: 2rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1.25rem;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+    position: relative; /* Đảm bảo tạo một context vị trí */
+    z-index: 50; /* Đưa thanh bộ lọc nổi lên trên danh sách máy */
+}
+.searchWrapper {
+    position: relative;
+    flex: 2;
+    min-width: 280px;
+}
+
+.searchIcon {
+    position: absolute;
+    left: 1.125rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1.125rem;
+    height: 1.125rem;
+    color: #D4AF37;
+}
+
+.searchInput, .selectBox {
+    width: 100%;
+    background: #0A0A10;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    padding: 0.9rem 1rem 0.9rem 3.25rem;
+    font-size: 0.9rem;
+    color: #F8F8F8;
+    outline: none;
+    transition: all 0.25s ease;
+}
+
+.selectBox {
+    width: 100%;
+    background: #0A0A10;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    padding: 0.9rem 2.5rem 0.9rem 1.25rem; /* Tăng khoảng trống bên phải để chứa icon */
+    font-size: 0.9rem;
+    color: #F8F8F8;
+    outline: none;
+    transition: all 0.25s ease;
+    flex: 1;
+    min-width: 200px;
+    cursor: pointer;
+
+    /* Căn chỉnh mũi tên select mặc định nằm giữa hoàn hảo theo chiều dọc */
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23D4AF37' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 1rem center; /* Đặt icon nằm chính giữa theo chiều dọc và cách lề phải đúng 1rem */
+    background-size: 1rem;
+}
+.selectBox {
+    padding-left: 1.25rem;
+    flex: 1;
+    min-width: 200px;
+    cursor: pointer;
+}
+
+.searchInput:focus, .selectBox:focus {
+    border-color: #D4AF37;
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.25);
+    background-color: #0F0F17;
+}
+
+.machinesGrid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 1.5rem;
+}
+@media (min-width: 768px) {
+    .machinesGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1200px) {
+    .machinesGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+.machineCard {
+    background: linear-gradient(145deg, rgba(18, 18, 28, 0.95) 0%, rgba(8, 8, 14, 0.98) 100%);
+    backdrop-filter: blur(30px);
+    border: 1px solid rgba(212, 175, 55, 0.28);
+    border-radius: 20px;
+    padding: 1.75rem;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.machineCard:hover {
+    border-color: rgba(212, 175, 55, 0.65);
+    transform: translateY(-5px);
+    box-shadow: 0 35px 80px rgba(0, 0, 0, 0.95), 0 0 30px rgba(212, 175, 55, 0.18);
+}
+
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.25rem;
+}
+
+.serverIconBox {
+    width: 3.25rem;
+    height: 3.25rem;
+    border-radius: 14px;
+    background: rgba(212, 175, 55, 0.1);
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+}
+
+.machineCode {
+    font-weight: 700;
+    color: #FFF;
+    font-size: 1.15rem;
+    font-family: 'Space Grotesk', monospace;
+    letter-spacing: 0.06em;
+}
+
+.machineLocation {
+    font-size: 0.8rem;
+    color: #94A3B8;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.3rem;
+}
+
+/* Huy hiệu trạng thái */
+/* --- HIỆU ỨNG ĐÈN LED TRẠNG THÁI --- */
+.badgeOnline, .badgeOffline, .badgeMaintenance {
+    padding: 0.4rem 0.9rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    font-family: 'Space Grotesk', monospace;
+    letter-spacing: 0.05em;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.dotOnline, .dotOffline, .dotMaintenance {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.dotOnline {
+    background-color: #4ADE80;
+    box-shadow: 0 0 8px #4ADE80;
+    animation: ledPulse 2s infinite ease-in-out;
+}
+
+.dotMaintenance {
+    background-color: #F59E0B;
+    box-shadow: 0 0 8px #F59E0B;
+    animation: ledPulse 1.5s infinite ease-in-out;
+}
+
+.dotOffline {
+    background-color: #F87171;
+    box-shadow: 0 0 8px #F87171;
+}
+
+@keyframes ledPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.infoBox {
+    background: rgba(10, 10, 16, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+    padding: 1.1rem;
+    margin: 1.25rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.infoRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.875rem;
+}
+
+.infoLabel {
+    color: #94A3B8;
+    font-weight: 500;
+}
+
+.infoValue {
+    color: #F8F8F8;
+    font-weight: 700;
+    font-family: 'Space Grotesk', monospace;
+}
+
+.firmwareTag {
+    font-family: 'Space Grotesk', monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #D4AF37;
+    background: rgba(212, 175, 55, 0.12);
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.lastSeenText {
+    font-size: 0.8rem;
+    color: #CBD5E1;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.detailLink {
+    width: 100%;
+    margin-top: 0.5rem;
+    padding: 0.9rem 1.25rem;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(212, 175, 55, 0.04) 100%);
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    color: #F3E7C4;
+    font-size: 0.875rem;
+    font-weight: 700;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+.detailLink:hover {
+    background: linear-gradient(135deg, #D4AF37 0%, #F5E6AD 100%);
+    color: #050508;
+    border-color: #D4AF37;
+    box-shadow: 0 6px 25px rgba(212, 175, 55, 0.45);
+    transform: translateY(-2px);
+}
+/* --- CUSTOM DROPDOWN CHUẨN DARK LUXURY --- */
+.dropdownContainer {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+    z-index: 100; /* Đảm bảo container dropdown luôn nằm trên cùng */
+}
+
+.dropdownHeader {
+    width: 100%;
+    background: #0A0A10;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 12px;
+    padding: 0.9rem 1.25rem;
+    font-size: 0.9rem;
+    color: #F8F8F8;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.25s ease;
+}
+
+.dropdownHeader:hover {
+    border-color: rgba(212, 175, 55, 0.6);
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.15);
+}
+
+.dropdownList {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: #12121A;
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    border-radius: 14px;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.9);
+    overflow: hidden;
+    z-index: 9999;
+    backdrop-filter: blur(20px);
+}
+
+.dropdownItem {
+    padding: 0.85rem 1rem;
+    font-size: 0.875rem;
+    color: #CBD5E1;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    transition: all 0.2s ease;
+}
+
+.dropdownItem:hover {
+    background-color: rgba(212, 175, 55, 0.15);
+    color: #D4AF37;
+    padding-left: 1.25rem;
+}

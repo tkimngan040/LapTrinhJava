@@ -1,0 +1,433 @@
+.container {
+    min-height: 100vh;
+    background-color: #030305;
+    background-image:
+            radial-gradient(circle at 10% 20%, rgba(212, 175, 55, 0.07) 0%, transparent 40%),
+            radial-gradient(circle at 90% 80%, rgba(188, 19, 254, 0.04) 0%, transparent 40%);
+    color: #f4f4f5;
+    padding: 2.5rem 3rem;
+    font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+}
+
+.backLink {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(16, 16, 24, 0.9) 0%, rgba(10, 10, 15, 0.95) 100%);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    color: #F3E7C4;
+    padding: 0.6rem 1.25rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    margin-bottom: 1.75rem;
+    backdrop-filter: blur(20px);
+}
+
+.backLink:hover {
+    border-color: rgba(212, 175, 55, 0.7);
+    color: #D4AF37;
+    background: rgba(212, 175, 55, 0.08);
+    transform: translateY(-2px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7), 0 0 15px rgba(212, 175, 55, 0.2);
+}
+
+/* --- NÂNG CẤP HEADER CHI TIẾT MÁY --- */
+.header {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1.25rem;
+    margin-bottom: 2.25rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+@media (min-width: 1024px) {
+    .header {
+        flex-direction: row;
+        align-items: center;
+    }
+}
+
+.titleGroup {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.machineTitle {
+    font-size: 2.5rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, #FFFFFF 0%, #F3E7C4 50%, #D4AF37 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-family: 'Space Grotesk', sans-serif;
+}
+
+/* Huy hiệu trạng thái chuẩn SaaS có đèn LED nhấp nháy */
+.onlineBadge {
+    background-color: rgba(74, 222, 128, 0.12);
+    border: 1px solid rgba(74, 222, 128, 0.35);
+    color: #4ade80;
+    font-size: 0.75rem;
+    padding: 0.35rem 0.85rem;
+    border-radius: 9999px;
+    font-weight: 700;
+    font-family: 'Space Grotesk', monospace;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 0 15px rgba(74, 222, 128, 0.15);
+}
+
+.dotOnline {
+    width: 6px;
+    height: 6px;
+    background-color: #4ADE80;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #4ADE80;
+    animation: ledPulse 2s infinite ease-in-out;
+}
+
+@keyframes ledPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.addressText {
+    font-size: 0.9rem;
+    color: #94a3b8;
+    margin-top: 0.4rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+/* Nhóm nút hành động cao cấp */
+.actionsGroup {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    flex-wrap: wrap;
+}
+
+.restartBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, rgba(18, 18, 28, 0.95) 0%, rgba(10, 10, 15, 0.98) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #f4f4f5;
+    padding: 0.75rem 1.25rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+}
+
+.restartBtn:hover {
+    border-color: rgba(212, 175, 55, 0.5);
+    background: rgba(212, 175, 55, 0.08);
+    transform: translateY(-2px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.7), 0 0 15px rgba(212, 175, 55, 0.2);
+}
+
+.maintenanceBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(212, 175, 55, 0.04) 100%);
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    color: #fbbf24;
+    padding: 0.75rem 1.25rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+}
+
+.maintenanceBtn:hover {
+    background: rgba(245, 158, 11, 0.22);
+    border-color: rgba(245, 158, 11, 0.7);
+    transform: translateY(-2px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.7), 0 0 20px rgba(245, 158, 11, 0.25);
+}
+
+.gridSection {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+@media (min-width: 1024px) {
+    .gridSection {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+/* --- NÂNG CẤP KHỐI THÔNG TIN VÀ CẢM BIẾN --- */
+.card {
+    background: linear-gradient(145deg, rgba(16, 16, 24, 0.95) 0%, rgba(10, 10, 15, 0.98) 100%);
+    backdrop-filter: blur(25px);
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    border-radius: 1.25rem;
+    padding: 1.75rem;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.cardTitle {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-family: 'Space Grotesk', sans-serif;
+    letter-spacing: 0.02em;
+}
+
+.infoCardGrid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+@media (min-width: 640px) {
+    .infoCardGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.infoBoxItem {
+    background: rgba(8, 8, 14, 0.75);
+    padding: 1rem 1.25rem;
+    border-radius: 0.85rem;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.infoBoxItem:hover {
+    border-color: rgba(212, 175, 55, 0.35);
+    background: rgba(15, 15, 24, 0.9);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+}
+
+.infoBoxLabel {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    display: block;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.3rem;
+}
+
+.infoBoxValue {
+    color: #f4f4f5;
+    font-weight: 600;
+    font-size: 0.95rem;
+    display: block;
+}
+
+/* --- NÂNG CẤP KHU VỰC 4 SLOT NƯỚC HOA --- */
+.slotsGrid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 1.25rem;
+}
+
+@media (min-width: 768px) {
+    .slotsGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1280px) {
+    .slotsGrid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+.slotCard {
+    background: linear-gradient(145deg, rgba(14, 14, 22, 0.95) 0%, rgba(8, 8, 14, 0.98) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1.25rem;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+    position: relative;
+    overflow: hidden;
+}
+
+.slotCard:hover {
+    border-color: rgba(212, 175, 55, 0.4);
+    transform: translateY(-3px);
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.8), 0 0 20px rgba(212, 175, 55, 0.15);
+    background: linear-gradient(145deg, rgba(18, 18, 28, 0.98) 0%, rgba(10, 10, 16, 0.99) 100%);
+}
+
+.slotHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.slotNumberTag {
+    font-size: 0.75rem;
+    font-weight: 700;
+    font-family: 'Space Grotesk', monospace;
+    color: #d4af37;
+    background: rgba(212, 175, 55, 0.1);
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    border: 1px solid rgba(212, 175, 55, 0.25);
+}
+
+.progressBarContainer {
+    margin-top: 1.25rem;
+    margin-bottom: 1.25rem;
+}
+
+.progressBarTrack {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 9999px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.slotFooter {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding-top: 1rem;
+    margin-top: 0.5rem;
+}
+
+.toggleSlotBtn {
+    padding: 0.45rem 0.85rem;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    transition: all 0.2s ease;
+}
+
+.toggleSlotBtn:hover {
+    filter: brightness(1.2);
+    transform: scale(1.02);
+}
+
+/* --- NÂNG CẤP MODAL XÁC NHẬN CAO CẤP --- */
+/* --- NÂNG CẤP MODAL XÁC NHẬN CAO CẤP --- */
+.modalOverlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(3, 3, 5, 0.85);
+    backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    z-index: 100;
+    animation: fadeInModal 0.25s ease-out;
+}
+
+@keyframes fadeInModal {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.modalContent {
+    background: linear-gradient(145deg, rgba(20, 20, 30, 0.98) 0%, rgba(10, 10, 15, 0.99) 100%);
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    border-radius: 20px;
+    width: 100%;
+    max-width: 32rem;
+    padding: 2rem;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.95), 0 0 30px rgba(212, 175, 55, 0.15);
+    position: relative;
+    overflow: hidden;
+}
+
+.cancelBtn {
+    padding: 0.75rem 1.25rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #f4f4f5;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.cancelBtn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.confirmBtn {
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, #D4AF37 0%, #F5E6AD 100%);
+    color: #050508;
+    font-weight: 700;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    cursor: pointer;
+    border: none;
+    transition: all 0.25s ease;
+    box-shadow: 0 8px 25px rgba(212, 175, 55, 0.35);
+}
+
+.confirmBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 35px rgba(212, 175, 55, 0.55);
+    background: linear-gradient(135deg, #E6C547 0%, #FFF3C4 100%);
+}
+/* --- HIỆU ỨNG ĐỘNG CHO 3 ICON CẢM BIẾN --- */
+
+/* 1. Hiệu ứng sóng Wifi nhấp nháy từng nấc */
+@keyframes wifiWave {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+}
+
+.wifiBar1 { animation: wifiWave 1.5s infinite ease-in-out 0s; }
+.wifiBar2 { animation: wifiWave 1.5s infinite ease-in-out 0.3s; }
+.wifiBar3 { animation: wifiWave 1.5s infinite ease-in-out 0.6s; }
+.wifiBar4 { animation: wifiWave 1.5s infinite ease-in-out 0.9s; }
+
+/* 2. Hiệu ứng cột thủy ngân trong ống nhiệt độ chạy lên xuống */
+@keyframes thermoMercury {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-4px); }
+}
+
+.mercuryCore {
+    animation: thermoMercury 2s infinite ease-in-out;
+}
+
