@@ -25,4 +25,6 @@ public interface MachineRepository extends JpaRepository<Machine, Long> {
     List<Machine> findByConnectionStatusNot(ConnectionStatus status);
 
     List<Machine> findByBrandId(Long brandId);
+    // Explicit tenant-scoped lookup for Brand Admin.
+    Optional<Machine> findByIdAndBrand_Id(Long id, Long brandId);
 }

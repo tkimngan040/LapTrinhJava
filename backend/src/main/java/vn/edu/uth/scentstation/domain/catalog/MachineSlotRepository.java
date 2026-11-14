@@ -28,4 +28,9 @@ public interface MachineSlotRepository extends JpaRepository<MachineSlot, Long> 
     Optional<MachineSlot> findByMachineIdAndSlotNumber(Long machineId, int slotNumber);
 
     List<MachineSlot> findByMachineIdOrderBySlotNumberAsc(Long machineId);
+    // Explicitly checks both machine ownership and slot ownership.
+    Optional<MachineSlot> findByIdAndMachine_IdAndBrand_Id(
+            Long id,
+            Long machineId,
+            Long brandId);
 }
