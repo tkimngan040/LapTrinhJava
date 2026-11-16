@@ -1,3 +1,5 @@
+// noinspection SpellCheckingInspection
+
 export interface ApiError {
     timestamp: string;
     status: number;
@@ -10,6 +12,9 @@ export interface AuthUser {
     fullName: string;
     email: string;
     brandId: number | null;
+    brandScope?: string | null;
+    role?: string;
+    roleCode?: string;
     roles: string[];
 }
 
@@ -26,6 +31,8 @@ export interface MachineMenuSlot {
     imageUrl: string;
     price: number; // Kiosk Experience Price per spray in VND
     available: boolean;
+    capacityMl?: number;
+    remainingMl?: number;
     retailPrice10ml?: number | null;
     retailPriceSource?: string | null;
     retailPriceCheckedAt?: string;
@@ -63,7 +70,7 @@ interface MockAccount {
     locked: boolean;
 }
 
-// Mock accounts for Frontend testing only
+// Đầy đủ 6 Vai trò chuẩn RBAC (PSA, BA, OM, TE, IS, VW) + Tài khoản Locked
 export const MOCK_ACCOUNTS: MockAccount[] = [
     {
         email: "admin@scentstation.local",
@@ -71,10 +78,73 @@ export const MOCK_ACCOUNTS: MockAccount[] = [
         locked: false,
         user: {
             id: 1,
-            fullName: "Platform Administrator",
+            fullName: "Platform Super Administrator",
             email: "admin@scentstation.local",
             brandId: null,
+            brandScope: null,
+            role: "PSA",
+            roleCode: "PSA",
             roles: ["PSA"],
+        },
+    },
+    {
+        email: "brand.chanel@scentstation.local",
+        password: "ScentDemo123!",
+        locked: false,
+        user: {
+            id: 2,
+            fullName: "Chanel Maison Director",
+            email: "brand.chanel@scentstation.local",
+            brandId: 1,
+            brandScope: "Chanel",
+            role: "BA",
+            roleCode: "BA",
+            roles: ["BA"],
+        },
+    },
+    {
+        email: "ops@scentstation.local",
+        password: "ScentDemo123!",
+        locked: false,
+        user: {
+            id: 3,
+            fullName: "Operations Manager",
+            email: "ops@scentstation.local",
+            brandId: null,
+            brandScope: null,
+            role: "OM",
+            roleCode: "OM",
+            roles: ["OM"],
+        },
+    },
+    {
+        email: "tech@scentstation.local",
+        password: "ScentDemo123!",
+        locked: false,
+        user: {
+            id: 4,
+            fullName: "Nguyễn Hoàng Nam (Senior IoT Engineer)",
+            email: "tech@scentstation.local",
+            brandId: null,
+            brandScope: null,
+            role: "TE",
+            roleCode: "TE",
+            roles: ["TE"],
+        },
+    },
+    {
+        email: "inventory@scentstation.local",
+        password: "ScentDemo123!",
+        locked: false,
+        user: {
+            id: 5,
+            fullName: "Lê Minh Khôi (Fragrance Cartridge Specialist)",
+            email: "inventory@scentstation.local",
+            brandId: null,
+            brandScope: null,
+            role: "IS",
+            roleCode: "IS",
+            roles: ["IS"],
         },
     },
     {
@@ -82,10 +152,13 @@ export const MOCK_ACCOUNTS: MockAccount[] = [
         password: "ScentDemo123!",
         locked: false,
         user: {
-            id: 2,
-            fullName: "Viewer Account",
+            id: 6,
+            fullName: "Executive Auditor (Viewer)",
             email: "viewer@scentstation.local",
             brandId: null,
+            brandScope: null,
+            role: "VW",
+            roleCode: "VW",
             roles: ["VW"],
         },
     },
@@ -94,34 +167,72 @@ export const MOCK_ACCOUNTS: MockAccount[] = [
         password: "ScentDemo123!",
         locked: true,
         user: {
-            id: 3,
+            id: 7,
             fullName: "Locked Account",
             email: "locked@scentstation.local",
             brandId: null,
+            brandScope: null,
+            role: "VW",
+            roleCode: "VW",
             roles: ["VW"],
         },
     },
 ];
 
+// Đồng bộ 2 chiều với Màn 2 (/login), Màn 12 (/users) và Màn 16 (/profile)
 export function mockLogin(
     email: string,
-    password: string,
+    password: string
 ): LoginResponse {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // 1. Kiểm tra nếu người dùng đã đổi mật khẩu hoặc tên hiển thị ở Màn 16 (/profile)
+    let customProfilePw: string | null = null;
+    let customProfileName: string | null = null;
+    if (typeof window !== "undefined") {
+        try {
+            const rawProf = localStorage.getItem("scentstation_profile_account_v2");
+            if (rawProf) {
+                const parsedProf = JSON.parse(rawProf);
+                if (parsedProf.password) customProfilePw = parsedProf.password;
+                if (parsedProf.fullName) customProfileName = parsedProf.fullName;
+            }
+        } catch {
+            // Safe fallback
+        }
+    }
+
     const account = MOCK_ACCOUNTS.find(
-        (item) => item.email === email.trim().toLowerCase(),
+        (item) => item.email.toLowerCase() === normalizedEmail
     );
 
-    if (!account || account.password !== password) {
+    const isAcceptedPassword =
+        password === "ScentDemo123!" ||
+        password === "Admin@12345" ||
+        (customProfilePw && password === customProfilePw) ||
+        (account && password === account.password);
+
+    if (!account || !isAcceptedPassword) {
         throw new Error("Invalid email or password.");
     }
 
     if (account.locked) {
-        throw new Error("Your account has been locked. Please contact the administrator.");
+        throw new Error(
+            "Your account has been locked. Please contact the administrator."
+        );
     }
+
+    const syncedUser: AuthUser = {
+        ...account.user,
+        fullName:
+            normalizedEmail === "admin@scentstation.local" && customProfileName
+                ? customProfileName
+                : account.user.fullName,
+    };
 
     return {
         token: `mock-jwt-token-${account.user.id}`,
-        user: account.user,
+        user: syncedUser,
     };
 }
 
@@ -131,26 +242,27 @@ export const mockLoginResponse: LoginResponse = {
 };
 
 export const mockCreateOrderResponse: CreateOrderResponse = {
-    orderId: 55,
+    orderId: 801,
     status: "PENDING",
-    price: 20000,
-    qrContent: "MOCK-QR-ORDER-55",
-    expiresAt: "2026-11-05T10:30:00Z",
+    price: 25000,
+    qrContent: "VIETQR-NAPAS247-ORDER-801",
+    expiresAt: "2026-11-16T23:59:00Z",
 };
 
 export const mockOrderStatus: OrderStatusResponse = {
-    orderId: 55,
+    orderId: 801,
     status: "DISPENSING",
     failureReason: null,
 };
 
 export const mockApiError: ApiError = {
-    timestamp: "2026-11-05T10:30:00Z",
+    timestamp: "2026-11-16T10:30:00Z",
     status: 400,
     code: "SLOT_EMPTY",
     message: "Slot has insufficient volume",
 };
 
+// Đầy đủ 34 Mùi hương nước hoa chuẩn từ 21 Thương hiệu cao cấp (Slot 1 -> 34 liên tục)
 export const mockMachineMenu: MachineMenuResponse = {
     deviceId: "demo-device",
     status: "ONLINE",
@@ -167,7 +279,25 @@ export const mockMachineMenu: MachineMenuResponse = {
             notes: "Raspberry, apricot, hand-picked jasmine, white moss",
             price: 10000,
             available: true,
-            imageUrl: "/images/mcm-edp.jpg"
+            capacityMl: 100,
+            remainingMl: 78.5,
+            imageUrl: "/images/mcm-edp.jpg",
+        },
+        {
+            slotNumber: 2,
+            productId: "ck-one-02",
+            productName: "Calvin Klein CK One EDT",
+            brand: "Calvin Klein",
+            concentration: "Eau de Toilette",
+            audience: "Unisex",
+            fragranceFamily: "Citrus Aromatic",
+            description: "An iconic gender-free citrus aromatic fragrance balancing bright bergamot, green tea accord, and warm musk.",
+            notes: "Bergamot, cardamom, fresh pineapple, papaya, jasmine, violet, rose, nutmeg, green tea, musk, amber",
+            price: 9000,
+            available: true,
+            capacityMl: 100,
+            remainingMl: 82.0,
+            imageUrl: "/images/acqua-di-gio.jpg",
         },
         {
             slotNumber: 3,
@@ -181,7 +311,9 @@ export const mockMachineMenu: MachineMenuResponse = {
             notes: "Calabrian bergamot, Sichuan pepper, Ambroxan, woody notes",
             price: 12000,
             available: true,
-            imageUrl: "/images/dior-sauvage.jpg"
+            capacityMl: 100,
+            remainingMl: 84.0,
+            imageUrl: "/images/dior-sauvage.jpg",
         },
         {
             slotNumber: 4,
@@ -195,7 +327,9 @@ export const mockMachineMenu: MachineMenuResponse = {
             notes: "Lemon, mint, pink pepper, grapefruit, ginger, cedar, sandalwood, frankincense",
             price: 12000,
             available: true,
-            imageUrl: "/images/bleu-de-chanel.png"
+            capacityMl: 100,
+            remainingMl: 12.5,
+            imageUrl: "/images/bleu-de-chanel.png",
         },
         {
             slotNumber: 5,
@@ -209,7 +343,9 @@ export const mockMachineMenu: MachineMenuResponse = {
             notes: "Vibrant orange, Turkish rose, Grasse jasmine, patchouli, tonka bean, vetiver",
             price: 15000,
             available: true,
-            imageUrl: "/images/coco-mademoiselle.jpg"
+            capacityMl: 100,
+            remainingMl: 76.0,
+            imageUrl: "/images/coco-mademoiselle.jpg",
         },
         {
             slotNumber: 6,
@@ -223,7 +359,9 @@ export const mockMachineMenu: MachineMenuResponse = {
             notes: "Mandarin oil, lavender, orange blossom, jasmine sambac, vanilla, ambergris",
             price: 15000,
             available: true,
-            imageUrl: "/images/ysl-libre.jpg"
+            capacityMl: 90,
+            remainingMl: 14.0,
+            imageUrl: "/images/ysl-libre.jpg",
         },
         {
             slotNumber: 7,
@@ -237,7 +375,9 @@ export const mockMachineMenu: MachineMenuResponse = {
             notes: "Apple, ginger, bergamot, sage, juniper berries, geranium, amberwood, tonka bean, cedar",
             price: 13000,
             available: true,
-            imageUrl: "/images/ysl-y-edp.jpg"
+            capacityMl: 100,
+            remainingMl: 74.0,
+            imageUrl: "/images/ysl-y-edp.jpg",
         },
         {
             slotNumber: 8,
@@ -251,7 +391,9 @@ export const mockMachineMenu: MachineMenuResponse = {
             notes: "Mint, green apple, Italian lemon, tonka bean, Venezuelan ambroxan, geranium flower, vanilla, cedarwood",
             price: 11000,
             available: true,
-            imageUrl: "/images/versace-eros.jpg"
+            capacityMl: 100,
+            remainingMl: 79.0,
+            imageUrl: "/images/versace-eros.jpg",
         },
         {
             slotNumber: 9,
@@ -265,7 +407,9 @@ export const mockMachineMenu: MachineMenuResponse = {
             notes: "Calabrian bergamot, grapefruit, fig leaf, aquatic notes, violet leaf, black pepper, papyrus wood, patchouli, mineral musk, tonka bean",
             price: 11000,
             available: true,
-            imageUrl: "/images/versace-dylan-blue.jpg"
+            capacityMl: 100,
+            remainingMl: 81.0,
+            imageUrl: "/images/versace-dylan-blue.jpg",
         },
         {
             slotNumber: 10,
@@ -279,7 +423,9 @@ export const mockMachineMenu: MachineMenuResponse = {
             notes: "Yuzu, pomegranate, iced accord, peony, lotus, magnolia, acajou wood, plant amber, musk",
             price: 11000,
             available: true,
-            imageUrl: "/images/versace-bright-crystal.jpg"
+            capacityMl: 90,
+            remainingMl: 72.0,
+            imageUrl: "/images/versace-bright-crystal.jpg",
         },
         {
             slotNumber: 11,
@@ -293,7 +439,9 @@ export const mockMachineMenu: MachineMenuResponse = {
             notes: "Calabrian bergamot, Damask rose, peony, apricot, peach, white musk",
             price: 14000,
             available: true,
-            imageUrl: "/images/miss-dior-blooming-bouquet.jpg"
+            capacityMl: 100,
+            remainingMl: 85.0,
+            imageUrl: "/images/miss-dior-blooming-bouquet.jpg",
         },
         {
             slotNumber: 12,
@@ -307,7 +455,9 @@ export const mockMachineMenu: MachineMenuResponse = {
             notes: "Lemon, pineapple, bergamot, blackcurrant, apple, birch, jasmine, rose, musk, ambergris, patchouli, vanilla",
             price: 9000,
             available: true,
-            imageUrl: "/images/club-de-nuit-intense.jpg"
+            capacityMl: 105,
+            remainingMl: 95.0,
+            imageUrl: "/images/club-de-nuit-intense.jpg",
         },
         {
             slotNumber: 13,
@@ -317,11 +467,13 @@ export const mockMachineMenu: MachineMenuResponse = {
             concentration: "Eau de Toilette",
             audience: "Men",
             fragranceFamily: "Aromatic Aquatic",
-            description: "A iconic aquatic, aromatic fragrance born from the Mediterranean sea. Fresh calabrian bergamot, neroli, and green tangerine blend with marine notes and cedarwood.",
+            description: "An iconic aquatic, aromatic fragrance born from the Mediterranean sea. Fresh Calabrian bergamot, neroli, and green tangerine blend with marine notes and cedarwood.",
             notes: "Lime, lemon, bergamot, jasmine, orange, neroli, sea notes, peach, freesia, cyclamen, cedar, patchouli, white musk, oakmoss",
             price: 11000,
             available: true,
-            imageUrl: "/images/acqua-di-gio.jpg"
+            capacityMl: 100,
+            remainingMl: 77.0,
+            imageUrl: "/images/acqua-di-gio.jpg",
         },
         {
             slotNumber: 14,
@@ -335,7 +487,9 @@ export const mockMachineMenu: MachineMenuResponse = {
             notes: "Marine notes, aquozone, bergamot, green mandarin, rosemary, cypress, lavender, mastic, mineral amber, patchouli, musk",
             price: 12500,
             available: true,
-            imageUrl: "/images/acqua-di-gio-profondo.jpg"
+            capacityMl: 100,
+            remainingMl: 80.0,
+            imageUrl: "/images/acqua-di-gio-profondo.jpg",
         },
         {
             slotNumber: 15,
@@ -345,11 +499,13 @@ export const mockMachineMenu: MachineMenuResponse = {
             concentration: "Parfum Cologne",
             audience: "Men",
             fragranceFamily: "Fougere Aromatic",
-            description: "An ultra-luxurious creation that translates supreme elegance. A complex blend of ultra-fresh citrus and herbal notes resting upon an intensely rich, complex woody and amber base.",
+            description: "An ultra-luxurious creation that translates supreme elegance. A complex blend of ultra-fresh citrus and herbal notes resting upon an intensely rich woody and amber base.",
             notes: "Lemon, bergamot, grapefruit, lime, thyme, artemisia, lily of the valley, rose, jasmine, apple, blackcurrant, pink pepper, cedarwood, vetiver, ambergris, musk",
             price: 25000,
             available: true,
-            imageUrl: "/images/roja-elysium.jpg"
+            capacityMl: 100,
+            remainingMl: 11.0,
+            imageUrl: "/images/roja-elysium.jpg",
         },
         {
             slotNumber: 16,
@@ -363,7 +519,9 @@ export const mockMachineMenu: MachineMenuResponse = {
             notes: "Bergamot, mandarin, grapefruit, mint, water notes, lavender, rosemary, frankincense, cedarwood, sandalwood, vetiver, cashmeran",
             price: 24000,
             available: true,
-            imageUrl: "/images/parfums-de-marly-sedley.jpg"
+            capacityMl: 125,
+            remainingMl: 88.0,
+            imageUrl: "/images/parfums-de-marly-sedley.jpg",
         },
         {
             slotNumber: 17,
@@ -377,7 +535,9 @@ export const mockMachineMenu: MachineMenuResponse = {
             notes: "Blackcurrant, pink pepper, bergamot, jasmine, jasmine sambac, jasmine tea, Bourbon vanilla, cashmere wood, guaiac wood",
             price: 15000,
             available: true,
-            imageUrl: "/images/valentino-born-in-roma.jpg"
+            capacityMl: 100,
+            remainingMl: 75.0,
+            imageUrl: "/images/valentino-born-in-roma.jpg",
         },
         {
             slotNumber: 18,
@@ -391,7 +551,9 @@ export const mockMachineMenu: MachineMenuResponse = {
             notes: "Almond, coffee, bergamot, lemon, tuberose, jasmine sambac, orange blossom, tonka bean, cocoa, vanilla, praline, sandalwood, amber, musk",
             price: 15000,
             available: true,
-            imageUrl: "/images/carolina-herrera-good-girl.jpg"
+            capacityMl: 80,
+            remainingMl: 66.0,
+            imageUrl: "/images/carolina-herrera-good-girl.jpg",
         },
         {
             slotNumber: 19,
@@ -401,11 +563,13 @@ export const mockMachineMenu: MachineMenuResponse = {
             concentration: "Eau de Parfum",
             audience: "Unisex",
             fragranceFamily: "Amber Floral",
-            description: "A luxurious and sensual fragrance of rich, dark accords and an alluring allure of black orchids and spice, modern yet timeless.",
+            description: "A luxurious and sensual fragrance of rich, dark accords and an alluring potion of black orchids and spice, modern yet timeless.",
             notes: "Truffle, gardenia, black currant, ylang-ylang, jasmine, bergamot, mandarin orange, orchid, spices, fruity notes, lotus, Mexican chocolate, patchouli, vanilla, incense, amber, sandalwood, vetiver, white musk",
             price: 22000,
             available: true,
-            imageUrl: "/images/tom-ford-black-orchid.jpg"
+            capacityMl: 100,
+            remainingMl: 64.0,
+            imageUrl: "/images/tom-ford-black-orchid.jpg",
         },
         {
             slotNumber: 20,
@@ -419,7 +583,9 @@ export const mockMachineMenu: MachineMenuResponse = {
             notes: "Cardamom, lavender, iris, oriental notes, vanilla, wood notes",
             price: 14500,
             available: true,
-            imageUrl: "/images/jean-paul-gaultier-le-male.jpg"
+            capacityMl: 125,
+            remainingMl: 92.0,
+            imageUrl: "/images/jean-paul-gaultier-le-male.jpg",
         },
         {
             slotNumber: 21,
@@ -433,7 +599,9 @@ export const mockMachineMenu: MachineMenuResponse = {
             notes: "Blood orange, mandarin orange, honey, gardenia, orange blossom, jasmine, peach, beeswax, caramel, patchouli, licorice",
             price: 14000,
             available: true,
-            imageUrl: "/images/jean-paul-gaultier-scandal.jpg"
+            capacityMl: 80,
+            remainingMl: 68.0,
+            imageUrl: "/images/jean-paul-gaultier-scandal.jpg",
         },
         {
             slotNumber: 22,
@@ -447,7 +615,9 @@ export const mockMachineMenu: MachineMenuResponse = {
             notes: "Mandarin orange, peppermint, grapefruit, cinnamon, rose extract, spicy notes, amber, leather, patchouli, white wood",
             price: 12000,
             available: true,
-            imageUrl: "/images/paco-rabanne-1-million.jpg"
+            capacityMl: 100,
+            remainingMl: 79.0,
+            imageUrl: "/images/paco-rabanne-1-million.jpg",
         },
         {
             slotNumber: 23,
@@ -461,7 +631,9 @@ export const mockMachineMenu: MachineMenuResponse = {
             notes: "Marine accord, grapefruit, mandarin, bay leaf, jasmine, guaiac wood, oakmoss, patchouli, ambergris",
             price: 11500,
             available: true,
-            imageUrl: "/images/paco-rabanne-invictus.jpg"
+            capacityMl: 100,
+            remainingMl: 83.0,
+            imageUrl: "/images/paco-rabanne-invictus.jpg",
         },
         {
             slotNumber: 24,
@@ -475,7 +647,9 @@ export const mockMachineMenu: MachineMenuResponse = {
             notes: "Lemon, pink pepper, apple, bergamot, blackcurrant, pineapple, jasmine, patchouli, birch, ambergris, cedarwood, oakmoss, musk",
             price: 28000,
             available: true,
-            imageUrl: "/images/creed-aventus.jpg"
+            capacityMl: 100,
+            remainingMl: 11.5,
+            imageUrl: "/images/creed-aventus.jpg",
         },
         {
             slotNumber: 25,
@@ -489,7 +663,9 @@ export const mockMachineMenu: MachineMenuResponse = {
             notes: "Bergamot, pink pepper, clary sage, leather, vetiver, patchouli, akigalawood, cocoa pod",
             price: 9500,
             available: true,
-            imageUrl: "/images/montblanc-explorer.jpg"
+            capacityMl: 100,
+            remainingMl: 86.0,
+            imageUrl: "/images/montblanc-explorer.jpg",
         },
         {
             slotNumber: 26,
@@ -503,7 +679,9 @@ export const mockMachineMenu: MachineMenuResponse = {
             notes: "Lavender, pineapple, bergamot, verbena, red apple, dried fruits, oakmoss, geranium, coumarin, rose, tonka bean, sandalwood",
             price: 9000,
             available: true,
-            imageUrl: "/images/montblanc-legend.jpg"
+            capacityMl: 100,
+            remainingMl: 82.0,
+            imageUrl: "/images/montblanc-legend.jpg",
         },
         {
             slotNumber: 27,
@@ -517,7 +695,9 @@ export const mockMachineMenu: MachineMenuResponse = {
             notes: "Rose, peach, musk, amber, patchouli, sandalwood",
             price: 13500,
             available: true,
-            imageUrl: "/images/narciso-rodriguez-for-her.jpg"
+            capacityMl: 100,
+            remainingMl: 74.0,
+            imageUrl: "/images/narciso-rodriguez-for-her.jpg",
         },
         {
             slotNumber: 28,
@@ -531,7 +711,9 @@ export const mockMachineMenu: MachineMenuResponse = {
             notes: "Musk, white flowers, cashmere wood",
             price: 13800,
             available: true,
-            imageUrl: "/images/narciso-rodriguez-pure-musc.jpg"
+            capacityMl: 100,
+            remainingMl: 78.0,
+            imageUrl: "/images/narciso-rodriguez-pure-musc.jpg",
         },
         {
             slotNumber: 29,
@@ -545,7 +727,9 @@ export const mockMachineMenu: MachineMenuResponse = {
             notes: "Strawberry, raspberry, blackberry, sour cherry, blackcurrant, mandarin orange, lemon, violet, jasmine, musk, vanilla, cashmeran, woody notes, amber, patchouli",
             price: 13000,
             available: true,
-            imageUrl: "/images/burberry-her.jpg"
+            capacityMl: 100,
+            remainingMl: 79.0,
+            imageUrl: "/images/burberry-her.jpg",
         },
         {
             slotNumber: 30,
@@ -559,11 +743,13 @@ export const mockMachineMenu: MachineMenuResponse = {
             notes: "Vanilla infusion, lavender, vanilla caviar, vanilla absolute, cacao, ginger",
             price: 13500,
             available: true,
-            imageUrl: "/images/burberry-goddess.jpg"
+            capacityMl: 100,
+            remainingMl: 81.0,
+            imageUrl: "/images/burberry-goddess.jpg",
         },
         {
-            slotNumber: 40,
-            productId: "le-labo-another-13-40",
+            slotNumber: 31,
+            productId: "le-labo-another-13-31",
             productName: "Le Labo Another 13 EDP",
             brand: "Le Labo",
             concentration: "Eau de Parfum",
@@ -573,11 +759,13 @@ export const mockMachineMenu: MachineMenuResponse = {
             notes: "Ambroxan, jasmine, moss, ambrette seed, pear, salicylate",
             price: 27000,
             available: true,
-            imageUrl: "/images/le-labo-another-13.jpg"
+            capacityMl: 100,
+            remainingMl: 13.5,
+            imageUrl: "/images/le-labo-another-13.jpg",
         },
         {
-            slotNumber: 41,
-            productId: "maison-margiela-by-the-fireplace-41",
+            slotNumber: 32,
+            productId: "maison-margiela-by-the-fireplace-32",
             productName: "Maison Margiela Replica By the Fireplace EDT",
             brand: "Maison Margiela",
             concentration: "Eau de Toilette",
@@ -587,21 +775,41 @@ export const mockMachineMenu: MachineMenuResponse = {
             notes: "Clove oil, pink pepper, orange flower, chestnut accord, guaiac wood oil, cade oil, vanilla accord, peru balsam, cashmeran",
             price: 16500,
             available: true,
-            imageUrl: "/images/maison-margiela-by-the-fireplace.jpg"
+            capacityMl: 100,
+            remainingMl: 80.0,
+            imageUrl: "/images/maison-margiela-by-the-fireplace.jpg",
         },
         {
-            slotNumber: 42,
-            productId: "mfk-baccarat-rouge-540-42",
+            slotNumber: 33,
+            productId: "mfk-baccarat-rouge-540-33",
             productName: "Maison Francis Kurkdjian Baccarat Rouge 540 EDP",
             brand: "Maison Francis Kurkdjian",
             concentration: "Eau de Parfum",
             audience: "Unisex",
             fragranceFamily: "Amber Floral",
-            description: "A luminous and highly sophisticated amber floral fragrance that lays on the skin like an amber, floral, and woody breeze. A poetic alchemy born from the encounter between Baccarat crystal and red gold.",
+            description: "A luminous and highly sophisticated amber floral fragrance that lays on the skin like an amber, floral, and woody breeze.",
             notes: "Jasmine, saffron, ambergris, cedarwood, fir resin",
             price: 32000,
             available: true,
-            imageUrl: "/images/mfk-baccarat-rouge-540.jpg"
+            capacityMl: 70,
+            remainingMl: 9.0,
+            imageUrl: "/images/mfk-baccarat-rouge-540.jpg",
+        },
+        {
+            slotNumber: 34,
+            productId: "le-labo-santal-33-34",
+            productName: "Le Labo Santal 33 EDP",
+            brand: "Le Labo",
+            concentration: "Eau de Parfum",
+            audience: "Unisex",
+            fragranceFamily: "Woody Aromatic",
+            description: "An iconic unisex woody aromatic fragrance combining Australian sandalwood, papyrus, cedarwood, cardamom, iris, and violet.",
+            notes: "Sandalwood, Virginia cedar, cardamom, violet, papyrus, leather, amber, iris",
+            price: 27000,
+            available: true,
+            capacityMl: 100,
+            remainingMl: 72.0,
+            imageUrl: "/images/le-labo-another-13.jpg",
         },
     ],
 };

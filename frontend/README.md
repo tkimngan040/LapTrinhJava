@@ -31,7 +31,7 @@ cd backend && mvn spring-boot:run
 Development only. Change it before the application is shown to anyone outside
 the team.
 
-To work on the screens with no backend running, copy `.env.local.example` to
+To work on the screens with no backend running, copy `.env.local` to
 `.env.local` and set `NEXT_PUBLIC_USE_MOCKS=true`; the fixtures in
 `src/mocks` are used instead. Leave it false for anything being demonstrated
 or tested, so a forgotten flag never signs someone in against fixtures.

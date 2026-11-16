@@ -230,6 +230,9 @@ body {
     ) scale(0.8);
   }
 }
+*, *::before, *::after {
+  box-sizing: border-box;
+}
 
 
 

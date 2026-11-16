@@ -1,3 +1,4 @@
+// noinspection SpellCheckingInspection
 
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
@@ -6,6 +7,7 @@ import {
     Geist_Mono,
     Bodoni_Moda,
     Montserrat,
+    Space_Grotesk,
 } from "next/font/google";
 import "./globals.css";
 
@@ -21,22 +23,32 @@ const geistMono = Geist_Mono({
 
 const bodoni = Bodoni_Moda({
     variable: "--font-bodoni",
-    subsets: ["latin"],
-    weight: ["400", "500"],
+    subsets: ["latin", "latin-ext"],
+    weight: ["400", "500", "600", "700"],
     style: ["normal", "italic"],
     display: "swap",
 });
 
 const montserrat = Montserrat({
     variable: "--font-montserrat",
-    subsets: ["latin"],
-    weight: ["300", "400", "500"],
+    subsets: ["latin", "vietnamese"],
+    weight: ["300", "400", "500", "600", "700"],
+    display: "swap",
+});
+
+const spaceGrotesk = Space_Grotesk({
+    variable: "--font-space-grotesk",
+    subsets: ["latin", "vietnamese"],
+    weight: ["500", "600", "700"],
     display: "swap",
 });
 
 export const metadata: Metadata = {
-    title: "ScentStation",
-    description: "Luxury Smart Fragrance Experience",
+    title: "ScentStation — Haute Parfumerie & Automated Sampling Boutiques",
+    description: "Multi-Brand Luxury Smart Fragrance Experience & IoT Management Platform",
+    other: {
+        google: "notranslate",
+    },
 };
 
 export default function RootLayout({
@@ -45,9 +57,10 @@ export default function RootLayout({
     children: ReactNode;
 }>) {
     return (
-        <html lang="en">
+        <html lang="en" translate="no" className="notranslate" suppressHydrationWarning>
         <body
-            className={`${geistSans.variable} ${geistMono.variable} ${bodoni.variable} ${montserrat.variable} antialiased`}
+            suppressHydrationWarning
+            className={`${geistSans.variable} ${geistMono.variable} ${bodoni.variable} ${montserrat.variable} ${spaceGrotesk.variable} antialiased notranslate`}
         >
         {children}
         </body>

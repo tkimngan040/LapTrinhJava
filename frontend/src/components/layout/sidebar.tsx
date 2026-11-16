@@ -10,26 +10,32 @@ import {
     FlaskConical,
     Cpu,
     Boxes,
+    Droplets,
     ArrowLeftRight,
     Wrench,
     BellRing,
     BarChart3,
+    UserCircle,
+    Settings,
     ChevronLeft,
     ChevronRight,
-    Zap
+    Zap,
 } from "lucide-react";
 
 const menuItems = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { label: "Alerts", href: "/alerts", icon: BellRing },
     { label: "Brands", href: "/brands", icon: Sparkles },
-    { label: "Users & Access", href: "/users", icon: Users },
     { label: "Products", href: "/products", icon: FlaskConical },
     { label: "Machines", href: "/machines", icon: Cpu },
-    { label: "Inventory", href: "/inventory", icon: Boxes },
     { label: "Transactions", href: "/transactions", icon: ArrowLeftRight },
+    { label: "Inventory", href: "/inventory", icon: Boxes },
+    { label: "Refill / Replace", href: "/refill", icon: Droplets },
     { label: "Maintenance", href: "/maintenance", icon: Wrench },
-    { label: "Alerts", href: "/alerts", icon: BellRing },
+    { label: "Users & Roles", href: "/users", icon: Users },
     { label: "Reports", href: "/reports", icon: BarChart3 },
+    { label: "Profile / Account", href: "/profile", icon: UserCircle },
+    { label: "Settings & Audit", href: "/settings", icon: Settings },
 ];
 
 type SidebarProps = {
@@ -44,24 +50,25 @@ export default function Sidebar({
                                     onToggleAction,
                                 }: SidebarProps) {
     const pathname = usePathname();
-    const [storedRole, setStoredRole] = useState<string | null>(null);
+    const [storedRole, setStoredRole] = useState<string | null>("PSA");
 
     useEffect(() => {
         const savedRole = sessionStorage.getItem("scentstation-demo-role");
-        setStoredRole(savedRole);
+        if (savedRole) {
+            setStoredRole(savedRole);
+        }
     }, []);
 
-    const role = roleProp ?? storedRole;
+    const role = roleProp ?? storedRole ?? "PSA";
     const visibleItems =
-        role === null
-            ? []
-            : role === "VW"
-                ? menuItems.filter(
-                    (item) =>
-                        item.href === "/dashboard" ||
-                        item.href === "/reports"
-                )
-                : menuItems;
+        role === "VW"
+            ? menuItems.filter(
+                (item) =>
+                    item.href === "/dashboard" ||
+                    item.href === "/reports" ||
+                    item.href === "/profile"
+            )
+            : menuItems;
 
     return (
         <aside
@@ -69,7 +76,7 @@ export default function Sidebar({
                 collapsed ? "w-[80px]" : "w-[280px]"
             }`}
             style={{
-                boxShadow: "5px 0 30px rgba(0, 0, 0, 0.8)"
+                boxShadow: "5px 0 30px rgba(0, 0, 0, 0.8)",
             }}
         >
             {/* Background Radial Glow & Noise Effect tinh tế */}
@@ -134,19 +141,25 @@ export default function Sidebar({
             </div>
 
             {/* Navigation Menu */}
-            <div className={`relative z-10 flex-1 py-6 ${collapsed ? "px-2.5" : "px-4"}`}>
+            <div
+                className={`relative z-10 flex-1 overflow-y-auto py-5 ${
+                    collapsed ? "px-2.5" : "px-4"
+                }`}
+            >
                 {!collapsed && (
                     <div className="mb-3 px-3 flex items-center justify-between">
                         <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#94A3B8]">
-                            Workspace
+                            Workspace ({visibleItems.length})
                         </span>
                         <Zap size={12} className="text-[#D4AF37] animate-pulse" />
                     </div>
                 )}
 
-                <nav className="space-y-1.5">
+                <nav className="space-y-1">
                     {visibleItems.map((item) => {
-                        const active = pathname === item.href;
+                        const active =
+                            pathname === item.href ||
+                            pathname.startsWith(`${item.href}/`);
                         const IconComponent = item.icon;
 
                         return (
@@ -155,7 +168,7 @@ export default function Sidebar({
                                 href={item.href}
                                 aria-current={active ? "page" : undefined}
                                 title={collapsed ? item.label : undefined}
-                                className={`group relative flex items-center gap-3.5 rounded-xl border py-3 text-sm font-medium transition-all duration-200 ${
+                                className={`group relative flex items-center gap-3.5 rounded-xl border py-2.5 text-sm font-medium transition-all duration-200 ${
                                     collapsed ? "justify-center px-2" : "px-3.5"
                                 } ${
                                     active
@@ -169,10 +182,12 @@ export default function Sidebar({
                                 )}
 
                                 <IconComponent
-                                    size={20}
+                                    size={19}
                                     strokeWidth={active ? 2.2 : 1.7}
                                     className={`shrink-0 transition-transform duration-200 group-hover:scale-110 ${
-                                        active ? "text-[#D4AF37]" : "text-[#64748B] group-hover:text-[#D4AF37]"
+                                        active
+                                            ? "text-[#D4AF37]"
+                                            : "text-[#64748B] group-hover:text-[#D4AF37]"
                                     }`}
                                 />
 
@@ -200,8 +215,12 @@ export default function Sidebar({
                             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-[11px] font-semibold text-white tracking-wider">IoT Network Active</span>
-                            <span className="text-[10px] text-[#94A3B8]">4 Slots Synchronized</span>
+                            <span className="text-[11px] font-semibold text-white tracking-wider">
+                                IoT Network Active
+                            </span>
+                            <span className="text-[10px] text-[#94A3B8]">
+                                7 Kiosks • 34 SKUs Synced
+                            </span>
                         </div>
                     </div>
                 </div>

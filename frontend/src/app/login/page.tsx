@@ -1,655 +1,1897 @@
+// noinspection SpellCheckingInspection
 "use client";
-import { login } from "@/lib/auth-api";
-import {
-    useState,
-    type FormEvent,
-    type CSSProperties,
-} from "react";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
 
+import React, { useState, useEffect, useRef, useCallback, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import {
+    Mail,
+    Lock,
+    Eye,
+    EyeOff,
+    Globe,
+    ShieldCheck,
+    ArrowLeft,
+    CheckCircle2,
+    AlertOctagon,
+    KeyRound,
+    X,
+    Volume2,
+    VolumeX,
+    Check,
+    Unlock,
+    LayoutDashboard,
+    LogOut,
+    ChevronDown,
+    Building2,
+    Cpu,
+    Users,
+    Sparkles,
+} from "lucide-react";
+import styles from "./login.module.css";
+
+export type AuthenticatedRoleCode = "PSA" | "BA" | "OM" | "TE" | "IS" | "VW";
+
+export interface SeedAccountItem {
+    id: number;
+    email: string;
+    passwordPlain: string;
+    roleCode: AuthenticatedRoleCode;
+    accountLabel: string;
+    brandTenant: string | null;
+    brandScopeDisplay: string;
+    status: "ACTIVE" | "LOCKED" | "INACTIVE";
+    requires2FA: boolean;
+    tokenVersion: number;
+    defaultRedirect: string;
+}
+
+const ROLE_ACCESS_MAP: Record<string, AuthenticatedRoleCode[]> = {
+    "/dashboard": ["PSA", "BA", "OM", "VW"],
+    "/alerts": ["PSA", "BA", "OM", "TE", "IS"],
+    "/profile": ["PSA", "BA", "OM", "TE", "IS", "VW"],
+    "/brands": ["PSA", "BA"],
+    "/products": ["PSA", "BA", "OM", "IS"],
+    "/machines": ["PSA", "BA", "OM", "TE", "IS"],
+    "/transactions": ["PSA", "BA", "OM"],
+    "/inventory": ["PSA", "BA", "OM", "IS"],
+    "/refill": ["OM", "TE", "IS"],
+    "/maintenance": ["PSA", "BA", "OM", "TE"],
+    "/users": ["PSA", "BA"],
+    "/reports": ["PSA", "BA", "OM", "VW"],
+    "/settings": ["PSA", "BA"],
+};
+
+const ENTERPRISE_SEED_ACCOUNTS: SeedAccountItem[] = [
+    {
+        id: 1,
+        email: "admin@scentstation.local",
+        passwordPlain: "Admin@12345",
+        roleCode: "PSA",
+        accountLabel: "Platform Super Administrator",
+        brandTenant: null,
+        brandScopeDisplay: "Global Platform Governance • All 21 Maisons",
+        status: "ACTIVE",
+        requires2FA: false,
+        tokenVersion: 1,
+        defaultRedirect: "/dashboard",
+    },
+    {
+        id: 2,
+        email: "brand.admin@scentstation.local",
+        passwordPlain: "Admin@12345",
+        roleCode: "BA",
+        accountLabel: "Chanel Brand Administrator",
+        brandTenant: "Chanel",
+        brandScopeDisplay: "Chanel Maison Workspace • 2FA Protected",
+        status: "ACTIVE",
+        requires2FA: true,
+        tokenVersion: 1,
+        defaultRedirect: "/dashboard",
+    },
+    {
+        id: 3,
+        email: "ops.manager@scentstation.local",
+        passwordPlain: "Admin@12345",
+        roleCode: "OM",
+        accountLabel: "Operations Manager",
+        brandTenant: null,
+        brandScopeDisplay: "Fleet Operations, Alerts & Transaction Reconciliation",
+        status: "ACTIVE",
+        requires2FA: false,
+        tokenVersion: 1,
+        defaultRedirect: "/dashboard",
+    },
+    {
+        id: 4,
+        email: "tech@scentstation.local",
+        passwordPlain: "Admin@12345",
+        roleCode: "TE",
+        accountLabel: "Lead Field Technician",
+        brandTenant: null,
+        brandScopeDisplay: "Hardware Diagnostics, Maintenance & Calibration",
+        status: "ACTIVE",
+        requires2FA: false,
+        tokenVersion: 1,
+        defaultRedirect: "/maintenance",
+    },
+    {
+        id: 5,
+        email: "inventory@scentstation.local",
+        passwordPlain: "Admin@12345",
+        roleCode: "IS",
+        accountLabel: "Warehouse & Inventory Specialist",
+        brandTenant: null,
+        brandScopeDisplay: "Perfume Batches, Bottle Registration & Refills",
+        status: "ACTIVE",
+        requires2FA: false,
+        tokenVersion: 1,
+        defaultRedirect: "/inventory",
+    },
+    {
+        id: 6,
+        email: "viewer@scentstation.local",
+        passwordPlain: "Admin@12345",
+        roleCode: "VW",
+        accountLabel: "Executive Analytics Viewer",
+        brandTenant: null,
+        brandScopeDisplay: "Read-Only Business Intelligence & Reports",
+        status: "ACTIVE",
+        requires2FA: false,
+        tokenVersion: 1,
+        defaultRedirect: "/dashboard",
+    },
+    {
+        id: 7,
+        email: "locked@scentstation.local",
+        passwordPlain: "Admin@12345",
+        roleCode: "TE",
+        accountLabel: "Field Technician (Suspended)",
+        brandTenant: null,
+        brandScopeDisplay: "Account Locked Due to Security Policy",
+        status: "LOCKED",
+        requires2FA: false,
+        tokenVersion: 2,
+        defaultRedirect: "/maintenance",
+    },
+];
+
+const I18N_CONTENT = {
+    en: {
+        platformSubtitle: "Haute Parfumerie & Automated Sampling Boutiques",
+        backToGateway: "Back to Flagship Store",
+        heroTitle: "Enterprise Fragrance & Telemetry Governance",
+        heroDesc:
+            "Centralized multi-tenant workspace for partner fragrance houses and operations teams. Manage curated catalogs, monitor real-time station telemetry, and oversee financial reconciliation.",
+        kpi1: "Partner Maisons",
+        kpi2: "Curated Signatures",
+        kpi3: "Calibrated Mist",
+        pillar1Title: "Multi-Tenant Brand Isolation",
+        pillar1Desc: "Dedicated workspace boundaries ensuring each luxury maison manages its own catalog, pricing, and analytics.",
+        pillar2Title: "Real-Time IoT Fleet Telemetry",
+        pillar2Desc: "Live heartbeat monitoring, load-cell volume tracking, and cryptographically signed dispensing commands.",
+        pillar3Title: "Role-Scoped Access Control",
+        pillar3Desc: "Granular permissions tailored for Administrators, Operations, Technicians, Inventory Staff, and Viewers.",
+        seedToggleLabel: "Demo Role Switcher (Quick Autofill)",
+        cardTitle: "Partner & Staff Sign In",
+        cardSubtitle: "Enter your corporate credentials to access your authorized workspace.",
+        emailLabel: "Corporate Email",
+        emailPlaceholder: "name@scentstation.local",
+        passwordLabel: "Password",
+        passwordPlaceholder: "Enter your password",
+        rememberMe: "Keep me signed in on this device",
+        forgotPassword: "Forgot password?",
+        signInBtn: "Sign In to Workspace",
+        signingInBtn: "Authenticating...",
+        securityHeading: "Enterprise Role-Based Security",
+        securityBody:
+            "Protected by cryptographic password hashing, stateless session verification, and strict tenant boundary enforcement. All authentication events are recorded for security compliance.",
+        errEmailEmpty: "Please enter your email address.",
+        errEmailFormat: "Please enter a valid email address (e.g., admin@scentstation.local).",
+        errPasswordEmpty: "Please enter your password.",
+        errGenericCredentials:
+            "Invalid email or password. Please verify your credentials and try again.",
+    },
+    vi: {
+        platformSubtitle: "Hệ Thống Trải Nghiệm Nước Hoa Tự Động Cao Cấp",
+        backToGateway: "Về Trang Chủ Trải Nghiệm",
+        heroTitle: "Hệ Thống Quản Trị & Giám Sát Trạm Hương Thơm",
+        heroDesc:
+            "Không gian quản trị tập trung đa thương hiệu dành cho các nhà hương đối tác và đội ngũ vận hành. Quản lý danh mục sản phẩm, giám sát cảm biến thời gian thực và đối soát giao dịch.",
+        kpi1: "Thương Hiệu Cao Cấp",
+        kpi2: "Tuyệt Tác Tuyển Chọn",
+        kpi3: "Định Lượng Phun Chuẩn",
+        pillar1Title: "Cô Lập Dữ Liệu Đa Thương Hiệu",
+        pillar1Desc: "Không gian làm việc độc lập giúp mỗi thương hiệu quản lý danh mục, giá bán và báo cáo doanh thu riêng biệt.",
+        pillar2Title: "Giám Sát Thiết Bị IoT Thời Gian Thực",
+        pillar2Desc: "Theo dõi trạng thái kết nối, định lượng dung tích từng bình chứa và xác thực lệnh phun an toàn.",
+        pillar3Title: "Phân Quyền Theo Vai Trò Nghiêm Ngặt",
+        pillar3Desc: "Giao diện và chức năng được cấp phát chính xác theo từng vị trí: Quản trị viên, Vận hành, Kỹ thuật, Kho và Kiểm toán.",
+        seedToggleLabel: "Chuyển Nhanh Tài Khoản Demo (Tự Động Điền)",
+        cardTitle: "Đăng Nhập Cổng Quản Trị",
+        cardSubtitle: "Sử dụng tài khoản nội bộ để truy cập không gian làm việc được phân quyền.",
+        emailLabel: "Email Doanh Nghiệp",
+        emailPlaceholder: "name@scentstation.local",
+        passwordLabel: "Mật Khẩu",
+        passwordPlaceholder: "Nhập mật khẩu của bạn",
+        rememberMe: "Duy trì đăng nhập trên thiết bị này",
+        forgotPassword: "Quên mật khẩu?",
+        signInBtn: "Đăng Nhập Hệ Thống",
+        signingInBtn: "Đang xác thực...",
+        securityHeading: "Bảo Mật Phân Quyền Doanh Nghiệp",
+        securityBody:
+            "Hệ thống bảo vệ dữ liệu bằng mã hóa mật khẩu một chiều, kiểm soát phiên truy cập tức thời và cô lập phạm vi thương hiệu. Mọi hoạt động đăng nhập đều được ghi nhận.",
+        errEmailEmpty: "Vui lòng nhập địa chỉ email của bạn.",
+        errEmailFormat: "Định dạng email không hợp lệ (VD: admin@scentstation.local).",
+        errPasswordEmpty: "Vui lòng nhập mật khẩu của bạn.",
+        errGenericCredentials:
+            "Email hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại thông tin.",
+    },
+};
+
+const AUDIT_LOGS_STORAGE_KEY = "scentstation_audit_logs_v2";
+const AUTH_SECURITY_STATE_KEY = "scentstation_auth_security_state_v2";
+const MACHINES_STORAGE_KEY = "scentstation_commercial_machines_v2";
+const ACTIVE_SESSIONS_STORAGE_KEY = "scentstation_active_sessions_v2";
+const LANGUAGE_STORAGE_KEY = "scentstation_preferred_lang_v1";
 
 export default function LoginPage() {
     const router = useRouter();
+    const videoRef = useRef<HTMLVideoElement | null>(null);
+    const isMountedRef = useRef<boolean>(true);
+    const hasInitializedUrlRef = useRef<boolean>(false);
+    const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
+    const registerTimeout = useCallback((fn: () => void, ms: number) => {
+        const t = setTimeout(() => {
+            if (isMountedRef.current) fn();
+        }, ms);
+        timersRef.current.push(t);
+        return t;
+    }, []);
+
+    const [isVideoMuted, setIsVideoMuted] = useState<boolean>(true);
     const [language, setLanguage] = useState<"en" | "vi">("en");
-    const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
+    const [langOpen, setLangOpen] = useState<boolean>(false);
+    const t = I18N_CONTENT[language];
 
-    function handleLanguageChange(nextLanguage: "en" | "vi") {
-        setLanguage(nextLanguage);
-        setIsLanguageMenuOpen(false);
-    }
-
-
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [showPassword, setShowPassword] = useState(false);
-    const [rememberMe, setRememberMe] = useState(true);
-    const [error, setError] = useState("");
-    const [emailError, setEmailError] = useState("");
-    const [passwordError, setPasswordError] = useState("");
-    const [loading, setLoading] = useState(false);
-
-
-    async function handleLogin(event: FormEvent<HTMLFormElement>) {
-        event.preventDefault();
-
-        if (loading) return;
-
-        // Reset validation errors
-        setError("");
+    const handleChangeLanguage = useCallback((nextLang: "en" | "vi") => {
+        setLanguage(nextLang);
+        setLangOpen(false);
         setEmailError("");
         setPasswordError("");
+        try {
+            localStorage.setItem(LANGUAGE_STORAGE_KEY, nextLang);
+        } catch {
+            // Ignore storage errors
+        }
+    }, []);
 
-        let isValid = true;
+    const [onlineKiosksCount, setOnlineKiosksCount] = useState<number>(6);
+    const [totalKiosksCount, setTotalKiosksCount] = useState<number>(8);
+    const [showRoleSwitcher, setShowRoleSwitcher] = useState<boolean>(true);
 
-        // Validate email
-        if (!email.trim()) {
-            setEmailError("Please enter your email address.");
-            isValid = false;
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-            setEmailError("Please enter a valid email address.");
-            isValid = false;
+    const [existingSessionUser, setExistingSessionUser] = useState<{
+        fullName: string;
+        email: string;
+        roleCode: AuthenticatedRoleCode;
+        defaultRedirect: string;
+    } | null>(null);
+
+    const [requestedRedirect, setRequestedRedirect] = useState<string | null>(null);
+    const requestedRedirectRef = useRef<string | null>(null);
+
+    const [email, setEmail] = useState<string>("admin@scentstation.local");
+    const [password, setPassword] = useState<string>("Admin@12345");
+    const [showPassword, setShowPassword] = useState<boolean>(false);
+    const [rememberMe, setRememberMe] = useState<boolean>(true);
+    const rememberMeRef = useRef<boolean>(true);
+
+    useEffect(() => {
+        rememberMeRef.current = rememberMe;
+    }, [rememberMe]);
+
+    const [emailError, setEmailError] = useState<string>("");
+    const [passwordError, setPasswordError] = useState<string>("");
+    const [authError, setAuthError] = useState<string>("");
+    const [authSuccess, setAuthSuccess] = useState<string>("");
+    const [loading, setLoading] = useState<boolean>(false);
+
+    const [failedAttempts, setFailedAttempts] = useState<Record<string, number>>({});
+    const [updatedPasswords, setUpdatedPasswords] = useState<Record<string, string>>({});
+    const [unlockedEmails, setUnlockedEmails] = useState<Record<string, boolean>>({});
+
+    const [pending2FAUser, setPending2FAUser] = useState<SeedAccountItem | null>(null);
+    const [otpInput, setOtpInput] = useState<string>("");
+    const [otpError, setOtpError] = useState<string>("");
+
+    const [isForgotOpen, setIsForgotOpen] = useState<boolean>(false);
+    const [forgotStep, setForgotStep] = useState<"EMAIL" | "NEW_PW" | "SUCCESS">("EMAIL");
+    const [forgotEmail, setForgotEmail] = useState<string>("");
+    const [newPassword, setNewPassword] = useState<string>("");
+    const [confirmPassword, setConfirmPassword] = useState<string>("");
+    const [showNewPassword, setShowNewPassword] = useState<boolean>(false);
+    const [forgotError, setForgotError] = useState<string>("");
+
+    const appendSecurityAuditLog = useCallback(
+        (entry: {
+            actor: string;
+            role: string;
+            tenant: string | null;
+            action: string;
+            entityId: string;
+            severity: "INFO" | "WARNING" | "ERROR";
+            details: Record<string, unknown>;
+        }) => {
+            try {
+                const rawLogs = localStorage.getItem(AUDIT_LOGS_STORAGE_KEY);
+                const logs = rawLogs ? JSON.parse(rawLogs) : [];
+                logs.unshift({
+                    id: `AUD-${Date.now()}-${Math.floor(100 + Math.random() * 899)}`,
+                    timestamp: new Date().toISOString(),
+                    actor: entry.actor,
+                    role: entry.role,
+                    tenant: entry.tenant,
+                    action: entry.action,
+                    entityType: "AUTHENTICATION",
+                    entityId: entry.entityId,
+                    severity: entry.severity,
+                    oldValues: null,
+                    newValues: entry.details,
+                    sourceIp: "127.0.0.1",
+                });
+                localStorage.setItem(AUDIT_LOGS_STORAGE_KEY, JSON.stringify(logs.slice(0, 250)));
+            } catch {
+                // Ignore storage quota errors
+            }
+        },
+        []
+    );
+
+    const persistSecurityState = useCallback(
+        (
+            nextFailures: Record<string, number>,
+            nextPasswords: Record<string, string>,
+            nextUnlocked: Record<string, boolean>
+        ) => {
+            try {
+                localStorage.setItem(
+                    AUTH_SECURITY_STATE_KEY,
+                    JSON.stringify({
+                        failedAttempts: nextFailures,
+                        updatedPasswords: nextPasswords,
+                        unlockedEmails: nextUnlocked,
+                    })
+                );
+            } catch {
+                // Safe fallback
+            }
+        },
+        []
+    );
+
+    const resolvePermittedDestination = useCallback((account: SeedAccountItem): string => {
+        const redir = requestedRedirectRef.current;
+        if (redir && redir.startsWith("/")) {
+            const [pathWithoutQuery, queryString] = redir.split("?");
+            const baseRoute = "/" + pathWithoutQuery.split("/").filter(Boolean)[0];
+            const allowedRoles = ROLE_ACCESS_MAP[baseRoute];
+            if (!allowedRoles || allowedRoles.includes(account.roleCode)) {
+                if (account.brandTenant && account.roleCode !== "PSA") {
+                    const params = new URLSearchParams(queryString || "");
+                    if (!params.has("brand")) {
+                        params.set("brand", account.brandTenant);
+                    }
+                    const qs = params.toString();
+                    return qs ? `${pathWithoutQuery}?${qs}` : pathWithoutQuery;
+                }
+                return redir;
+            }
+        }
+        return account.defaultRedirect;
+    }, []);
+
+    const establishAuthenticatedSession = useCallback(
+        (account: SeedAccountItem, authMethod: "PASSWORD" | "2FA_OTP" = "PASSWORD") => {
+            const targetRoute = resolvePermittedDestination(account);
+            const isRemember = rememberMeRef.current;
+            const sessionId = `SES-${Date.now()}-${Math.floor(100 + Math.random() * 899)}`;
+            const nowIso = new Date().toISOString();
+
+            const sessionPayload = {
+                token: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.scentstation_${account.roleCode}_v${account.tokenVersion}_${Date.now()}`,
+                user: {
+                    id: account.id,
+                    sessionId,
+                    fullName: account.accountLabel,
+                    name: account.accountLabel,
+                    email: account.email,
+                    role: account.roleCode,
+                    roleCode: account.roleCode,
+                    brand: account.brandTenant,
+                    brandScope: account.brandTenant,
+                    brandScopeDisplay: account.brandScopeDisplay,
+                    tokenVersion: account.tokenVersion,
+                    roles: [account.roleCode],
+                    authenticatedAt: nowIso,
+                    authMethod,
+                },
+            };
+
+            sessionStorage.setItem("scentstation-token", sessionPayload.token);
+            sessionStorage.setItem("scentstation-user", JSON.stringify(sessionPayload.user));
+            sessionStorage.setItem("scentstation-remember", String(isRemember));
+            sessionStorage.setItem("scentstation-demo-user", JSON.stringify(sessionPayload.user));
+            sessionStorage.setItem("scentstation-demo-role", account.roleCode);
+            sessionStorage.setItem("scentstation-demo-remember", String(isRemember));
+
+            if (isRemember) {
+                localStorage.setItem("scentstation-token", sessionPayload.token);
+                localStorage.setItem("scentstation-user", JSON.stringify(sessionPayload.user));
+                localStorage.setItem("scentstation-remember", "true");
+            } else {
+                localStorage.removeItem("scentstation-token");
+                localStorage.removeItem("scentstation-user");
+                localStorage.removeItem("scentstation-remember");
+            }
+
+            try {
+                const rawSessions = localStorage.getItem(ACTIVE_SESSIONS_STORAGE_KEY);
+                const sessions = rawSessions ? JSON.parse(rawSessions) : [];
+                const updatedSessions = Array.isArray(sessions)
+                    ? sessions.map((s: any) => ({ ...s, isCurrent: false }))
+                    : [];
+                updatedSessions.unshift({
+                    sessionId,
+                    userId: account.id,
+                    email: account.email,
+                    userName: account.accountLabel,
+                    roleCode: account.roleCode,
+                    brandScope: account.brandTenant,
+                    device: "Windows Desktop • Chrome Web Portal",
+                    ipAddress: "127.0.0.1",
+                    location: "Ho Chi Minh City, VN",
+                    loginTime: nowIso,
+                    lastActive: nowIso,
+                    authMethod,
+                    tokenVersion: account.tokenVersion,
+                    status: "ACTIVE",
+                    isCurrent: true,
+                });
+                localStorage.setItem(
+                    ACTIVE_SESSIONS_STORAGE_KEY,
+                    JSON.stringify(updatedSessions.slice(0, 25))
+                );
+            } catch {
+                // Safe fallback
+            }
+
+            const cleanEmailKey = account.email.toLowerCase();
+            setFailedAttempts((prev) => {
+                const nextFail = { ...prev, [cleanEmailKey]: 0 };
+                try {
+                    const rawSec = localStorage.getItem(AUTH_SECURITY_STATE_KEY);
+                    const parsed = rawSec ? JSON.parse(rawSec) : {};
+                    localStorage.setItem(
+                        AUTH_SECURITY_STATE_KEY,
+                        JSON.stringify({
+                            ...parsed,
+                            failedAttempts: nextFail,
+                        })
+                    );
+                } catch {
+                    // Safe fallback
+                }
+                return nextFail;
+            });
+
+            appendSecurityAuditLog({
+                actor: account.accountLabel,
+                role: account.roleCode,
+                tenant: account.brandTenant,
+                action: "LOGIN_SUCCESS",
+                entityId: account.email,
+                severity: "INFO",
+                details: {
+                    sessionId,
+                    method: authMethod,
+                    tokenVersion: account.tokenVersion,
+                    redirectedTo: targetRoute,
+                    rememberMe: isRemember,
+                },
+            });
+
+            router.push(targetRoute);
+        },
+        [appendSecurityAuditLog, resolvePermittedDestination, router]
+    );
+
+    const handleSignOutCurrentSession = useCallback(() => {
+        if (existingSessionUser) {
+            appendSecurityAuditLog({
+                actor: existingSessionUser.fullName,
+                role: existingSessionUser.roleCode,
+                tenant: null,
+                action: "LOGOUT_SUCCESS",
+                entityId: existingSessionUser.email,
+                severity: "INFO",
+                details: { source: "Login Session Switcher" },
+            });
+        }
+        sessionStorage.removeItem("scentstation-token");
+        sessionStorage.removeItem("scentstation-user");
+        sessionStorage.removeItem("scentstation-demo-user");
+        localStorage.removeItem("scentstation-token");
+        localStorage.removeItem("scentstation-user");
+        setExistingSessionUser(null);
+        setAuthSuccess(
+            language === "en"
+                ? "You have been signed out of the previous session."
+                : "Đã đăng xuất khỏi phiên làm việc trước đó."
+        );
+    }, [appendSecurityAuditLog, existingSessionUser, language]);
+
+    useEffect(() => {
+        isMountedRef.current = true;
+        if (typeof window === "undefined") return;
+
+        if (!hasInitializedUrlRef.current) {
+            hasInitializedUrlRef.current = true;
+
+            try {
+                const savedLang = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+                if (savedLang === "vi" || savedLang === "en") {
+                    setLanguage(savedLang);
+                }
+            } catch {
+                // Safe fallback
+            }
+
+            try {
+                const rawMachines = localStorage.getItem(MACHINES_STORAGE_KEY);
+                if (rawMachines) {
+                    const parsedMachines = JSON.parse(rawMachines);
+                    if (Array.isArray(parsedMachines) && parsedMachines.length > 0) {
+                        setTotalKiosksCount(parsedMachines.length);
+                        const onlineCnt = parsedMachines.filter((m: any) => {
+                            const conn = m.connectionStatus || (m.status === "OFFLINE" ? "OFFLINE" : "ONLINE");
+                            const oper =
+                                m.operatingStatus ||
+                                (m.status === "MAINTENANCE"
+                                    ? "MAINTENANCE"
+                                    : m.status === "OFFLINE"
+                                        ? "ERROR"
+                                        : "ACTIVE");
+                            return conn === "ONLINE" && oper === "ACTIVE";
+                        }).length;
+                        setOnlineKiosksCount(onlineCnt);
+                    }
+                }
+            } catch {
+                // Safe fallback
+            }
+
+            try {
+                const savedUserRaw =
+                    sessionStorage.getItem("scentstation-user") ||
+                    localStorage.getItem("scentstation-user");
+                if (savedUserRaw) {
+                    const parsedUser = JSON.parse(savedUserRaw);
+                    const roleCode = (parsedUser.roleCode || parsedUser.role || "PSA") as AuthenticatedRoleCode;
+                    const seedMatch = ENTERPRISE_SEED_ACCOUNTS.find((a) => a.roleCode === roleCode);
+                    setExistingSessionUser({
+                        fullName: parsedUser.fullName || parsedUser.name || "Portal User",
+                        email: parsedUser.email || "admin@scentstation.local",
+                        roleCode,
+                        defaultRedirect: seedMatch?.defaultRedirect || "/dashboard",
+                    });
+                }
+            } catch {
+                // Safe fallback
+            }
+
+            try {
+                const rawSec = localStorage.getItem(AUTH_SECURITY_STATE_KEY);
+                if (rawSec) {
+                    const parsed = JSON.parse(rawSec);
+                    if (parsed.failedAttempts) setFailedAttempts(parsed.failedAttempts);
+                    if (parsed.updatedPasswords) setUpdatedPasswords(parsed.updatedPasswords);
+                    if (parsed.unlockedEmails) setUnlockedEmails(parsed.unlockedEmails);
+                }
+            } catch {
+                // Safe fallback
+            }
+
+            const params = new URLSearchParams(window.location.search);
+            const redirectParam = params.get("redirect");
+            if (redirectParam) {
+                requestedRedirectRef.current = redirectParam;
+                setRequestedRedirect(redirectParam);
+            }
         }
 
-        // Validate password
+        return () => {
+            isMountedRef.current = false;
+            timersRef.current.forEach((t) => clearTimeout(t));
+            timersRef.current = [];
+        };
+    }, []);
+
+    useEffect(() => {
+        const anyModalOpen = isForgotOpen || Boolean(pending2FAUser);
+        document.body.style.overflow = anyModalOpen ? "hidden" : "";
+
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                setIsForgotOpen(false);
+                setPending2FAUser(null);
+                setLangOpen(false);
+            }
+        };
+        window.addEventListener("keydown", handleEsc);
+        return () => {
+            document.body.style.overflow = "";
+            window.removeEventListener("keydown", handleEsc);
+        };
+    }, [isForgotOpen, pending2FAUser]);
+
+    const handleSignInSubmit = async (e: FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (loading) return;
+
+        setEmailError("");
+        setPasswordError("");
+        setAuthError("");
+        setAuthSuccess("");
+
+        const cleanEmail = email.trim().toLowerCase();
+        let valid = true;
+
+        if (!cleanEmail) {
+            setEmailError(t.errEmailEmpty);
+            valid = false;
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+            setEmailError(t.errEmailFormat);
+            valid = false;
+        }
+
         if (!password.trim()) {
-            setPasswordError("Please enter your password.");
-            isValid = false;
+            setPasswordError(t.errPasswordEmpty);
+            valid = false;
         }
 
-        if (!isValid) return;
+        if (!valid) return;
 
         setLoading(true);
+        await new Promise<void>((resolve) => {
+            registerTimeout(() => resolve(), 360);
+        });
+        if (!isMountedRef.current) return;
 
-        try {
-            const response = await login(email, password);
+        const matched = ENTERPRISE_SEED_ACCOUNTS.find(
+            (item) => item.email.toLowerCase() === cleanEmail
+        );
 
-            sessionStorage.setItem("scentstation-token", response.token);
-            sessionStorage.setItem("scentstation-user", JSON.stringify(response.user));
-            sessionStorage.setItem("scentstation-remember", String(rememberMe));
-
-            sessionStorage.setItem("scentstation-demo-user", JSON.stringify(response.user));
-            sessionStorage.setItem("scentstation-demo-role", response.user.roles[0] ?? "VW");
-            sessionStorage.setItem("scentstation-demo-remember", String(rememberMe));
-
-            router.push("/dashboard");
-        } catch (err) {
-            // The backend answers 401 with its own message for a wrong email
-            // or password; anything else is usually the API not running.
-            setError(
-                err instanceof Error
-                    ? err.message
-                    : "Unable to sign in. Please try again."
-            );
-        } finally {
+        if (!matched) {
+            setAuthError(t.errGenericCredentials);
+            appendSecurityAuditLog({
+                actor: cleanEmail,
+                role: "UNAUTHENTICATED",
+                tenant: null,
+                action: "LOGIN_FAILED_UNKNOWN_USER",
+                entityId: cleanEmail,
+                severity: "WARNING",
+                details: { attemptedEmail: cleanEmail },
+            });
             setLoading(false);
+            return;
         }
-    }
 
+        const failCount = failedAttempts[cleanEmail] || 0;
+        const isSeedLocked = matched.status === "LOCKED" && !unlockedEmails[cleanEmail];
+
+        if (isSeedLocked || failCount >= 5) {
+            const lockMsg =
+                language === "en"
+                    ? `This account (${cleanEmail}) has been temporarily locked due to multiple failed sign-in attempts. Please reset your password or contact an administrator.`
+                    : `Tài khoản (${cleanEmail}) đã bị tạm khóa do nhập sai mật khẩu quá 5 lần. Vui lòng khôi phục mật khẩu hoặc liên hệ Quản trị viên.`;
+            setAuthError(lockMsg);
+
+            appendSecurityAuditLog({
+                actor: matched.accountLabel,
+                role: matched.roleCode,
+                tenant: matched.brandTenant,
+                action: "LOGIN_REFUSED_ACCOUNT_LOCKED",
+                entityId: cleanEmail,
+                severity: "ERROR",
+                details: { failCount, status: "LOCKED" },
+            });
+            setLoading(false);
+            return;
+        }
+
+        const activePassword = updatedPasswords[cleanEmail] || matched.passwordPlain;
+
+        if (password !== activePassword) {
+            const nextFail = failCount + 1;
+            const nextFailMap = { ...failedAttempts, [cleanEmail]: nextFail };
+            setFailedAttempts(nextFailMap);
+            persistSecurityState(nextFailMap, updatedPasswords, unlockedEmails);
+
+            const left = Math.max(0, 5 - nextFail);
+
+            appendSecurityAuditLog({
+                actor: matched.accountLabel,
+                role: matched.roleCode,
+                tenant: matched.brandTenant,
+                action: left === 0 ? "ACCOUNT_LOCKED_MAX_ATTEMPTS" : "LOGIN_FAILED_WRONG_PASSWORD",
+                entityId: cleanEmail,
+                severity: left === 0 ? "ERROR" : "WARNING",
+                details: { failedAttemptNumber: nextFail, remainingAttempts: left },
+            });
+
+            setAuthError(
+                left === 0
+                    ? language === "en"
+                        ? `Maximum failed attempts reached. Account "${cleanEmail}" is now locked for security.`
+                        : `Đã vượt quá 5 lần thử. Tài khoản "${cleanEmail}" đã bị khóa để bảo mật.`
+                    : language === "vi"
+                        ? `Email hoặc mật khẩu không chính xác. Còn ${left}/5 lần thử trước khi tài khoản bị tạm khóa.`
+                        : `Invalid email or password. ${left}/5 attempt(s) remaining before temporary lockout.`
+            );
+            setLoading(false);
+            return;
+        }
+
+        if (matched.requires2FA) {
+            setPending2FAUser(matched);
+            setOtpInput("");
+            setOtpError("");
+            setLoading(false);
+            return;
+        }
+
+        establishAuthenticatedSession(matched, "PASSWORD");
+        setLoading(false);
+    };
+
+    const handleVerify2FASubmit = (e: FormEvent) => {
+        e.preventDefault();
+        if (!pending2FAUser) return;
+        if (otpInput.trim() !== "123456") {
+            setOtpError(
+                language === "en"
+                    ? "Invalid 6-digit verification code. Please enter 123456 for demonstration."
+                    : "Mã xác thực 6 chữ số không chính xác. Vui lòng nhập mã demo: 123456."
+            );
+            appendSecurityAuditLog({
+                actor: pending2FAUser.accountLabel,
+                role: pending2FAUser.roleCode,
+                tenant: pending2FAUser.brandTenant,
+                action: "2FA_VERIFICATION_FAILED",
+                entityId: pending2FAUser.email,
+                severity: "WARNING",
+                details: { enteredOtp: otpInput },
+            });
+            return;
+        }
+        const userToAuth = pending2FAUser;
+        setPending2FAUser(null);
+        establishAuthenticatedSession(userToAuth, "2FA_OTP");
+    };
+
+    const handleForgotPasswordFlow = (e: FormEvent) => {
+        e.preventDefault();
+        setForgotError("");
+
+        if (forgotStep === "EMAIL") {
+            const clean = forgotEmail.trim().toLowerCase();
+            if (!clean || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) {
+                setForgotError(t.errEmailFormat);
+                return;
+            }
+            const matchedAccount = ENTERPRISE_SEED_ACCOUNTS.find(
+                (acc) => acc.email.toLowerCase() === clean
+            );
+            if (!matchedAccount) {
+                setForgotError(
+                    language === "en"
+                        ? `No registered corporate account found for "${clean}".`
+                        : `Không tìm thấy tài khoản doanh nghiệp "${clean}".`
+                );
+                return;
+            }
+            setForgotStep("NEW_PW");
+            return;
+        }
+
+        if (forgotStep === "NEW_PW") {
+            const hasMinLen = newPassword.length >= 8;
+            const hasUpper = /[A-Z]/.test(newPassword);
+            const hasLower = /[a-z]/.test(newPassword);
+            const hasDigit = /[0-9]/.test(newPassword);
+            const hasSpecial = /[^A-Za-z0-9]/.test(newPassword);
+
+            if (!hasMinLen || !hasUpper || !hasLower || !hasDigit || !hasSpecial) {
+                setForgotError(
+                    language === "en"
+                        ? "Password must meet all security requirements (min 8 characters, uppercase, lowercase, number, and special character)."
+                        : "Mật khẩu mới phải đáp ứng đủ các tiêu chí bảo mật (tối thiểu 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt)."
+                );
+                return;
+            }
+            if (newPassword !== confirmPassword) {
+                setForgotError(
+                    language === "en"
+                        ? "Password confirmation does not match."
+                        : "Mật khẩu xác nhận không khớp."
+                );
+                return;
+            }
+            const clean = forgotEmail.trim().toLowerCase();
+            const nextPasswords = { ...updatedPasswords, [clean]: newPassword };
+            const nextFailures = { ...failedAttempts, [clean]: 0 };
+            const nextUnlocked = { ...unlockedEmails, [clean]: true };
+
+            setUpdatedPasswords(nextPasswords);
+            setFailedAttempts(nextFailures);
+            setUnlockedEmails(nextUnlocked);
+            persistSecurityState(nextFailures, nextPasswords, nextUnlocked);
+
+            appendSecurityAuditLog({
+                actor: clean,
+                role: "USER_RECOVERY",
+                tenant: null,
+                action: "PASSWORD_RESET_COMPLETED",
+                entityId: clean,
+                severity: "INFO",
+                details: { lockoutCleared: true },
+            });
+
+            setForgotStep("SUCCESS");
+        }
+    };
 
     return (
-
-        <main className="relative h-[100dvh] w-full overflow-hidden bg-[#21140d] text-[#281b12]">
-
-        {/* Floating glitter overlay */}
-            <div className="flower-glitter-layer" aria-hidden="true">
-                {Array.from({ length: 32 }).map((_, i) => (
-                    <span
-                        key={i}
-                        className="flower-glitter"
-                        style={{
-                            left: `${(i * 37 + 11) % 100}%`,
-                            top: `${(i * 53 + 7) % 100}%`,
-                            animationDelay: `${-(i % 8) * 0.45}s`,
-                            animationDuration: `${3 + (i % 5)}s`,
-                        }}
-                    />
-                ))}
+        <main className={`${styles.viewport} notranslate`} translate="no" onClick={() => setLangOpen(false)}>
+            <div className={styles.videoBackdropContainer} aria-hidden="true">
+                <video
+                    ref={videoRef}
+                    className={styles.backgroundVideo}
+                    autoPlay
+                    loop
+                    muted={isVideoMuted}
+                    playsInline
+                    poster="/login-perfume.png"
+                >
+                    <source src="/video_1.mp4" type="video/mp4" />
+                    <source src="/login-bg.mp4" type="video/mp4" />
+                    <source src="/videos/video_1.mp4" type="video/mp4" />
+                </video>
+                <div className={styles.videoVignetteOverlay} />
             </div>
 
-            <div className="absolute inset-0 bg-[#21140d]">
-
-                {/* Soft background layer */}
-
-                <Image
-                    src="/login-perfume.png"
-                    alt="Luxury perfume collection"
-                    fill
-                    sizes="100vw"
-                    className="object-cover object-center"
-                />
-
-
-                {/* Main background image — brighter and more vivid */}
-                <Image
-                    src="/login-perfume.png"
-                    alt="Luxury perfume collection overlooking Paris at sunset"
-                    fill
-                    sizes="100vw"
-                    className="absolute inset-0 object-cover object-center brightness-110 saturate-110"
-                />
-
-
-
-                <div className="absolute inset-0 bg-gradient-to-r from-[#160d08]/10 via-transparent to-[#2a170b]/10" />
-
-                {/* Luxury Paris editorial typography */}
-                <div className="pointer-events-none absolute inset-y-0 left-0 z-[5] hidden w-[55%] items-center justify-center px-6 lg:flex xl:px-10">
-
-                    {/* Soft vignette: darker behind the slogan, lighter near the perfume */}
+            <header className={styles.topHeader}>
+                <div className={styles.topHeaderInner}>
                     <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute top-[-15%] bottom-7 left-[-15%] right-[-35%] z-0 bg-[radial-gradient(ellipse_90%_65%_at_50%_35%,rgba(12,6,3,0.58)_0%,rgba(18,9,5,0.42)_28%,rgba(18,9,5,0.24)_52%,rgba(18,9,5,0.10)_72%,transparent_100%)] blur-3xl"
-                    />
+                        className={styles.brandTypographyOnly}
+                        onClick={() => router.push("/")}
+                    >
+                        <span className={styles.brandNameText} translate="no">
+                            ScentStation
+                        </span>
+                        <span className={styles.brandSubText}>{t.platformSubtitle}</span>
+                    </div>
 
-                    {/* Gentle darkening from both sides */}
                     <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-y-[-10%] left-[-1%] right-[-10%] z-0 bg-[linear-gradient(to_right,rgba(18,9,5,0.4)_0%,transparent_30%,transparent_68%,rgba(18,9,5,0.2)_100%)] blur-2xl"
-                    />
+                        className={styles.headerControlsRight}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button
+                            type="button"
+                            onClick={() => router.push("/")}
+                            className={styles.videoControlBtn}
+                        >
+                            <ArrowLeft size={14} color="#D4AF37" />
+                            <span>{t.backToGateway}</span>
+                        </button>
 
-                    <Image
-                        src="/scent-slogan.png"
-                        alt="Where Scent Becomes Art — Discover Your Signature Scent"
-                        width={980}
-                        height={400}
-                        sizes="(max-width: 768px) 100vw, 980px"
-                        className="h-auto w-[135%] max-w-[980px] -translate-y-70 translate-x-55 object-contain"
-                    />
+                        <button
+                            type="button"
+                            onClick={() => setIsVideoMuted(!isVideoMuted)}
+                            className={styles.videoControlBtn}
+                            title={isVideoMuted ? "Unmute ambient audio" : "Mute ambient audio"}
+                        >
+                            {isVideoMuted ? (
+                                <VolumeX size={15} color="#94A3B8" />
+                            ) : (
+                                <Volume2 size={15} color="#D4AF37" />
+                            )}
+                        </button>
 
+                        <div className={styles.langSelectorWrapper}>
+                            <button
+                                type="button"
+                                onClick={() => setLangOpen(!langOpen)}
+                                className={styles.langButton}
+                                aria-expanded={langOpen}
+                            >
+                                <Globe size={15} color="#D4AF37" />
+                                <span>{language === "en" ? "EN" : "VI"}</span>
+                                <ChevronDown
+                                    size={14}
+                                    color="#D4AF37"
+                                    style={{
+                                        transform: langOpen ? "rotate(180deg)" : "rotate(0deg)",
+                                        transition: "transform 0.2s ease",
+                                    }}
+                                />
+                            </button>
+
+                            {langOpen && (
+                                <div className={styles.langDropdown}>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleChangeLanguage("en")}
+                                        className={`${styles.langOption} ${
+                                            language === "en" ? styles.langOptionActive : ""
+                                        }`}
+                                    >
+                                        <span>English (EN)</span>
+                                        {language === "en" && <Check size={14} color="#D4AF37" />}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleChangeLanguage("vi")}
+                                        className={`${styles.langOption} ${
+                                            language === "vi" ? styles.langOptionActive : ""
+                                        }`}
+                                    >
+                                        <span>Tiếng Việt (VI)</span>
+                                        {language === "vi" && <Check size={14} color="#D4AF37" />}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div className={styles.mainWorkspace}>
+                <div className={styles.telemetryPanel}>
+                    <div className={styles.statusPill}>
+                        <span className={styles.statusDot} />
+                        <span>
+                            {language === "en"
+                                ? `LIVE NETWORK • ${onlineKiosksCount} OF ${totalKiosksCount} BOUTIQUE STATIONS ONLINE`
+                                : `MẠNG LƯỚI TRỰC TUYẾN • ${onlineKiosksCount}/${totalKiosksCount} TRẠM ĐANG HOẠT ĐỘNG`}
+                        </span>
+                    </div>
+
+                    <h1 className={styles.heroHeading}>{t.heroTitle}</h1>
+                    <p className={styles.heroDescription}>{t.heroDesc}</p>
+
+                    <div className={styles.kpiGrid}>
+                        <div className={styles.kpiCard}>
+                            <div className={styles.kpiValue} translate="no">
+                                21 Maisons
+                            </div>
+                            <div className={styles.kpiLabel}>{t.kpi1}</div>
+                        </div>
+                        <div className={styles.kpiCard}>
+                            <div className={styles.kpiValue} translate="no">
+                                34 Scents
+                            </div>
+                            <div className={styles.kpiLabel}>{t.kpi2}</div>
+                        </div>
+                        <div className={styles.kpiCard}>
+                            <div className={styles.kpiValue} translate="no">
+                                0.12 ml
+                            </div>
+                            <div className={styles.kpiLabel}>{t.kpi3}</div>
+                        </div>
+                    </div>
+
+                    <div className={styles.architecturePillars}>
+                        <div className={styles.pillarItem}>
+                            <div className={styles.pillarIconBox}>
+                                <Building2 size={17} color="#D4AF37" />
+                            </div>
+                            <div>
+                                <div className={styles.pillarTitle}>{t.pillar1Title}</div>
+                                <div className={styles.pillarDesc}>{t.pillar1Desc}</div>
+                            </div>
+                        </div>
+
+                        <div className={styles.pillarItem}>
+                            <div className={styles.pillarIconBox}>
+                                <Cpu size={17} color="#34D399" />
+                            </div>
+                            <div>
+                                <div className={styles.pillarTitle}>{t.pillar2Title}</div>
+                                <div className={styles.pillarDesc}>{t.pillar2Desc}</div>
+                            </div>
+                        </div>
+
+                        <div className={styles.pillarItem}>
+                            <div className={styles.pillarIconBox}>
+                                <Users size={17} color="#F5E6AD" />
+                            </div>
+                            <div>
+                                <div className={styles.pillarTitle}>{t.pillar3Title}</div>
+                                <div className={styles.pillarDesc}>{t.pillar3Desc}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className={styles.seedDirectoryCard}>
+                        <button
+                            type="button"
+                            onClick={() => setShowRoleSwitcher(!showRoleSwitcher)}
+                            className={styles.seedDirectoryHeaderBtn}
+                        >
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}>
+                                <Sparkles size={13} color="#D4AF37" />
+                                <span>{t.seedToggleLabel}</span>
+                            </span>
+                            <ChevronDown
+                                size={15}
+                                color="#D4AF37"
+                                style={{
+                                    transform: showRoleSwitcher ? "rotate(180deg)" : "rotate(0deg)",
+                                    transition: "transform 0.2s ease",
+                                }}
+                            />
+                        </button>
+
+                        {showRoleSwitcher && (
+                            <div className={styles.seedDirectoryList}>
+                                {ENTERPRISE_SEED_ACCOUNTS.map((acc) => {
+                                    const cleanKey = acc.email.toLowerCase();
+                                    const isCurrentlyLocked =
+                                        (acc.status === "LOCKED" && !unlockedEmails[cleanKey]) ||
+                                        (failedAttempts[cleanKey] || 0) >= 5;
+
+                                    return (
+                                        <button
+                                            key={acc.email}
+                                            type="button"
+                                            onClick={() => {
+                                                setEmail(acc.email);
+                                                setPassword(updatedPasswords[cleanKey] || acc.passwordPlain);
+                                                setEmailError("");
+                                                setPasswordError("");
+                                                setAuthError("");
+                                                setAuthSuccess("");
+                                            }}
+                                            className={`${styles.seedRowBtn} ${
+                                                email.toLowerCase() === cleanKey ? styles.seedRowBtnActive : ""
+                                            }`}
+                                        >
+                                            <div style={{ minWidth: 0, flex: 1 }}>
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: "0.45rem",
+                                                        flexWrap: "wrap",
+                                                    }}
+                                                >
+                                                    <strong style={{ color: "#FFF", fontSize: "0.79rem" }}>
+                                                        {acc.accountLabel}
+                                                    </strong>
+                                                    <span
+                                                        translate="no"
+                                                        style={{
+                                                            fontFamily: "Space Grotesk, monospace",
+                                                            fontSize: "0.69rem",
+                                                            color: "#F5E6AD",
+                                                        }}
+                                                    >
+                                                        {acc.email}
+                                                    </span>
+                                                </div>
+                                                <div style={{ fontSize: "0.68rem", color: "#94A3B8", marginTop: "2px" }}>
+                                                    {acc.brandScopeDisplay}
+                                                </div>
+                                            </div>
+
+                                            <span
+                                                translate="no"
+                                                style={{
+                                                    fontSize: "0.63rem",
+                                                    fontWeight: 700,
+                                                    fontFamily: "Space Grotesk, monospace",
+                                                    padding: "0.22rem 0.55rem",
+                                                    borderRadius: "999px",
+                                                    whiteSpace: "nowrap",
+                                                    background: isCurrentlyLocked
+                                                        ? "rgba(248,113,113,0.16)"
+                                                        : acc.requires2FA
+                                                            ? "rgba(251,191,36,0.16)"
+                                                            : "rgba(52,211,153,0.14)",
+                                                    border: `1px solid ${
+                                                        isCurrentlyLocked
+                                                            ? "rgba(248,113,113,0.4)"
+                                                            : acc.requires2FA
+                                                                ? "rgba(251,191,36,0.4)"
+                                                                : "rgba(52,211,153,0.4)"
+                                                    }`,
+                                                    color: isCurrentlyLocked
+                                                        ? "#F87171"
+                                                        : acc.requires2FA
+                                                            ? "#FBBF24"
+                                                            : "#34D399",
+                                                }}
+                                            >
+                                                {isCurrentlyLocked
+                                                    ? "SUSPENDED"
+                                                    : acc.requires2FA
+                                                        ? `${acc.roleCode} • 2FA`
+                                                        : acc.roleCode}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
-            </div>
+                <section className={styles.authCardContainer}>
+                    <div className={styles.authCard}>
+                        <div className={styles.authHeader}>
+                            <span className={styles.authEyebrow}>
+                                {language === "en" ? "CORPORATE ACCESS PORTAL" : "CỔNG TRUY CẬP DOANH NGHIỆP"}
+                            </span>
+                            <h2 className={styles.authTitle}>{t.cardTitle}</h2>
+                            <p className={styles.authSubtitle}>{t.cardSubtitle}</p>
 
-            {/* Soft light behind the login form */}
-            <div className="pointer-events-none absolute inset-y-0 right-0 z-0 hidden w-[45%] bg-gradient-to-l from-[#f4e6d1]/25 via-transparent to-transparent lg:block" />
-
-
-            {/* Login form area */}
-            <div className="relative z-10 flex min-h-screen w-full -translate-y-1 items-center justify-center overflow-y-auto px-4 py-6 sm:px-8 lg:ml-auto lg:min-h-screen lg:w-[46%] lg:translate-x-25 lg:justify-center lg:px-8 xl:px-12">
-                <section className="w-full max-w-[550px]">
-
-
-                    <div className="relative h-fit w-full max-w-[500px] overflow-hidden rounded-[26px] border border-[#D8AA60]/70 bg-[#302019]/95 p-5 shadow-[0_25px_90px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-6 lg:p-7">
-
-                    <div className="pointer-events-none absolute -right-10 top-20 h-40 w-40 rounded-full bg-[#D8AA60]/15 blur-3xl" />
-                        <div className="pointer-events-none absolute -left-12 bottom-8 h-36 w-36 rounded-full bg-[#D8AA60]/10 blur-3xl" />
-                        <div className="relative">
-
-                            {/* Logo và vùng bay của bướm */}
-                            <div className="relative mb-5 flex flex-col items-center text-center">
-
-                                {/* Fairy Dust — magical butterfly flight */}
-                                <div
-                                    className="scent-magic pointer-events-none absolute inset-0 z-20"
-                                    aria-hidden="true"
-                                >
-                                    {/* Butterfly 1 */}
-                                    <div className="butterfly-flight fairy-flight-one">
-                                        <div className="butterfly-trail">
-                                            {Array.from({ length: 14 }).map((_, i) => (
-                                                <span
-                                                    key={i}
-                                                    className="fairy-particle"
-                                                    style={{
-                                                        "--delay": `${i * 0.075}s`,
-                                                        "--drift-x": `${-12 - (i % 5) * 3}px`,
-                                                        "--drift-y": `${i % 2 === 0 ? -6 : 6}px`,
-                                                        "--particle-size": `${2 + (i % 3)}px`,
-                                                    } as CSSProperties}
-                                                />
-                                            ))}
-                                        </div>
-                                        <svg className="magic-butterfly"
-                                            viewBox="0 0 100 100"
-
-                                            fill="none"
-                                        >
-                                            <defs>
-                                                <linearGradient id="fairyGoldOne" x1="0" y1="0" x2="1" y2="1">
-                                                    <stop offset="0%" stopColor="#FFF8D9" />
-                                                    <stop offset="48%" stopColor="#F4D28A" />
-                                                    <stop offset="100%" stopColor="#C18435" />
-                                                </linearGradient>
-                                            </defs>
-                                            <g stroke="url(#fairyGoldOne)" strokeWidth="2" strokeLinejoin="round">
-                                                <path d="M47 47 C34 9 5 12 12 39 C16 53 32 57 47 51Z" fill="#F4D28A" fillOpacity=".7" />
-                                                <path d="M47 53 C25 45 12 62 23 77 C32 88 42 68 47 53Z" fill="#E8BD70" fillOpacity=".55" />
-                                                <path d="M53 47 C66 9 95 12 88 39 C84 53 68 57 53 51Z" fill="#FFF1BD" fillOpacity=".8" />
-                                                <path d="M53 53 C75 45 88 62 77 77 C68 88 58 68 53 53Z" fill="#F4D28A" fillOpacity=".55" />
-                                                <path d="M50 38 Q44 50 50 65 Q56 50 50 38Z" fill="#FFF1BD" />
-                                                <path d="M48 40 Q42 27 37 29 M52 40 Q58 27 63 29" strokeLinecap="round" />
-                                            </g>
-                                        </svg>
+                            {existingSessionUser && (
+                                <div className={styles.activeSessionBanner}>
+                                    <div style={{ fontSize: "0.73rem", color: "#E2E8F0" }}>
+                                        <span style={{ color: "#34D399", fontWeight: 700 }}>● Signed in as:</span>{" "}
+                                        <strong>{existingSessionUser.fullName}</strong> ({existingSessionUser.roleCode})
                                     </div>
-                                    {/* Butterfly 2 */}
-                                    <div className="butterfly-flight fairy-flight-two">
-                                        <div className="butterfly-trail">
-                                            {Array.from({ length: 14 }).map((_, i) => (
-                                                <span
-                                                    key={i}
-                                                    className="fairy-particle"
-                                                    style={{
-                                                        "--delay": `${i * 0.085}s`,
-                                                        "--drift-x": `${-10 - (i % 5) * 3}px`,
-                                                        "--drift-y": `${i % 2 === 0 ? -4 : 4}px`,
-                                                        "--particle-size": `${2 + (i % 3)}px`,
-                                                    } as CSSProperties}
-                                                />
-                                            ))}
-                                        </div>
-                                        <svg  className="magic-butterfly"
-                                            viewBox="0 0 100 100"
-
-                                            fill="none"
-                                        >
-                                            <defs>
-                                                <linearGradient id="fairyGoldTwo" x1="0" y1="0" x2="1" y2="1">
-                                                    <stop offset="0%" stopColor="#FFFFFF" />
-                                                    <stop offset="50%" stopColor="#E8BD70" />
-                                                    <stop offset="100%" stopColor="#B77930" />
-                                                </linearGradient>
-                                            </defs>
-                                            <g stroke="url(#fairyGoldTwo)" strokeWidth="2" strokeLinejoin="round">
-                                                <path d="M47 47 C34 9 5 12 12 39 C16 53 32 57 47 51Z" fill="#E8BD70" fillOpacity=".65" />
-                                                <path d="M47 53 C25 45 12 62 23 77 C32 88 42 68 47 53Z" fill="#E8BD70" fillOpacity=".5" />
-                                                <path d="M53 47 C66 9 95 12 88 39 C84 53 68 57 53 51Z" fill="#FFF1BD" fillOpacity=".85" />
-                                                <path d="M53 53 C75 45 88 62 77 77 C68 88 58 68 53 53Z" fill="#F4D28A" fillOpacity=".5" />
-                                                <path d="M50 38 Q44 50 50 65 Q56 50 50 38Z" fill="#FFF1BD" />
-                                                <path d="M48 40 Q42 27 37 29 M52 40 Q58 27 63 29" strokeLinecap="round" />
-                                            </g>
-                                        </svg>
-                                    </div>
-                                </div>
-
-                                    {/* Original ScentStation lotus logo */}
-
-                                <Image
-                                    src="/scentstation-logo.png"
-                                    alt="ScentStation logo"
-                                    width={96}
-                                    height={96}
-                                    sizes="96px"
-                                    className="relative z-10 h-20 w-20 -translate-y-5 object-contain sm:h-24 sm:w-24"
-                                />
-
-
-                            </div>
-
-
-                            {/* Brand name */}
-                                <p className="text-center -translate-y-9 font-serif text-[30px] leading-tight tracking-tight text-[#FFF2DE] sm:text-[34px]">
-                                    ScentStation
-                                </p>
-
-                                <p className="mt-1 text-center -translate-y-9 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#D8AA60]">
-                                    Smart Fragrance Experience
-                                </p>
-
-                                {/* Login heading */}
-                                <h1 className="mt-7 text-center -translate-y-13 font-serif text-3xl font-semibold tracking-tight text-[#FFF2DE] sm:text-[38px]">
-                                    Welcome Back
-                                </h1>
-
-                                <p className="mt-1 text-center -translate-y-14 text-sm text-[#D9C3AA] sm:text-base">
-                                    Continue your fragrance journey
-                                </p>
-                            </div>
-
-                        <form
-                            onSubmit={handleLogin}
-                            noValidate
-                            className="space-y-4 -translate-y-10"
-                        >
-
-
-                                <div className="mb-5">
-                                    <label
-                                        htmlFor="email"
-                                        className="mb-2 block text-sm font-semibold text-[#FFF2DE] sm:text-base"
-                                    >
-                                        Email address
-                                    </label>
-
-                                    <div className="flex min-h-[58px] w-full overflow-hidden rounded-2xl border border-[#D8AA60]/60 bg-[#FFF2DE] transition focus-within:ring-2 focus-within:ring-[#D8AA60]/50 sm:min-h-[66px]">
-                                        {/* Email icon */}
-                                        <span
-                                            className="flex w-14 shrink-0 items-center justify-center border-r border-[#D8AA60]/40 text-[#9B6B37]"
-                                            aria-hidden="true"
-                                        >
-            <svg
-                viewBox="0 0 24 24"
-                className="h-6 w-6"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            >
-                <rect x="3" y="5" width="18" height="14" rx="2" />
-                <path d="m4 7 8 6 8-6" />
-            </svg>
-        </span>
-
-                                        {/* Email input */}
-                                        <input
-                                            id="email"
-                                            name="email"
-                                            type="email"
-                                            autoComplete="email"
-                                            value={email}
-                                            onChange={(event) => {
-                                                setEmail(event.target.value);
-                                                setEmailError("");
-                                            }}
-                                            placeholder="Enter your email"
-                                            className="min-w-0 flex-1 bg-transparent px-4 py-4 text-base text-[#302019] outline-none placeholder:text-[#967B63] sm:text-lg"
-                                        />
-                                    </div>
-                                    {emailError && (
-                                        <p className="mt-2 text-sm font-medium text-[#FFAAA0]" role="alert">
-                                            {emailError}
-                                        </p>
-                                    )}
-                                </div>
-
-
-                                <div className="mb-5">
-                                    <label
-                                        htmlFor="password"
-                                        className="mb-2 block text-sm font-semibold text-[#FFF2DE] sm:text-base"
-                                    >
-                                        Password
-                                    </label>
-
-                                    <div className="flex min-h-[58px] w-full overflow-hidden rounded-2xl border border-[#D8AA60]/60 bg-[#FFF2DE] transition focus-within:ring-2 focus-within:ring-[#D8AA60]/50 sm:min-h-[66px]">
-                                        {/* Lock icon */}
-                                        <span className="flex w-14 shrink-0 items-center justify-center border-r border-[#D8AA60]/40 text-[#9B6B37]">
-            <svg
-                viewBox="0 0 24 24"
-                className="h-6 w-6"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-            >
-                <rect x="5" y="10" width="14" height="11" rx="2" />
-                <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-                <path d="M12 14v3" />
-            </svg>
-        </span>
-
-                                        {/* Password input */}
-                                        <input
-                                            id="password"
-                                            name="password"
-                                            type={showPassword ? "text" : "password"}
-                                            value={password}
-                                            onChange={(event) => {
-                                                setPassword(event.target.value);
-                                                setPasswordError("");
-                                            }}
-                                            placeholder="Enter your password"
-                                            autoComplete="current-password"
-                                            className="min-w-0 flex-1 bg-transparent px-4 py-4 text-base text-[#302019] outline-none placeholder:text-[#967B63] sm:text-lg"
-                                        />
-
-                                        {/* Show / hide password */}
+                                    <div style={{ display: "flex", gap: "0.4rem" }}>
                                         <button
                                             type="button"
-                                            onClick={() => setShowPassword((previous) => !previous)}
-                                            aria-label={showPassword ? "Hide password" : "Show password"}
-                                            className="flex w-14 shrink-0 items-center justify-center text-[#9B6B37] transition hover:bg-[#E8BD70]/20"
+                                            onClick={() => router.push(existingSessionUser.defaultRedirect)}
+                                            className={styles.sessionContinueBtn}
                                         >
-                                            <svg
-                                                viewBox="0 0 24 24"
-                                                className="h-6 w-6"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                strokeWidth="1.8"
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                aria-hidden="true"
-                                            >
-                                                {showPassword ? (
-                                                    <>
-                                                        <path d="M3 3l18 18" />
-                                                        <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" />
-                                                        <path d="M9.9 5.2A11 11 0 0 1 12 5c5.5 0 9 7 9 7a15 15 0 0 1-3.1 3.8" />
-                                                        <path d="M6.2 6.2C4.2 7.5 3 10 3 12c0 0 3.5 7 9 7a10 10 0 0 0 3-.5" />
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
-                                                        <circle cx="12" cy="12" r="3" />
-                                                    </>
-                                                )}
-                                            </svg>
+                                            <LayoutDashboard size={12} />
+                                            <span>{language === "en" ? "Continue" : "Vào trang"}</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleSignOutCurrentSession}
+                                            className={styles.sessionSignOutBtn}
+                                        >
+                                            <LogOut size={12} />
+                                            <span>{language === "en" ? "Sign Out" : "Đăng xuất"}</span>
                                         </button>
                                     </div>
-                                    {passwordError && (
-                                        <p className="mt-2 text-sm font-medium text-[#FFAAA0]" role="alert">
-                                            {passwordError}
-                                        </p>
-                                    )}
                                 </div>
+                            )}
 
-                                <div className="flex items-center justify-between gap-3 pt-0.5 text-xs sm:text-sm">
-                                <label className="flex cursor-pointer items-center gap-2 text-[#D9C3AA]">
+                            {requestedRedirect && (
+                                <div className={styles.redirectNoticePill}>
+                                    {language === "en" ? "Continuing to:" : "Chuyển hướng sau khi đăng nhập:"}{" "}
+                                    <strong>{requestedRedirect}</strong>
+                                </div>
+                            )}
+                        </div>
+
+                        <form onSubmit={handleSignInSubmit} noValidate>
+                            <div className={styles.fieldBlock}>
+                                <label htmlFor="login-email" className={styles.fieldLabel}>
+                                    <span>{t.emailLabel}</span>
+                                </label>
+                                <div
+                                    className={`${styles.inputShell} ${
+                                        emailError ? styles.inputShellError : ""
+                                    }`}
+                                >
+                                    <span className={styles.inputIconPrefix}>
+                                        <Mail size={17} />
+                                    </span>
+                                    <input
+                                        id="login-email"
+                                        type="email"
+                                        autoComplete="email"
+                                        value={email}
+                                        onChange={(e) => {
+                                            setEmail(e.target.value);
+                                            setEmailError("");
+                                            setAuthError("");
+                                        }}
+                                        placeholder={t.emailPlaceholder}
+                                        className={styles.textInput}
+                                    />
+                                </div>
+                                {emailError && (
+                                    <p className={styles.fieldErrorMsg} role="alert">
+                                        {emailError}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className={styles.fieldBlock}>
+                                <label htmlFor="login-password" className={styles.fieldLabel}>
+                                    <span>{t.passwordLabel}</span>
+                                </label>
+                                <div
+                                    className={`${styles.inputShell} ${
+                                        passwordError ? styles.inputShellError : ""
+                                    }`}
+                                >
+                                    <span className={styles.inputIconPrefix}>
+                                        <Lock size={17} />
+                                    </span>
+                                    <input
+                                        id="login-password"
+                                        type={showPassword ? "text" : "password"}
+                                        autoComplete="current-password"
+                                        value={password}
+                                        onChange={(e) => {
+                                            setPassword(e.target.value);
+                                            setPasswordError("");
+                                            setAuthError("");
+                                        }}
+                                        placeholder={t.passwordPlaceholder}
+                                        className={styles.textInput}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        aria-label={showPassword ? "Hide password" : "Show password"}
+                                        className={styles.eyeToggleBtn}
+                                    >
+                                        {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                                    </button>
+                                </div>
+                                {passwordError && (
+                                    <p className={styles.fieldErrorMsg} role="alert">
+                                        {passwordError}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className={styles.utilityRow}>
+                                <label className={styles.rememberLabel}>
                                     <input
                                         type="checkbox"
                                         checked={rememberMe}
-                                        onChange={(event) => setRememberMe(event.target.checked)}
-                                        className="h-4 w-4 rounded accent-[#D8AA60]"
+                                        onChange={(e) => setRememberMe(e.target.checked)}
+                                        style={{
+                                            accentColor: "#D4AF37",
+                                            width: "15px",
+                                            height: "15px",
+                                        }}
                                     />
-                                    Remember me
+                                    <span>{t.rememberMe}</span>
                                 </label>
-                                <a
-                                    href="/forgot-password"
-                                    className="font-medium text-[#E3B873] underline underline-offset-4 transition hover:text-[#FFF2DE]"
-                                >
-                                    Forgot password?
-                                </a>
-                            </div>
-
-                                <div
-                                    className={`mt-3 min-h-[44px] rounded-xl px-4 py-2.5 text-sm leading-5 break-words ${
-                                        error
-                                            ? "border border-red-200 bg-red-50 text-red-600"
-                                            : "invisible"
-                                    }`}
-                                    role="alert"
-                                    aria-live="polite"
-                                >
-                                    {error || " "}
-                                </div>
 
                                 <button
-                                    type="submit"
-                                    disabled={loading}
-                                    className="group flex w-full items-center justify-center gap-3 rounded-xl border border-[#c58c45] bg-gradient-to-r from-[#d99b4c] via-[#a96826] to-[#60350f] px-4 py-3.5 font-serif text-lg text-[#fff9ef] shadow-[0_8px_18px_rgba(111,63,20,0.2)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
+                                    type="button"
+                                    onClick={() => {
+                                        setForgotEmail(email || "admin@scentstation.local");
+                                        setForgotStep("EMAIL");
+                                        setNewPassword("");
+                                        setConfirmPassword("");
+                                        setShowNewPassword(false);
+                                        setForgotError("");
+                                        setIsForgotOpen(true);
+                                    }}
+                                    className={styles.forgotLinkBtn}
                                 >
-                                    {loading ? "Signing in..." : "Sign In"}
-
-                                    {!loading && (
-                                        <span
-                                            aria-hidden="true"
-                                            className="transition-transform group-hover:translate-x-1"
-                                        ></span>
-                                    )}
+                                    {t.forgotPassword}
                                 </button>
+                            </div>
+
+                            {authError && (
+                                <div className={styles.authErrorAlert} role="alert">
+                                    <div style={{ display: "flex", alignItems: "flex-start", gap: "0.55rem" }}>
+                                        <AlertOctagon size={16} style={{ flexShrink: 0, marginTop: "2px" }} />
+                                        <div style={{ flex: 1 }}>
+                                            <div>{authError}</div>
+                                            {(authError.includes("locked") || authError.includes("khóa")) && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const cleanKey = email.trim().toLowerCase();
+                                                        const nextFail = { ...failedAttempts, [cleanKey]: 0 };
+                                                        const nextUnl = { ...unlockedEmails, [cleanKey]: true };
+                                                        setFailedAttempts(nextFail);
+                                                        setUnlockedEmails(nextUnl);
+                                                        persistSecurityState(nextFail, updatedPasswords, nextUnl);
+                                                        setAuthError("");
+                                                        setAuthSuccess(
+                                                            language === "en"
+                                                                ? `Administrator Override: Account "${cleanKey}" has been unlocked.`
+                                                                : `Quản trị viên đã mở khóa cho tài khoản "${cleanKey}".`
+                                                        );
+                                                    }}
+                                                    className={styles.adminUnlockBtn}
+                                                >
+                                                    <Unlock size={12} />
+                                                    <span>
+                                                        {language === "en"
+                                                            ? "Unlock Account (Admin Override)"
+                                                            : "Mở khóa nhanh (Quyền Super Admin)"}
+                                                    </span>
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {authSuccess && (
+                                <div className={styles.authSuccessAlert} role="status">
+                                    <CheckCircle2
+                                        size={15}
+                                        style={{
+                                            display: "inline",
+                                            marginRight: "6px",
+                                            verticalAlign: "text-bottom",
+                                        }}
+                                    />
+                                    {authSuccess}
+                                </div>
+                            )}
+
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className={styles.signInBtn}
+                            >
+                                <Lock size={15} />
+                                <span>{loading ? t.signingInBtn : t.signInBtn}</span>
+                            </button>
                         </form>
 
-                        <div className="my-5 -translate-y-9 flex items-center gap-3">
-                            <div className="h-px flex-1 bg-[#e5d1b5]" />
-                            <span className="text-[11px] font-medium text-[#a07b55]">OR</span>
-                            <div className="h-px flex-1 bg-[#e5d1b5]" />
+                        <div className={styles.securityInfoPanel}>
+                            <ShieldCheck
+                                size={20}
+                                color="#34D399"
+                                style={{ flexShrink: 0, marginTop: "2px" }}
+                            />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div
+                                    style={{
+                                        fontSize: "0.76rem",
+                                        fontWeight: 700,
+                                        color: "#F5E6AD",
+                                    }}
+                                >
+                                    {t.securityHeading}
+                                </div>
+                                <div
+                                    style={{
+                                        fontSize: "0.69rem",
+                                        color: "#94A3B8",
+                                        lineHeight: 1.5,
+                                        marginTop: "3px",
+                                    }}
+                                >
+                                    {t.securityBody}
+                                </div>
+                            </div>
                         </div>
-                        <button
-                            type="button"
-                            onClick={() => setError("QR code login will be available when the ScentStation mobile app is released.")}
-                            className="flex w-full -translate-y-8 items-center gap-3 rounded-xl border border-[#D8AA60]/45 bg-[#493023] px-4 py-3 text-left transition hover:border-[#D8AA60]/80 hover:bg-[#593B2A]"
-                        >
-        <span
-            className="flex h-10 w-10 shrink-0 items-center justify-center text-[#D8AA60]"
-            aria-hidden="true"
-        >
-        <svg
-            viewBox="0 0 24 24"
-            className="h-7 w-7"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-        >
-            <rect x="3" y="3" width="6" height="6" rx="1" />
-            <rect x="15" y="3" width="6" height="6" rx="1" />
-            <rect x="3" y="15" width="6" height="6" rx="1" />
-            <path d="M15 15h3v3h-3zM21 15v2M18 21h3M12 3v3M12 12h2M12 18v3" />
-        </svg>
-    </span>
-                            <span className="min-w-0 flex-1">
-        <span className="block text-sm font-semibold text-[#FFF2DE]">
-            Login with QR Code
-        </span>
-        <span className="mt-0.5 block text-xs text-[#D9C3AA]">
-            Use ScentStation mobile app to scan
-        </span>
-    </span>
-
-                            <span className="text-xl text-[#D8AA60]" aria-hidden="true">
-        ›
-    </span>
-                        </button>
-
-
-
-
-
-                        <div className="mt-6 -translate-y-8 flex w-full items-center gap-3 rounded-xl border border-[#D8AA60]/45 bg-[#493023] px-4 py-3 text-left transition hover:border-[#D8AA60]/80 hover:bg-[#593B2A]">
-                            {/* Security icon */}
-                            <span
-                                className="flex h-10 w-10 shrink-0 items-center justify-center text-[#D8AA60]"
-                                aria-hidden="true"
-                            >
-        <svg
-            viewBox="0 0 24 24"
-            className="h-7 w-7"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.7"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        >
-            <path d="M12 2 20 5v6c0 5-3.5 8.5-8 11-4.5-2.5-8-6-8-11V5l8-3Z" />
-            <path d="m8.5 12 2.2 2.2 4.8-5" />
-        </svg>
-    </span>
-
-                            {/* Security description */}
-                            <span className="min-w-0 flex-1">
-        <span className="block text-sm font-semibold text-[#FFF2DE]">
-            Secure &amp; Role-based Access
-        </span>
-        <span className="mt-0.5 block text-xs text-[#D9C3AA]">
-            Your data is protected with industry-standard security.
-        </span>
-    </span>
-                        </div>
-
-
-
                     </div>
-
                 </section>
             </div>
 
-            {/* Language Selector */}
-            <div className="fixed bottom-6 left-20 z-50">
-                <div className="relative">
-                    <button
-                        type="button"
-                        onClick={() =>
-                            setIsLanguageMenuOpen((open) => !open)
-                        }
-                        aria-expanded={isLanguageMenuOpen}
+            {isForgotOpen && (() => {
+                const cleanForgot = forgotEmail.trim().toLowerCase();
+                const matchedForgotAcc = ENTERPRISE_SEED_ACCOUNTS.find(
+                    (a) => a.email.toLowerCase() === cleanForgot
+                );
+                const isForgotAccLocked =
+                    matchedForgotAcc &&
+                    ((matchedForgotAcc.status === "LOCKED" && !unlockedEmails[cleanForgot]) ||
+                        (failedAttempts[cleanForgot] || 0) >= 5);
 
-                        className="flex min-h-[52px] items-center gap-3 rounded-full border border-[#D8AA60]/50 bg-[#28190F]/95 px-6 py-3 text-base font-medium text-[#FFF2DE] shadow-lg backdrop-blur-md transition-all duration-200 hover:border-[#D8AA60] hover:bg-[#3A2619]"
+                const pwChecks = {
+                    len: newPassword.length >= 8,
+                    upper: /[A-Z]/.test(newPassword),
+                    lower: /[a-z]/.test(newPassword),
+                    digit: /[0-9]/.test(newPassword),
+                    special: /[^A-Za-z0-9]/.test(newPassword),
+                    match: newPassword.length > 0 && newPassword === confirmPassword,
+                };
 
-                    >
-                        {/* Globe icon */}
-                        <svg
-                            viewBox="0 0 24 24"
-                            className="h-7 w-7 shrink-0 text-[#D8AA60]"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.6"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden="true"
-                        >
-                            <circle cx="12" cy="12" r="9.5" />
-                            <path d="M2.5 12h19" />
-                            <path d="M12 2.5c2.5 2.6 3.7 5.9 3.7 9.5s-1.2 6.9-3.7 9.5" />
-                            <path d="M12 2.5c-2.5 2.6-3.7 5.9-3.7 9.5s1.2 6.9 3.7 9.5" />
-                        </svg>
-
-                        {language === "en" ? "English" : "Vietnamese"}
-
-                        <svg
-                            viewBox="0 0 24 24"
-                            className={`h-5 w-5 text-[#D8AA60] transition-transform duration-200 ${
-                                isLanguageMenuOpen ? "rotate-180" : ""
-                            }`}
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.8"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden="true"
-                        >
-                            <path d="m7 10 5 5 5-5" />
-                        </svg>
-                    </button>
-
-                    {isLanguageMenuOpen && (
-                        <div className="absolute bottom-full left-0 mb-2 min-w-40 rounded-xl border border-[#D8AA60]/30 bg-[#28190F] p-1.5 shadow-xl">
-                            <button
-                                type="button"
-                                onClick={() => handleLanguageChange("en")}
-                                className="block w-full rounded-lg px-3 py-2.5 text-left text-sm text-[#FFF2DE] hover:bg-white/10"
+                return (
+                    <div className={styles.modalOverlay} onClick={() => setIsForgotOpen(false)}>
+                        <div className={styles.recoveryModalCard} onClick={(e) => e.stopPropagation()}>
+                            <div
+                                style={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "flex-start",
+                                    marginBottom: "0.85rem",
+                                }}
                             >
-                                English
-                            </button>
+                                <div>
+                                    <span
+                                        translate="no"
+                                        style={{
+                                            fontSize: "0.65rem",
+                                            color: "#D4AF37",
+                                            fontWeight: 700,
+                                            letterSpacing: "0.14em",
+                                            fontFamily: "Space Grotesk, monospace",
+                                            display: "block",
+                                        }}
+                                    >
+                                        ACCOUNT CREDENTIAL RECOVERY
+                                    </span>
+                                    <h3
+                                        style={{
+                                            margin: "0.18rem 0 0 0",
+                                            fontSize: "1.25rem",
+                                            color: "#FFF",
+                                            fontFamily: "Bodoni Moda, Georgia, serif",
+                                            fontWeight: 600,
+                                        }}
+                                    >
+                                        <KeyRound
+                                            size={18}
+                                            color="#D4AF37"
+                                            style={{ display: "inline", marginRight: "8px", verticalAlign: "middle" }}
+                                        />
+                                        {language === "en" ? "Reset Corporate Password" : "Khôi Phục Mật Khẩu"}
+                                    </h3>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsForgotOpen(false)}
+                                    style={{
+                                        background: "rgba(255,255,255,0.05)",
+                                        border: "1px solid rgba(255,255,255,0.12)",
+                                        borderRadius: "8px",
+                                        padding: "0.3rem",
+                                        color: "#94A3B8",
+                                        cursor: "pointer",
+                                        display: "flex",
+                                    }}
+                                >
+                                    <X size={16} />
+                                </button>
+                            </div>
 
-                            <button
-                                type="button"
-                                onClick={() => handleLanguageChange("vi")}
-                                className="block w-full rounded-lg px-3 py-2.5 text-left text-sm text-[#FFF2DE] hover:bg-white/10"
-                            >
-                                Vietnamese
-                            </button>
+                            <div className={styles.recoveryStepper} translate="no">
+                                <div
+                                    className={`${styles.recoveryStepPill} ${
+                                        forgotStep === "EMAIL"
+                                            ? styles.recoveryStepActive
+                                            : styles.recoveryStepDone
+                                    }`}
+                                >
+                                    <span>01</span>
+                                    <span>VERIFY EMAIL</span>
+                                </div>
+                                <div
+                                    className={`${styles.recoveryStepPill} ${
+                                        forgotStep === "NEW_PW"
+                                            ? styles.recoveryStepActive
+                                            : forgotStep === "SUCCESS"
+                                                ? styles.recoveryStepDone
+                                                : ""
+                                    }`}
+                                >
+                                    <span>02</span>
+                                    <span>NEW PASSWORD</span>
+                                </div>
+                                <div
+                                    className={`${styles.recoveryStepPill} ${
+                                        forgotStep === "SUCCESS" ? styles.recoveryStepDone : ""
+                                    }`}
+                                >
+                                    <span>03</span>
+                                    <span>COMPLETE</span>
+                                </div>
+                            </div>
+
+                            {forgotError && (
+                                <div className={styles.authErrorAlert}>{forgotError}</div>
+                            )}
+
+                            {forgotStep === "EMAIL" && (
+                                <form onSubmit={handleForgotPasswordFlow}>
+                                    <p style={{ fontSize: "0.8rem", color: "#CBD5E1", lineHeight: 1.5, margin: "0 0 0.75rem 0" }}>
+                                        {language === "en"
+                                            ? "Enter your registered corporate email address to verify your identity and set a new password:"
+                                            : "Nhập địa chỉ email doanh nghiệp đã đăng ký để xác minh danh tính và thiết lập mật khẩu mới:"}
+                                    </p>
+
+                                    <div className={styles.quickAccountChips} translate="no">
+                                        {ENTERPRISE_SEED_ACCOUNTS.map((acc) => {
+                                            const isSelected = acc.email.toLowerCase() === cleanForgot;
+                                            return (
+                                                <button
+                                                    key={acc.email}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setForgotEmail(acc.email);
+                                                        setForgotError("");
+                                                    }}
+                                                    className={`${styles.quickChipBtn} ${
+                                                        isSelected ? styles.quickChipBtnActive : ""
+                                                    }`}
+                                                >
+                                                    {acc.roleCode}: {acc.email.split("@")[0]}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <div className={styles.inputShell} style={{ marginBottom: "0.75rem" }}>
+                                        <span className={styles.inputIconPrefix}>
+                                            <Mail size={16} />
+                                        </span>
+                                        <input
+                                            type="email"
+                                            required
+                                            value={forgotEmail}
+                                            onChange={(e) => {
+                                                setForgotEmail(e.target.value);
+                                                setForgotError("");
+                                            }}
+                                            className={styles.textInput}
+                                            placeholder="admin@scentstation.local"
+                                        />
+                                    </div>
+
+                                    {matchedForgotAcc && (
+                                        <div className={styles.accountPreviewBox}>
+                                            <div>
+                                                <div style={{ fontWeight: 700, color: "#FFF", fontSize: "0.78rem" }}>
+                                                    {matchedForgotAcc.accountLabel}
+                                                </div>
+                                                <div style={{ fontSize: "0.68rem", color: "#94A3B8" }}>
+                                                    {matchedForgotAcc.brandScopeDisplay}
+                                                </div>
+                                            </div>
+                                            <span
+                                                translate="no"
+                                                style={{
+                                                    fontSize: "0.64rem",
+                                                    fontWeight: 700,
+                                                    fontFamily: "Space Grotesk, monospace",
+                                                    padding: "0.22rem 0.55rem",
+                                                    borderRadius: "999px",
+                                                    background: isForgotAccLocked
+                                                        ? "rgba(248,113,113,0.16)"
+                                                        : "rgba(52,211,153,0.14)",
+                                                    border: `1px solid ${
+                                                        isForgotAccLocked
+                                                            ? "rgba(248,113,113,0.4)"
+                                                            : "rgba(52,211,153,0.4)"
+                                                    }`,
+                                                    color: isForgotAccLocked ? "#F87171" : "#34D399",
+                                                    whiteSpace: "nowrap",
+                                                }}
+                                            >
+                                                {isForgotAccLocked ? "SUSPENDED" : "VERIFIED"}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    <div className={styles.modalActionStack}>
+                                        <button type="submit" className={styles.signInBtn}>
+                                            <span>
+                                                {language === "en"
+                                                    ? "Continue to Password Reset"
+                                                    : "Tiếp Tục Đặt Lại Mật Khẩu"}
+                                            </span>
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
+
+                            {forgotStep === "NEW_PW" && (
+                                <form onSubmit={handleForgotPasswordFlow}>
+                                    <div
+                                        style={{
+                                            padding: "0.65rem 0.85rem",
+                                            borderRadius: "11px",
+                                            background: "rgba(52, 211, 153, 0.1)",
+                                            border: "1px solid rgba(52, 211, 153, 0.38)",
+                                            color: "#34D399",
+                                            fontSize: "0.75rem",
+                                            lineHeight: 1.45,
+                                            marginBottom: "0.85rem",
+                                            display: "flex",
+                                            justifyContent: "space-between",
+                                            alignItems: "center",
+                                            gap: "0.5rem",
+                                            flexWrap: "wrap",
+                                        }}
+                                    >
+                                        <span>
+                                            ✓ Account verified: <strong>{forgotEmail}</strong>
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setNewPassword("Scent@2026");
+                                                setConfirmPassword("Scent@2026");
+                                                setForgotError("");
+                                            }}
+                                            style={{
+                                                background: "rgba(212,175,55,0.2)",
+                                                border: "1px solid #D4AF37",
+                                                color: "#F5E6AD",
+                                                borderRadius: "6px",
+                                                padding: "0.2rem 0.5rem",
+                                                fontSize: "0.66rem",
+                                                fontWeight: 700,
+                                                cursor: "pointer",
+                                            }}
+                                        >
+                                            Fill Strong Password
+                                        </button>
+                                    </div>
+
+                                    <div className={styles.inputShell} style={{ marginBottom: "0.65rem" }}>
+                                        <span className={styles.inputIconPrefix}>
+                                            <Lock size={16} />
+                                        </span>
+                                        <input
+                                            type={showNewPassword ? "text" : "password"}
+                                            required
+                                            value={newPassword}
+                                            onChange={(e) => {
+                                                setNewPassword(e.target.value);
+                                                setForgotError("");
+                                            }}
+                                            placeholder={
+                                                language === "en"
+                                                    ? "Enter new password"
+                                                    : "Nhập mật khẩu mới"
+                                            }
+                                            className={styles.textInput}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowNewPassword(!showNewPassword)}
+                                            className={styles.eyeToggleBtn}
+                                            aria-label={showNewPassword ? "Hide new password" : "Show new password"}
+                                        >
+                                            {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                        </button>
+                                    </div>
+
+                                    <div className={styles.inputShell} style={{ marginBottom: "0.85rem" }}>
+                                        <span className={styles.inputIconPrefix}>
+                                            <Lock size={16} />
+                                        </span>
+                                        <input
+                                            type={showNewPassword ? "text" : "password"}
+                                            required
+                                            value={confirmPassword}
+                                            onChange={(e) => {
+                                                setConfirmPassword(e.target.value);
+                                                setForgotError("");
+                                            }}
+                                            placeholder={
+                                                language === "en"
+                                                    ? "Confirm new password"
+                                                    : "Nhập lại mật khẩu mới"
+                                            }
+                                            className={styles.textInput}
+                                        />
+                                    </div>
+
+                                    <div className={styles.pwCriteriaGrid} translate="no">
+                                        <div className={`${styles.pwCriteriaItem} ${pwChecks.len ? styles.pwCriteriaPass : ""}`}>
+                                            <Check size={12} />
+                                            <span>8+ characters</span>
+                                        </div>
+                                        <div className={`${styles.pwCriteriaItem} ${pwChecks.upper ? styles.pwCriteriaPass : ""}`}>
+                                            <Check size={12} />
+                                            <span>Uppercase (A-Z)</span>
+                                        </div>
+                                        <div className={`${styles.pwCriteriaItem} ${pwChecks.lower ? styles.pwCriteriaPass : ""}`}>
+                                            <Check size={12} />
+                                            <span>Lowercase (a-z)</span>
+                                        </div>
+                                        <div className={`${styles.pwCriteriaItem} ${pwChecks.digit ? styles.pwCriteriaPass : ""}`}>
+                                            <Check size={12} />
+                                            <span>Number (0-9)</span>
+                                        </div>
+                                        <div className={`${styles.pwCriteriaItem} ${pwChecks.special ? styles.pwCriteriaPass : ""}`}>
+                                            <Check size={12} />
+                                            <span>Special (@#$%!)</span>
+                                        </div>
+                                        <div className={`${styles.pwCriteriaItem} ${pwChecks.match ? styles.pwCriteriaPass : ""}`}>
+                                            <Check size={12} />
+                                            <span>Passwords match</span>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: "flex", gap: "0.6rem" }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setForgotStep("EMAIL")}
+                                            className={styles.secondaryBtn}
+                                            style={{ flex: 0.45 }}
+                                        >
+                                            <span>{language === "en" ? "Back" : "Quay lại"}</span>
+                                        </button>
+                                        <button type="submit" className={styles.signInBtn} style={{ flex: 1.55 }}>
+                                            <Unlock size={16} />
+                                            <span>
+                                                {language === "en"
+                                                    ? "Update Password & Unlock"
+                                                    : "Cập Nhật & Mở Khóa"}
+                                            </span>
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
+
+                            {forgotStep === "SUCCESS" && (
+                                <div>
+                                    <div className={styles.authSuccessAlert}>
+                                        <strong>
+                                            {language === "en"
+                                                ? "✓ Password Updated Successfully"
+                                                : "✓ Đã Cập Nhật Mật Khẩu Thành Công"}
+                                        </strong>
+                                        <div style={{ marginTop: "0.25rem", color: "#E2E8F0" }}>
+                                            {language === "en" ? (
+                                                <>
+                                                    Your new password for <strong>{forgotEmail}</strong> is active and any security lockouts have been cleared.
+                                                </>
+                                            ) : (
+                                                <>
+                                                    Mật khẩu mới cho tài khoản <strong>{forgotEmail}</strong> đã có hiệu lực và trạng thái khóa bảo mật đã được gỡ bỏ.
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setEmail(forgotEmail);
+                                            setPassword(newPassword);
+                                            setIsForgotOpen(false);
+                                            setAuthSuccess(
+                                                language === "en"
+                                                    ? "Password updated. You may now sign in with your new credentials."
+                                                    : "Đã điền mật khẩu mới. Bạn có thể bấm Đăng nhập ngay."
+                                            );
+                                        }}
+                                        className={styles.signInBtn}
+                                    >
+                                        <span>
+                                            {language === "en"
+                                                ? "Return to Sign In"
+                                                : "Quay Lại Đăng Nhập"}
+                                        </span>
+                                    </button>
+                                </div>
+                            )}
                         </div>
-                    )}
-                </div>
-            </div>
-            <style jsx global>{`
-    #email:-webkit-autofill,
-    #email:-webkit-autofill:hover,
-    #email:-webkit-autofill:focus,
-    #password:-webkit-autofill,
-    #password:-webkit-autofill:hover,
-    #password:-webkit-autofill:focus {
-        -webkit-text-fill-color: #302019 !important;
-        -webkit-box-shadow: 0 0 0 1000px #FFF2DE inset !important;
-        box-shadow: 0 0 0 1000px #FFF2DE inset !important;
-        caret-color: #302019;
-        transition: background-color 999999s ease-in-out 0s;
-    }
-`}</style>
+                    </div>
+                );
+            })()}
 
+            {pending2FAUser && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalCard}>
+                        <span
+                            translate="no"
+                            style={{
+                                fontSize: "0.65rem",
+                                color: "#D4AF37",
+                                fontWeight: 700,
+                                letterSpacing: "0.14em",
+                                fontFamily: "Space Grotesk, monospace",
+                                display: "block",
+                                marginBottom: "0.2rem",
+                            }}
+                        >
+                            TWO-FACTOR AUTHENTICATION
+                        </span>
+                        <h3
+                            style={{
+                                margin: "0 0 0.45rem 0",
+                                fontSize: "1.24rem",
+                                color: "#FFF",
+                                fontFamily: "Bodoni Moda, Georgia, serif",
+                            }}
+                        >
+                            {language === "en"
+                                ? "Security Verification Required"
+                                : "Xác Thực Bảo Mật Hai Lớp"}
+                        </h3>
+                        <p style={{ fontSize: "0.8rem", color: "#CBD5E1", lineHeight: 1.55, margin: 0 }}>
+                            {language === "en" ? (
+                                <>
+                                    Enter the 6-digit verification code for{" "}
+                                    <strong>{pending2FAUser.accountLabel}</strong> (Demo code:{" "}
+                                    <strong style={{ color: "#F5E6AD" }}>123456</strong>).
+                                </>
+                            ) : (
+                                <>
+                                    Nhập mã xác thực gồm 6 chữ số cho tài khoản{" "}
+                                    <strong>{pending2FAUser.accountLabel}</strong> (Mã demo:{" "}
+                                    <strong style={{ color: "#F5E6AD" }}>123456</strong>).
+                                </>
+                            )}
+                        </p>
+
+                        {otpError && (
+                            <div className={styles.authErrorAlert} style={{ marginTop: "0.75rem" }}>
+                                {otpError}
+                            </div>
+                        )}
+
+                        <form onSubmit={handleVerify2FASubmit}>
+                            <div className={styles.inputShell} style={{ margin: "1rem 0" }}>
+                                <input
+                                    type="text"
+                                    maxLength={6}
+                                    value={otpInput}
+                                    onChange={(e) => setOtpInput(e.target.value)}
+                                    placeholder="123456"
+                                    className={styles.textInput}
+                                    style={{
+                                        textAlign: "center",
+                                        fontSize: "1.25rem",
+                                        fontWeight: 700,
+                                        letterSpacing: "0.35em",
+                                        fontFamily: "Space Grotesk, monospace",
+                                    }}
+                                />
+                            </div>
+                            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.65rem" }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setPending2FAUser(null)}
+                                    className={styles.secondaryBtn}
+                                >
+                                    {language === "en" ? "Cancel" : "Hủy"}
+                                </button>
+                                <button
+                                    type="submit"
+                                    className={styles.signInBtn}
+                                    style={{ width: "auto", padding: "0 1.4rem", height: "42px" }}
+                                >
+                                    {language === "en" ? "Verify & Continue" : "Xác Thực & Tiếp Tục"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            <footer className={styles.footerBar}>
+                <div className={styles.footerInner}>
+                    <div>
+                        <strong>SCENTSTATION</strong> •{" "}
+                        {language === "en"
+                            ? "Enterprise Identity & Access Governance"
+                            : "Hệ Thống Quản Trị Định Danh & Phân Quyền Doanh Nghiệp"}
+                    </div>
+                    <div className={styles.footerRight}>
+                        <span>BCrypt Security</span>
+                        <span>•</span>
+                        <span>Multi-Tenant Isolation</span>
+                        <span>•</span>
+                        <button
+                            type="button"
+                            onClick={() => router.push("/")}
+                            className={styles.footerLinkBtn}
+                        >
+                            {t.backToGateway}
+                        </button>
+                    </div>
+                </div>
+            </footer>
         </main>
     );
 }
