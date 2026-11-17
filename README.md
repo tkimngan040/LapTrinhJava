@@ -61,71 +61,135 @@ The deliverable device is a working prototype kiosk with at least four independe
 
 ```
 LapTrinhJava/
+├── backend/        Spring Boot API
+├── frontend/       Next.js web and kiosk UI
+├── simulator/      Java MQTT device simulator
 ├── Report/         Project report (chapters) and diagrams
 ├── Work Log/       Weekly work logs
 └── README.md
 ```
 
-Source code folders are not in the repository yet. They are added in Sprint 2:
+## 6. Running the Project on Windows (VS Code + Git Bash)
 
+This guide starts the database, MQTT broker, backend, and frontend. The
+simulator is not required to start the web application.
+
+### One-time Setup
+
+If you already have any of these tools installed, skip the corresponding
+command. Open PowerShell as an administrator and run:
+
+```powershell
+winget install EclipseAdoptium.Temurin.21.JDK
+winget install Docker.DockerDesktop
+winget install OpenJS.NodeJS.LTS
+winget install Git.Git
+winget install Microsoft.VisualStudioCode
 ```
-├── backend/        Spring Boot API          (planned)
-├── frontend/       Next.js web and kiosk UI (planned)
-└── simulator/      Java MQTT device simulator (planned)
-```
 
-## 6. Getting Started
+Restart your computer if needed. Open Docker Desktop and wait until it reports
+that Docker is running. If Docker requests a WSL update, run `wsl --update` in
+PowerShell and then restart Docker Desktop.
 
-> The steps below apply once the source folders above exist. Until then only
-> Steps 1 and 2 can be followed.
-
-### Prerequisites
-
-- JDK 21
-- Node.js 20 or later
-- Docker Desktop
-- Git
-
-### Steps
-
-**Step 1 — Clone the repository**
+Install Maven 3.9.9 from Git Bash:
 
 ```bash
+cd ~
+curl -L -o maven.zip https://archive.apache.org/dist/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.zip
+unzip maven.zip && mv apache-maven-3.9.9 maven
+echo 'export PATH="$HOME/maven/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+Verify the tools are installed:
+
+```bash
+java -version
+mvn -v
+node -v
+docker --version
+```
+
+### Clone the Repository (One Time)
+
+```bash
+git config --global user.name "TEN_CUA_BAN"
+git config --global user.email "EMAIL_GITHUB_CUA_BAN"
 git clone https://github.com/tkimngan040/LapTrinhJava.git
-cd LapTrinhJava
+cd ~/LapTrinhJava
+code .
 ```
 
-**Step 2 — Start PostgreSQL and MQTT**
+Replace the placeholder name and email with your GitHub details.
+
+### Update the Repository
 
 ```bash
-docker run -d --name scent-db -p 5432:5432 \
-  -e POSTGRES_DB=scentstation \
-  -e POSTGRES_USER=scent \
-  -e POSTGRES_PASSWORD=scent \
-  postgres:16
-
-docker run -d --name scent-mqtt -p 1883:1883 \
-  eclipse-mosquitto:2.0 mosquitto -c /mosquitto-no-auth.conf
+cd ~/LapTrinhJava
+git checkout main
+git pull
 ```
 
-**Step 3 — Run the backend**
+### Start the Application
+
+Open three terminals in VS Code and select **Git Bash** for each one.
+
+**Terminal 1 — Database and MQTT:** Docker Desktop must be running.
 
 ```bash
-cd backend
-./mvnw spring-boot:run
+cd ~/LapTrinhJava
+docker compose up -d
+docker compose ps
 ```
 
-The backend runs at `http://localhost:8080`
-
-**Step 4 — Run the frontend** (in a new terminal)
+**Terminal 2 — Backend:** wait for the `Started ScentStationApplication` log
+message.
 
 ```bash
-cd frontend
+cd ~/LapTrinhJava/backend
+mvn spring-boot:run
+```
+
+Check the backend from another terminal:
+
+```bash
+curl http://localhost:8080/actuator/health
+```
+
+The expected response is `{"status":"UP"}`.
+
+**Terminal 3 — Frontend:**
+
+```bash
+cd ~/LapTrinhJava/frontend
 npm install
 npm run dev
 ```
 
-The frontend runs at `http://localhost:3000`
+Open `http://localhost:3000/login` and sign in with the development account:
+
+| Email | Password |
+|---|---|
+| `admin@scentstation.local` | `Admin@12345` |
+
+This account is for development and testing only.
+
+### Run Tests (Optional)
+
+```bash
+cd ~/LapTrinhJava/backend
+mvn test
+```
+
+### Stop the Application
+
+Stop the backend and frontend by pressing `Ctrl+C` in Terminals 2 and 3, then
+stop the database and MQTT broker:
+
+```bash
+cd ~/LapTrinhJava
+docker compose down
+```
 
 ## 7. Team Members
 

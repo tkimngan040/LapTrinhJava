@@ -80,9 +80,85 @@ public interface FaultInjector {
         if (name == null || name.isBlank() || "none".equalsIgnoreCase(name)) {
             return none();
         }
+
+        if ("reject".equalsIgnoreCase(name)) {
+            return new FaultInjector() {
+                @Override
+                public String name() {
+                    return "reject";
+                }
+
+                @Override
+                public boolean acceptCommand() {
+                    return false;
+                }
+
+                @Override
+                public String rejectionReason() {
+                    return "DEVICE_REJECTED";
+                }
+            };
+        }
+
+        if ("interlock".equalsIgnoreCase(name)) {
+            return new FaultInjector() {
+                @Override
+                public String name() {
+                    return "interlock";
+                }
+
+                @Override
+                public boolean forceDoorOpen() {
+                    return true;
+                }
+            };
+        }
+
+        if ("silent".equalsIgnoreCase(name)) {
+            return new FaultInjector() {
+                @Override
+                public String name() {
+                    return "silent";
+                }
+
+                @Override
+                public boolean sendResult() {
+                    return false;
+                }
+            };
+        }
+
+        if ("duplicate".equalsIgnoreCase(name)) {
+            return new FaultInjector() {
+                @Override
+                public String name() {
+                    return "duplicate";
+                }
+
+                @Override
+                public int resultCopies() {
+                    return 2;
+                }
+            };
+        }
+
+        if ("offline".equalsIgnoreCase(name)) {
+            return new FaultInjector() {
+                @Override
+                public String name() {
+                    return "offline";
+                }
+
+                @Override
+                public boolean sendHeartbeats() {
+                    return false;
+                }
+            };
+        }
+
+
         throw new IllegalArgumentException(
-                "Unknown fault mode '" + name + "'. Expected one of: "
-                        + "none, reject, interlock, silent, duplicate, offline. "
-                        + "Only 'none' is implemented so far; the rest are task N2.");
+                "Unknown fault mode '" + name + "'. Supported modes: "
+                        + "none, reject, interlock, silent, duplicate, offline.");
     }
 }
