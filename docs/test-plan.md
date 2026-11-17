@@ -57,15 +57,18 @@ This plan traces cases to:
 
 ### Integration tests
 
-- Use Spring Boot Test/MockMvc and PostgreSQL Testcontainers for tests that
-  need the real Spring wiring, database migrations, transactions, indexes or
-  tenant filters.
-- Use Mosquitto plus the Java device simulator for MQTT scenarios. The
-  simulator supports reproducible `reject`, `interlock`, `silent`,
-  `duplicate` and `offline` fault modes. Use a test payment payload/provider;
-  never call a real payment service.
-- Seed only the records required by a case and clean them up through the test
-  transaction or isolated database/container.
+- Use Spring Boot Test/MockMvc and PostgreSQL for tests that need real Spring
+  wiring, database migrations, transactions, indexes or tenant filters. The
+  current `MqttDispensingIT` and `BackendBoundaryIT` connect to the local
+  PostgreSQL service from `docker-compose.yml`; start it before running them.
+- Use Mosquitto plus the Java device simulator, or a deterministic
+  protocol-compatible test device, for MQTT scenarios. The simulator supports
+  reproducible `reject`, `interlock`, `silent`, `duplicate` and `offline`
+  fault modes. Use a test payment payload/provider; never call a real payment
+  service.
+- Seed only the records required by a case. These two integration test classes
+  use the shared local Compose database and may leave test orders/records
+  behind; use only the local development database, never production data.
 - For a security case without a corresponding production admin endpoint yet,
   register a test-only controller through test configuration. It must call
   the real repository or a marker-writing service and pass through the real
@@ -104,17 +107,37 @@ This plan traces cases to:
 
 | ID | Test setup and action | Expected result / assertions | UC | BR | FR / NFR | Boundary and test data |
 |---|---|---|---|---|---|---|
-| IT-01 | In PostgreSQL, create an active brand, online/active machine, available slot, installed bottle and pending order. Submit a correctly signed success payment notification with the exact reference, amount and currency. Run the simulator and allow acknowledgement/result success. | Persisted order is `DISPENSED`; one `SUCCEEDED` payment and one successful command/result correlated to the order are persisted; exactly one customer-sale inventory movement for the configured dose is recorded. | UC-05, UC-08, UC-09 | BR3, BR4, BR5, BR6, BR10 | FR3.2, FR3.4, FR3.7, FR4.1, FR4.9, FR4.10, FR6.7 | Spring Boot + PostgreSQL Testcontainers + Mosquitto + simulator in normal mode; use a fixed/configurable test timeout. |
-| IT-02 | Begin with a paid order and an active command. Start the simulator in `--fault=reject` mode and deliver its negative acknowledgement with a failure reason. | Command is recorded as rejected; order becomes `FAILED` with the device reason; no customer-sale inventory movement is created; an incident/review item is persisted and available to the operational review workflow. All assertions are required for Pass. | UC-08, UC-09, UC-16 | BR7, BR10 | FR3.13, FR4.6, FR4.9, FR4.12 | PostgreSQL + MQTT + simulator `reject`. If incident/review persistence or workflow is absent, mark the case Blocked; passing only the command/order/stock assertions is partial, not a Pass. |
-| IT-03 | Begin with a paid order and an active command. Start the simulator in `--fault=interlock` mode, which reports the door-open safety condition. | Simulator refuses actuation; backend records the correlated rejection and order `FAILED`; failure reason is retained; customer-sale inventory is unchanged; machine operating status is updated and an alert is raised. All assertions are required for Pass. | UC-08, UC-13 | BR8 | FR4.7, FR4.9, FR7.1 | PostgreSQL + MQTT + simulator `interlock`; this concrete scenario covers the door-open interlock. Other BR8 interlocks require equivalent controllable simulator/test-fixture states. If status/alert handling is absent, mark Blocked. |
-| IT-04 | Begin with a paid order and an active command. Start the simulator in `--fault=silent` mode and advance the configured result timeout without delivering a result. | Command is marked timed out; order becomes `UNCERTAIN`; exactly one command was published; no automatic retry is issued; an incident/review item is persisted for human resolution. All assertions are required for Pass. | UC-08, UC-16 | BR14 | FR4.11, FR4.12, NFR4.5 | PostgreSQL + MQTT + simulator `silent`; advance/test the timeout without sleeping for the production duration. If incident/review routing is absent, mark Blocked. |
-| IT-05 | Begin with a paid order. Start the simulator in `--fault=duplicate` mode so it publishes the same successful result more than once. | The order remains `DISPENSED`; command/result correlation is preserved; exactly one customer-sale inventory movement and one dose deduction are persisted. | UC-09, UC-10 | BR6, BR10 | FR5.6, FR6.7, NFR3.3, NFR3.4 | PostgreSQL + MQTT + simulator `duplicate`; verify database rows after all result copies have arrived. |
-| IT-06 | Register an online machine, then run the simulator in `--fault=offline` mode or otherwise stop its heartbeats. Advance beyond the configured heartbeat threshold and submit a kiosk order request. | Machine is classified `OFFLINE`; the order request is refused; no order or payment record is created. | UC-05, UC-07 | BR9 | FR3.2, FR5.1, FR5.2, NFR7.5 | PostgreSQL + MQTT + simulator `offline`; use a controllable clock/threshold rather than a long real-time wait. |
-| IT-07 | Seed PostgreSQL with machines belonging to Brand A and Brand B. Authenticate a Brand A user and request the known Brand B machine through a test-only controller registered by test configuration and calling the real `MachineRepository`. | The request cannot retrieve Brand B data (for example, the scoped repository lookup is empty and the fixture responds `404`). A platform administrator can retrieve it in a separate positive control. Both checks are required. | UC-07, UC-17 | BR13 | FR1.4, FR1.5, NFR7.6 | Spring Boot + PostgreSQL Testcontainers + real JWT filter + tenant filter. This fixture specifically tests tenant isolation, not the existence or behavior of a production brand-admin read API. If the real tenant filter/repository path cannot be exercised, mark Blocked rather than substituting a mocked repository. |
-| IT-08 | Authenticate a Viewer and POST to a test-only protected write route registered by test configuration under `/api/`; its handler would save a marker record through the test database. | Spring Security returns `403` before the handler runs; the marker record is not created or modified. A role permitted to write may reach the same fixture as a positive control. Both checks are required. | UC-17 | — | FR1.11, NFR7.6 | Spring Boot/MockMvc + PostgreSQL Testcontainers + real JWT and `SecurityFilterChain`. The fixture verifies the configured authorization boundary only; it is not a production write API. |
-| IT-09 | Create a pending order and submit the same correctly signed successful webhook twice, with matching provider, provider reference, payment reference, amount and currency. | First delivery is applied; repeat is reported as ignored; one payment is persisted, order is confirmed paid once, and no more than one dispense command is issued. | UC-05, UC-08 | BR5, BR6 | FR3.7, FR3.8, FR4.1, NFR3.3 | Spring Boot + PostgreSQL Testcontainers; capture the `DeviceGateway` publish count and inspect persisted payment/order/command records. |
+| IT-01 | In PostgreSQL, create an active brand, online/active machine, available slot, installed bottle and pending order. Submit a correctly signed success payment notification with the exact reference, amount and currency. Run the simulator or protocol-compatible test device and allow acknowledgement/result success. | Persisted order is `DISPENSED`; one `SUCCEEDED` payment and one successful command/result correlated to the order are persisted; exactly one customer-sale inventory movement for the configured dose is recorded. | UC-05, UC-08, UC-09 | BR3, BR4, BR5, BR6, BR10 | FR3.2, FR3.4, FR3.7, FR4.1, FR4.9, FR4.10, FR6.7 | Spring Boot + local Compose PostgreSQL + Mosquitto + protocol-compatible test device in normal mode. |
+| IT-02 | Begin with a paid order and an active command. Start the simulator or protocol-compatible test device in `reject` mode and deliver its negative acknowledgement with a failure reason. | Command is recorded as rejected; order becomes `FAILED` with the device reason; no customer-sale inventory movement is created; an incident/review item is persisted and available to the operational review workflow. All assertions are required for Pass. | UC-08, UC-09, UC-16 | BR7, BR10 | FR3.13, FR4.6, FR4.9, FR4.12 | PostgreSQL + MQTT + simulator/test device `reject`. If incident/review persistence or workflow is absent, mark the case Blocked; passing only the command/order/stock assertions is partial, not a Pass. |
+| IT-03 | Begin with a paid order and an active command. Start the simulator or protocol-compatible test device in `interlock` mode, which reports the door-open safety condition. | Device refuses actuation; backend records the correlated rejection and order `FAILED`; failure reason is retained; customer-sale inventory is unchanged; machine operating status is updated and an alert is raised. All assertions are required for Pass. | UC-08, UC-13 | BR8 | FR4.7, FR4.9, FR7.1 | PostgreSQL + MQTT + simulator/test device `interlock`; this concrete scenario covers the door-open interlock. Other BR8 interlocks require equivalent controllable simulator/test-fixture states. If status/alert handling is absent, mark Blocked. |
+| IT-04 | Begin with a paid order and an active command. Start the simulator or protocol-compatible test device in `silent` mode and advance the configured result timeout without delivering a result. | Command is marked timed out; order becomes `UNCERTAIN`; exactly one command was published; no automatic retry is issued; an incident/review item is persisted for human resolution. All assertions are required for Pass. | UC-08, UC-16 | BR14 | FR4.11, FR4.12, NFR4.5 | PostgreSQL + MQTT + simulator/test device `silent`; advance/test the timeout without sleeping for the production duration. If incident/review routing is absent, mark Blocked. |
+| IT-05 | Begin with a paid order. Start the simulator or protocol-compatible test device in `duplicate` mode so it publishes the same successful result more than once. | The order remains `DISPENSED`; command/result correlation is preserved; exactly one customer-sale inventory movement and one dose deduction are persisted. | UC-09, UC-10 | BR6, BR10 | FR5.6, FR6.7, NFR3.3, NFR3.4 | PostgreSQL + MQTT + simulator/test device `duplicate`; verify database rows after all result copies have arrived. |
+| IT-06 | Register an online machine, then run the simulator in `offline` mode or otherwise stop its heartbeats. Advance beyond the configured heartbeat threshold and submit a kiosk order request. | Machine is classified `OFFLINE`; the order request is refused; no order or payment record is created. | UC-05, UC-07 | BR9 | FR3.2, FR5.1, FR5.2, NFR7.5 | PostgreSQL + MQTT + simulator `offline`, or age the last heartbeat under a controllable threshold; do not wait through the production timeout. |
+| IT-07 | Seed PostgreSQL with machines belonging to Brand A and Brand B. Authenticate a Brand A user and request the known Brand B machine through a test-only controller registered by test configuration and calling the real `MachineRepository`. | The request cannot retrieve Brand B data (for example, the scoped repository lookup is empty and the fixture responds `404`). A platform administrator can retrieve it in a separate positive control. Both checks are required. | UC-07, UC-17 | BR13 | FR1.4, FR1.5, NFR7.6 | Spring Boot + local Compose PostgreSQL + real JWT filter + tenant filter. This fixture specifically tests tenant isolation, not the existence or behavior of a production brand-admin read API. If the real tenant filter/repository path cannot be exercised, mark Blocked rather than substituting a mocked repository. |
+| IT-08 | Authenticate a Viewer and POST to a test-only protected write route registered by test configuration under `/api/`; its handler would save a marker record through the test database. | Spring Security returns `403` before the handler runs; the marker record is not created or modified. A role permitted to write may reach the same fixture as a positive control. Both checks are required. | UC-17 | — | FR1.11, NFR7.6 | Spring Boot/MockMvc + local Compose PostgreSQL + real JWT and `SecurityFilterChain`. The fixture verifies the configured authorization boundary only; it is not a production write API. |
+| IT-09 | Create a pending order and submit the same correctly signed successful webhook twice, with matching provider, provider reference, payment reference, amount and currency. | First delivery is applied; repeat is reported as ignored; one payment is persisted, order is confirmed paid once, and no more than one dispense command is issued. | UC-05, UC-08 | BR5, BR6 | FR3.7, FR3.8, FR4.1, NFR3.3 | Spring Boot + local Compose PostgreSQL; capture the `DeviceGateway` publish count and inspect persisted payment/order/command records. |
 
 ## 6. Execution and reporting
+
+### Implementation and execution status
+
+The results below include the user's Maven/Failsafe run of
+`MqttDispensingIT` against local Compose services and the IntelliJ run of
+`BackendBoundaryIT` shown in the supplied screenshot, on 2026-11-17. Passing
+means every assertion in that case passed; an assertion failure is recorded as
+Fail, not as an environment issue.
+
+| Cases | Current code status |
+|---|---|
+| UT-01–UT-16 | **Pass**: reported passed; the supplied `MqttDispensingIT` Maven output also shows 35 Surefire tests with 0 failures/errors/skips. JVM/Mockito warnings did not fail those tests. |
+| UT-17 | **Error** in `MqttDispensingIT`: timed out waiting for the correlated `LATE_RESULT` device event; query returned 0 rows after 10 seconds. |
+| IT-01 | **Pass** in `MqttDispensingIT`: success result dispensed once and deducted one dose. |
+| IT-02 | **Fail** in `MqttDispensingIT`: rejected command/order/stock assertions passed, but no incident was persisted (`0` expected greater than `0`). |
+| IT-03 | **Fail** in `MqttDispensingIT`: order rejection and reason were observed, but machine operating status remained `ACTIVE`; the test stopped before checking the alert assertion. |
+| IT-04 | **Fail** in `MqttDispensingIT`: timeout/order/one-command assertions passed, but no incident/review item was persisted. |
+| IT-05–IT-06 | **Pass** in `MqttDispensingIT`: duplicate result was idempotent; offline machine blocked a new order. |
+| IT-07–IT-08 | **Pass** in `BackendBoundaryIT` screenshot: tenant isolation and write authorization passed. |
+| IT-09 | **Fail** in `BackendBoundaryIT` screenshot: duplicate signed payment webhook case failed. The screenshot does not show the assertion details. |
 
 Run backend unit tests from `backend/`:
 
@@ -122,9 +145,13 @@ Run backend unit tests from `backend/`:
 mvn test
 ```
 
-Run integration tests from `backend/`:
+For the integration tests, first start their local dependencies from the
+repository root, then run the test from `backend/`:
 
 ```shell
+docker compose up -d db mqtt
+docker compose exec db pg_isready -U scent -d scentstation
+cd backend
 mvn verify
 ```
 
@@ -134,22 +161,34 @@ Name an integration case `SomethingIT.java`, so that `mvn test` stays runnable
 by every member on every change, including on a machine with no Docker.
 
 What the build provides: `spring-boot-starter-test` brings JUnit 5, Mockito
-and AssertJ; `spring-security-test` brings the authentication helpers that
-IT-07 and IT-08 need; `spring-boot-testcontainers` with the Testcontainers
-PostgreSQL module brings the database for the cases that need the real
-indexes, the real migrations and the real tenant filter. The simulator
-declares JUnit 5 of its own, having no Spring parent to inherit it from.
-
-Integration tests that use Testcontainers additionally require Docker to be
-available. Tests that launch the simulator require a reachable Mosquitto
-broker; do not start a production payment provider or physical device.
+and AssertJ; `spring-security-test` is available for security test helpers,
+while `BackendBoundaryIT` obtains tokens through the real login endpoint.
+These integration test classes connect to PostgreSQL and Mosquitto on
+`localhost` as configured in `application.yml` and `docker-compose.yml`; start
+the required Compose services before running them. They start Spring in the
+test process, so do not start a separate backend. Do not start a production
+payment provider or physical device.
 
 Use the following result record in the Chapter 3 test-results section after
 the cases have actually been implemented and run:
 
 | ID | Test case | Command/environment | Expected result | Actual result / evidence | Status |
 |---|---|---|---|---|---|
-| UT/IT-xx |  |  |  |  | Not run |
+| UT-01–UT-03 | Order state-machine rules | IntelliJ JUnit: `OrderStateMachineTest` | Expected assertions in §4 | User reports test file passed; green indicator (2026-11-17) | Pass |
+| UT-04–UT-06 | Command signature verification | IntelliJ JUnit: `CommandSignerTest` | Expected assertions in §4 | User reports test file passed; green indicator (2026-11-17) | Pass |
+| UT-07, UT-10–UT-12 | Order creation, availability and expiry | IntelliJ JUnit: `OrderServiceTest` | Expected assertions in §4 | User reports test file passed; green indicator (2026-11-17) | Pass |
+| UT-08–UT-09 | Inventory deduction and insufficient volume | IntelliJ JUnit: `InventoryServiceTest` | Expected assertions in §4 | User reports test file passed; green indicator (2026-11-17) | Pass |
+| UT-13–UT-14 | Command authorization and duplicate result handling | IntelliJ JUnit: `DispenseServiceTest` | Expected assertions in §4 | Test class completed; process exit code 0 (2026-11-17) | Pass |
+| UT-15 | Malformed MQTT message handling | IntelliJ JUnit: `DeviceMessageHandlerTest` | Expected assertions in §4 | User reports test file passed; green indicator (2026-11-17) | Pass |
+| UT-16 | Payment amount validation | IntelliJ JUnit: `PaymentServiceTest` | Expected assertions in §4 | User reports test file passed; green indicator (2026-11-17) | Pass |
+| UT-17 | Late successful result is retained as durable review evidence | `mvn "-Dit.test=MqttDispensingIT" verify`, local Compose PostgreSQL/Mosquitto | One correlated `LATE_RESULT` device event; order remains `UNCERTAIN`, stock unchanged, no second command | Awaitility timed out after 10 seconds; event query returned 0 rows | Error |
+| IT-01 | Successful dispensing flow | `mvn "-Dit.test=MqttDispensingIT" verify`, local Compose PostgreSQL/Mosquitto | Dispense once and deduct one dose | Passed in the user's run; Maven summary: 7 tests, 3 failures, 1 error | Pass |
+| IT-02 | Device rejection and incident | Same as above | Rejected order, unchanged stock, durable incident | Incident count was 0; assertion expected > 0 | Fail |
+| IT-03 | Door interlock and alert | Same as above | Rejected order, non-active machine, alert | Machine operating status was still `ACTIVE`; alert assertion was not reached | Fail |
+| IT-04 | Silent device timeout and review incident | Same as above | `UNCERTAIN`, one command, no stock change, durable incident | Incident count was 0; assertion expected > 0 | Fail |
+| IT-05–IT-06 | Duplicate result; offline machine | Same as above | Idempotent stock deduction; offline machine blocks new order | Both cases passed in the user's run | Pass |
+| IT-07–IT-08 | Tenant isolation; write authorization | IntelliJ JUnit: `BackendBoundaryIT`, local Compose PostgreSQL | Expected assertions in §5 | Supplied screenshot: 2 passed | Pass |
+| IT-09 | Duplicate signed payment webhook | Same as above | One payment and command; duplicate notification ignored | Supplied screenshot: test failed; assertion detail not visible | Fail |
 
 Status meanings: **Pass** means all stated assertions succeeded; **Fail**
 means at least one assertion did not; **Blocked** means a required component
