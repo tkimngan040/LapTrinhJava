@@ -5,9 +5,8 @@
 | Project | ScentStation |
 | Scope | N2 – Backend/Simulator Fault Mode integration testing |
 | Test device | `ma-device-001` |
-| Test date | 17/11/2026 |
+| Test date | 17–18/11/2026 |
 | Tester | Tran Thi Kim Ngan |
-| Status | In Progress |
 
 > **How to use this document:** Use the three terminals as assigned in Section 2.2. Complete the setup, then run each Fault Mode in order. Record results and evidence screenshots in [N2-Report.md](N2-Report.md).
 
@@ -33,17 +32,17 @@ The tests verify that the Backend handles Order status, inventory, transactions,
 
 ### 2.1. Environment Configuration
 
-| Component / precondition | Requirement | Actual status |
+| Component / precondition | Required state |
 |---|---|---|
-| Docker Desktop | Installed and running | [Enter result] |
-| PostgreSQL | Running via Docker Compose | [Enter result] |
-| MQTT Broker | Running via Docker Compose | [Enter result] |
-| Backend | Started successfully and API responds | [Enter result] |
-| Simulator | Build completed successfully | [Enter result] |
-| Device `ma-device-001` | Maison Aroma demo machine in seed data; must be `ONLINE` before each mode, except when verifying the `offline` mode | [Enter result] |
-| MQTT command secret | Backend and Simulator configurations match | [Enter result] |
-| Order creation and simulated payment | Flow works before fault-mode testing begins | [Enter result] |
-| Heartbeat timeout | 45 seconds by default, or record the actual value | [Enter result] |
+| Docker Desktop | Installed and running |
+| PostgreSQL | Running via Docker Compose |
+| MQTT Broker | Running via Docker Compose |
+| Backend | Started successfully and API responds |
+| Simulator | Build completed successfully |
+| Device `ma-device-001` | Maison Aroma demo machine in seed data; must be `ONLINE` before each mode, except when verifying the `offline` mode |
+| MQTT command secret | Backend and Simulator configurations match |
+| Order creation and simulated payment | Flow works before fault-mode testing begins |
+| Heartbeat timeout | 45 seconds by default, or the actual configured value |
 
 ### 2.2. Terminals to Keep Open
 
@@ -297,19 +296,15 @@ This query retrieves incidents recorded for the Order under test.
 
 #### Expected Results
 
-| Criterion | Expected result | Actual result |
+| Criterion | Expected result |
 |---|---|---|
-| Simulator response | `DEVICE_REJECTED` | [Enter] |
-| Order status | `FAILED` | [Enter] |
-| Command status | `REJECTED` | [Enter] |
-| Inventory | No deduction | [Enter] |
-| Incident | Recorded | [Enter] |
+| Simulator response | `DEVICE_REJECTED` |
+| Order status | `FAILED` |
+| Command status | `REJECTED` |
+| Inventory | No deduction |
+| Incident | Recorded |
 
-**Assessment:** [PASS / FAIL / BLOCKED]
-
-**Evidence:** `N2-reject.png`
-
-The screenshot/logs should show the Simulator response, Order status, and inventory/incident check results.
+Required evidence: `N2-reject.png` should show the Simulator response, Order status, inventory check, and incident check.
 
 ---
 
@@ -438,22 +433,16 @@ Mark the test as passing only when the machine status and alert meet the agreed 
 
 #### Expected Results
 
-| Criterion | Expected result | Actual result |
+| Criterion | Expected result |
 |---|---|---|
-| Simulator response | `DOOR_OPEN` | [Enter] |
-| Order status | `FAILED` | [Enter] |
-| Failure reason | `DOOR_OPEN` is recorded | [Enter] |
-| Inventory | Unchanged | [Enter] |
-| Device status | Updated as required | [Enter] |
-| Incident/Alert | Recorded as required | [Enter] |
+| Simulator response | `DOOR_OPEN` |
+| Order status | `FAILED` |
+| Failure reason | `DOOR_OPEN` is recorded |
+| Inventory | Unchanged |
+| Device status | Updated according to the behavior agreed with Long |
+| Incident/Alert | Recorded according to the agreed requirements |
 
-**Confirmation with Long:** [Name / agreed behavior / date]
-
-**Assessment:** [PASS / FAIL / BLOCKED]
-
-**Evidence:** `N2-interlock.png`
-
-The screenshot/logs should show the `DOOR_OPEN` response, Order status, machine status, and alert.
+Required evidence: `N2-interlock.png` should show the `DOOR_OPEN` response, Order status, machine status, incident/alert check, and confirmation with Long.
 
 ---
 
@@ -530,19 +519,15 @@ Do not create a replacement Order during the same test. Check the Backend and Si
 
 #### Expected Results
 
-| Criterion | Expected result | Actual result |
+| Criterion | Expected result |
 |---|---|---|
-| Dispense result | No response | [Enter] |
-| Order status | `UNCERTAIN` | [Enter] |
-| Command count | One command | [Enter] |
-| Command retry | Not automatically retried | [Enter] |
-| Inventory | Not applied while the result is unknown | [Enter] |
+| Dispense result | No response |
+| Order status | `UNCERTAIN` |
+| Command count | One command |
+| Command retry | Not automatically retried |
+| Inventory | Not applied while the result is unknown |
 
-**Assessment:** [PASS / FAIL / BLOCKED]
-
-**Evidence:** `N2-silent.png`
-
-The screenshot/logs should show that the Simulator did not send a dispense result, the Order is `UNCERTAIN`, and only one command exists.
+Required evidence: `N2-silent.png` should show that the Simulator did not send a dispense result, the Order is `UNCERTAIN`, and only one command exists.
 
 ---
 
@@ -627,19 +612,15 @@ The test plan requires exactly one customer-sale movement. Identify the correct 
 
 #### Expected Results
 
-| Criterion | Expected result | Actual result |
+| Criterion | Expected result |
 |---|---|---|
-| Simulator response count | Two responses for the same command | [Enter] |
-| Order command count | One command | [Enter] |
-| Order status | `DISPENSED` | [Enter] |
-| Inventory deduction count | Once | [Enter] |
-| Customer-sale movement | One record | [Enter] |
+| Simulator response count | Two responses for the same command |
+| Order command count | One command |
+| Order status | `DISPENSED` |
+| Inventory deduction count | Once |
+| Customer-sale movement | One record |
 
-**Assessment:** [PASS / FAIL / BLOCKED]
-
-**Evidence:** `N2-duplicate.png`
-
-The screenshot/logs should show two Simulator results but only one Backend inventory update and one customer-sale movement.
+Required evidence: `N2-duplicate.png` should show two Simulator results and only one Backend inventory update/customer-sale record.
 
 ---
 
@@ -753,18 +734,14 @@ Command summary:
 
 #### Expected Results
 
-| Criterion | Expected result | Actual result |
+| Criterion | Expected result |
 |---|---|---|
-| Device status | `OFFLINE` | [Enter] |
-| Order-creation request | Rejected | [Enter] |
-| New Order | Not created | [Enter] |
-| New Payment | Not created | [Enter] |
+| Device status | `OFFLINE` |
+| Order-creation request | Rejected |
+| New Order | Not created |
+| New Payment | Not created |
 
-**Assessment:** [PASS / FAIL / BLOCKED]
-
-**Evidence:** `N2-offline.png`
-
-The screenshot/logs should show the machine status as `OFFLINE`, the rejected HTTP response, and unchanged Order/Payment counts.
+Required evidence: `N2-offline.png` should show the machine status as `OFFLINE`, the rejected HTTP response, and unchanged Order/Payment counts.
 
 ---
 
@@ -810,46 +787,7 @@ After restoring the machine, keep Terminal 1 open to retain `TOKEN` and the `cre
 
 ---
 
-## 6. Test Results Summary
-
-Update this table after completing the corresponding checks.
-
-| No. | Fault Mode | Expected result | Actual result | Assessment |
-|---:|---|---|---|---|
-| 1 | Reject | Order `FAILED`, no inventory deduction, incident created | [Enter] | [PASS / FAIL / BLOCKED] |
-| 2 | Interlock | Order `FAILED`, reason `DOOR_OPEN`, appropriate machine status/alert | [Enter] | [PASS / FAIL / BLOCKED] |
-| 3 | Silent | Order `UNCERTAIN`, one command, no retry | [Enter] | [PASS / FAIL / BLOCKED] |
-| 4 | Duplicate | Two responses but only one inventory/transaction update | [Enter] | [PASS / FAIL / BLOCKED] |
-| 5 | Offline | Machine `OFFLINE`, rejects new Order/Payment | [Enter] | [PASS / FAIL / BLOCKED] |
-
-## 7. Issues
-
-| No. | Issue | Cause | Resolution | Owner | Status |
-|---:|---|---|---|---|---|
-| 1 | [Enter issue] | [Enter cause] | [Enter resolution] | [Enter] | [Open / Resolved] |
-
-Record any case that cannot be verified because of missing configuration/data or pending work by another team member as `BLOCKED`, including the reason and owner.
-
-## 8. Conclusion
-
-After testing, summarize the results:
-
-- Total test cases: 5.
-- `PASS`: [Enter].
-- `FAIL`: [Enter].
-- `BLOCKED`: [Enter].
-
-**Overall conclusion:**
-
-[Enter a conclusion based on the actual results.]
-
-Confirm N2 as complete only when:
-1. All five Fault Modes meet their required criteria.
-2. All required test evidence has been saved.
-3. The `interlock` behavior has been confirmed with Long.
-4. Issues have been resolved or have a clear conclusion in accordance with the task requirements.
-
-## 9. Evidence Checklist
+## 6. Evidence Checklist
 
 Evidence directory:
 
