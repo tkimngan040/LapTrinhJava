@@ -195,8 +195,8 @@ docker compose down
 
 | No. | Full name | Role |
 |---|---|---|
-| 1 | Tran Thi Kim Ngan | Team leader |
-| 2 | Nguyen Duy Long | Member |
+| 1 | Tran Thi Kim Ngan | Member |
+| 2 | Nguyen Duy Long | Team leader |
 | 3 | Pham Tran Tra My | Member |
 | 4 | Kim Tuyen | Member |
 | 5 | Nguyen Hoai Anh | Member |
