@@ -1,9 +1,10 @@
 /*
  * Entity and repository files belong to Tra My (tasks M1, M2).
+ * Written here so the security, ordering and dispensing code can run;
+ * check the columns against Report section 2.7.2 before merging.
  */
 package vn.edu.uth.scentstation.domain.inventory;
 
-import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -12,37 +13,33 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import java.math.BigDecimal;
-import java.time.Instant;
-import org.hibernate.annotations.Filter;
-import vn.edu.uth.scentstation.common.BaseEntity;
-import vn.edu.uth.scentstation.domain.brand.Brand;
-import vn.edu.uth.scentstation.domain.catalog.MachineSlot;
 
-/**
- * A bottle or cartridge, and how much is left in it.
- *
- * <p>Quantities are millilitres as {@code NUMERIC}, so half a dose is
- * representable and no rounding is hidden in an integer. Compare two of them
- * with {@code compareTo}, never {@code equals}, which also compares the scale.
- *
- * <p>Extends {@code BaseEntity} and not {@code TimestampedEntity}: the ERD
- * gives this table {@code installed_at} and {@code removed_at} but no
- * {@code created_at}.
- */
+import vn.edu.uth.scentstation.common.BaseEntity;
+import vn.edu.uth.scentstation.domain.catalog.MachineSlot;
+import vn.edu.uth.scentstation.domain.catalog.Product;
+
+import java.time.Instant;
+
+/** A bottle or cartridge, and how much is left in it. */
 @Entity
 @Table(name = "inventory_bottles")
-@AttributeOverride(name = "id", column = @Column(name = "bottle_id"))
-@Filter(name = "brandFilter", condition = "brand_id = :brandId")
 public class InventoryBottle extends BaseEntity {
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "brand_id", nullable = false)
-    private Brand brand;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "batch_id")
     private InventoryBatch batch;
+
+    public InventoryBatch getBatch() {
+        return batch;
+    }
+
+    public void setBatch(InventoryBatch batch) {
+        this.batch = batch;
+    }
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "product_id", nullable = false)
+    private Product product;
 
     // Null once the bottle is removed, which frees the slot for the next one.
     @ManyToOne(fetch = FetchType.LAZY)
@@ -52,11 +49,11 @@ public class InventoryBottle extends BaseEntity {
     @Column(name = "bottle_code", nullable = false, length = 80)
     private String bottleCode;
 
-    @Column(name = "initial_quantity", nullable = false, precision = 10, scale = 3)
-    private BigDecimal initialQuantity;
+    @Column(name = "initial_quantity_ml", nullable = false)
+    private int initialQuantityMl;
 
-    @Column(name = "remaining_quantity", nullable = false, precision = 10, scale = 3)
-    private BigDecimal remainingQuantity;
+    @Column(name = "remaining_quantity_ml", nullable = false)
+    private int remainingQuantityMl;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -68,25 +65,12 @@ public class InventoryBottle extends BaseEntity {
     @Column(name = "removed_at")
     private Instant removedAt;
 
-    /** True when the bottle still holds at least one full dose. */
-    public boolean holdsAtLeast(BigDecimal quantity) {
-        return remainingQuantity != null && remainingQuantity.compareTo(quantity) >= 0;
+    public Product getProduct() {
+        return product;
     }
 
-    public Brand getBrand() {
-        return brand;
-    }
-
-    public void setBrand(Brand brand) {
-        this.brand = brand;
-    }
-
-    public InventoryBatch getBatch() {
-        return batch;
-    }
-
-    public void setBatch(InventoryBatch batch) {
-        this.batch = batch;
+    public void setProduct(Product product) {
+        this.product = product;
     }
 
     public MachineSlot getSlot() {
@@ -105,20 +89,20 @@ public class InventoryBottle extends BaseEntity {
         this.bottleCode = bottleCode;
     }
 
-    public BigDecimal getInitialQuantity() {
-        return initialQuantity;
+    public int getInitialQuantityMl() {
+        return initialQuantityMl;
     }
 
-    public void setInitialQuantity(BigDecimal initialQuantity) {
-        this.initialQuantity = initialQuantity;
+    public void setInitialQuantityMl(int initialQuantityMl) {
+        this.initialQuantityMl = initialQuantityMl;
     }
 
-    public BigDecimal getRemainingQuantity() {
-        return remainingQuantity;
+    public int getRemainingQuantityMl() {
+        return remainingQuantityMl;
     }
 
-    public void setRemainingQuantity(BigDecimal remainingQuantity) {
-        this.remainingQuantity = remainingQuantity;
+    public void setRemainingQuantityMl(int remainingQuantityMl) {
+        this.remainingQuantityMl = remainingQuantityMl;
     }
 
     public BottleStatus getStatus() {

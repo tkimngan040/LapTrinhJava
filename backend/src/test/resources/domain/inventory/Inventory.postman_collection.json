@@ -1,0 +1,562 @@
+{
+  "info": {
+    "name": "ScentStation - Inventory batches, bottles and movements",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Run in order on a development database. Requires an existing product and EMPTY slot configured for that product. Set productId and slotId. Supervisor credentials are needed for ADJUST; Inventory Staff can perform the other operations. Retains demo bottles/history; choose another empty slot before another full run."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "username",
+      "value": "psa@scentstation.local"
+    },
+    {
+      "key": "password",
+      "value": ""
+    },
+    {
+      "key": "productId",
+      "value": ""
+    },
+    {
+      "key": "slotId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "01 Login supervisor (PSA, BA or OM)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "if (pm.response.code < 300) pm.collectionVariables.set(\"token\", pm.response.json().token);",
+              "pm.collectionVariables.set(\"runId\", Date.now().toString()); pm.collectionVariables.set(\"receivedDate\", new Date().toISOString().slice(0, 10)); pm.collectionVariables.set(\"expiryDate\", new Date(Date.now() + 86400000 * 365).toISOString().slice(0, 10));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Receive two-bottle batch",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/inventory/batches",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"batchNumber\": \"INV-DEMO-{{runId}}\",\n  \"quantity\": 2,\n  \"receivedDate\": \"{{receivedDate}}\",\n  \"expiryDate\": \"{{expiryDate}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+              "if (pm.response.code < 300) pm.collectionVariables.set(\"batchId\", pm.response.json().id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 Register first bottle",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/inventory/bottles",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"batchId\": \"{{batchId}}\",\n  \"bottleCode\": \"INV-A-{{runId}}\",\n  \"initialQuantityMl\": 100\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+              "if (pm.response.code < 300) pm.collectionVariables.set(\"firstBottleId\", pm.response.json().id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 Register second bottle",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/inventory/bottles",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"batchId\": \"{{batchId}}\",\n  \"bottleCode\": \"INV-B-{{runId}}\",\n  \"initialQuantityMl\": 100\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+              "if (pm.response.code < 300) pm.collectionVariables.set(\"secondBottleId\", pm.response.json().id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Pause empty slot for installation",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/inventory/slots/{{slotId}}/service"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 Install first bottle",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/inventory/slots/{{slotId}}/install",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"bottleId\": \"{{firstBottleId}}\",\n  \"initialQuantityMl\": 100\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 Second install returns clear conflict",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/inventory/slots/{{slotId}}/install",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"bottleId\": \"{{secondBottleId}}\",\n  \"initialQuantityMl\": 100\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 409\", () => pm.response.to.have.status(409));",
+              "pm.test(\"Occupied slot\", () => pm.expect(pm.response.json().code).to.eql(\"SLOT_ALREADY_OCCUPIED\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 Pause slot for adjustment",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/inventory/slots/{{slotId}}/service"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 Adjustment without reason rejected",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/inventory/bottles/{{firstBottleId}}/adjust",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"remainingQuantityMl\": 60\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 Adjustment without quantity rejected",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/inventory/bottles/{{firstBottleId}}/adjust",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reason\": \"Missing measured amount\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 Adjust with measured quantity and reason",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/inventory/bottles/{{firstBottleId}}/adjust",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"remainingQuantityMl\": 60,\n  \"reason\": \"Measured reconciliation during inventory service\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 Pause slot for refill",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/inventory/slots/{{slotId}}/service"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 Refill 20 ml",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/inventory/slots/{{slotId}}/refill",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"quantityMl\": 20,\n  \"reason\": \"Scheduled top-up\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"80 ml remaining\", () => pm.expect(pm.response.json().remainingQuantityMl).to.eql(80));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 Pause slot for replacement",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/inventory/slots/{{slotId}}/service"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15 Replace with second bottle",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/inventory/slots/{{slotId}}/replace",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"bottleId\": \"{{secondBottleId}}\",\n  \"initialQuantityMl\": 100\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "16 History has INSTALL, REFILL, ADJUST and replacement identities",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/inventory/movements"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Complete movement history\", () => { const all = pm.response.json(); const ids = [Number(pm.variables.get(\"firstBottleId\")), Number(pm.variables.get(\"secondBottleId\"))]; const rows = all.filter(m => ids.includes(m.bottleId)); [\"INSTALL\", \"REFILL\", \"ADJUST\", \"REMOVE\"].forEach(type => pm.expect(rows.some(m => m.movementType === type)).to.eql(true)); rows.forEach(m => { pm.expect(m.performedBy).to.be.a(\"number\"); pm.expect(m.performedAt).to.be.a(\"string\"); pm.expect(m.slotId).to.eql(Number(pm.variables.get(\"slotId\"))); pm.expect(m.machineId).to.be.a(\"number\"); }); const replacement = rows.find(m => m.movementType === \"INSTALL\" && m.previousBottleId === ids[0] && m.newBottleId === ids[1]); pm.expect(replacement).to.exist; });"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

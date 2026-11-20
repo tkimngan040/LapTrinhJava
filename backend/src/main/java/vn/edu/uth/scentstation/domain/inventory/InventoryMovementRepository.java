@@ -6,6 +6,20 @@
 package vn.edu.uth.scentstation.domain.inventory;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.util.List;
 
 public interface InventoryMovementRepository extends JpaRepository<InventoryMovement, Long> {
+    @Query(
+            "select m from InventoryMovement m where (:brand is null or m.bottle.product.brand.id ="
+                    + " :brand) and (:bottle is null or m.bottle.id = :bottle) order by m.id")
+    List<InventoryMovement> findAllScoped(
+            @Param("brand") Long brandId, @Param("bottle") Long bottleId);
+
+    boolean existsByCommandIdAndMovementType(Long commandId, MovementType type);
+
+    boolean existsByCommandIdAndMovementTypeIn(
+            Long commandId, java.util.Collection<MovementType> types);
 }
