@@ -10,7 +10,6 @@ import {
     Eye,
     EyeOff,
     Globe,
-    ShieldCheck,
     ArrowLeft,
     CheckCircle2,
     AlertOctagon,
@@ -19,12 +18,9 @@ import {
     Volume2,
     VolumeX,
     Check,
-    Sparkles,
     Unlock,
     ChevronDown,
-    Clock,
-    ShieldAlert,
-    History,
+    Users,
 } from "lucide-react";
 import "./forgot-password.css";
 
@@ -35,9 +31,11 @@ interface SeedAccountDirectoryItem {
     id: number;
     email: string;
     roleCode: AuthenticatedRoleCode;
-    accountLabel: string;
+    accountLabelEn: string;
+    accountLabelVi: string;
     brandTenant: string | null;
-    brandScopeDisplay: string;
+    scopeEn: string;
+    scopeVi: string;
     defaultStatus: "ACTIVE" | "LOCKED";
 }
 
@@ -46,63 +44,77 @@ const ENTERPRISE_ACCOUNTS: SeedAccountDirectoryItem[] = [
         id: 1,
         email: "admin@scentstation.local",
         roleCode: "PSA",
-        accountLabel: "Platform Super Administrator",
+        accountLabelEn: "Platform Super Administrator",
+        accountLabelVi: "Quản trị viên nền tảng",
         brandTenant: null,
-        brandScopeDisplay: "Global Platform Governance • All 21 Maisons",
+        scopeEn: "Tenants/Brands, platform users, settings & audit",
+        scopeVi: "Quản trị thương hiệu, tài khoản nền tảng, cài đặt & audit",
         defaultStatus: "ACTIVE",
     },
     {
         id: 2,
         email: "brand.admin@scentstation.local",
         roleCode: "BA",
-        accountLabel: "Chanel Brand Administrator",
+        accountLabelEn: "Brand Administrator (Chanel)",
+        accountLabelVi: "Quản trị viên thương hiệu (Chanel)",
         brandTenant: "Chanel",
-        brandScopeDisplay: "Chanel Maison Workspace • 2FA Protected",
+        scopeEn: "Chanel products, slots, staff & reports",
+        scopeVi: "Sản phẩm, khoang máy, nhân sự & báo cáo Chanel",
         defaultStatus: "ACTIVE",
     },
     {
         id: 3,
         email: "ops.manager@scentstation.local",
         roleCode: "OM",
-        accountLabel: "Operations Manager",
+        accountLabelEn: "Operations Manager",
+        accountLabelVi: "Quản lý vận hành",
         brandTenant: null,
-        brandScopeDisplay: "Fleet Operations, Alerts & Reconciliation",
+        scopeEn: "Machines, alerts, tickets & reconciliation",
+        scopeVi: "Giám sát máy, cảnh báo, điều phối ticket & đối soát đơn",
         defaultStatus: "ACTIVE",
     },
     {
         id: 4,
         email: "tech@scentstation.local",
         roleCode: "TE",
-        accountLabel: "Lead Field Technician",
+        accountLabelEn: "Technician",
+        accountLabelVi: "Kỹ thuật viên",
         brandTenant: null,
-        brandScopeDisplay: "Hardware Diagnostics & Calibration",
+        scopeEn: "Assigned tickets, checklist & post-repair test",
+        scopeVi: "Ticket được giao, checklist bảo trì & kiểm tra sau sửa",
         defaultStatus: "ACTIVE",
     },
     {
         id: 5,
         email: "inventory@scentstation.local",
         roleCode: "IS",
-        accountLabel: "Warehouse & Inventory Specialist",
+        accountLabelEn: "Inventory Staff",
+        accountLabelVi: "Nhân viên kho",
         brandTenant: null,
-        brandScopeDisplay: "Perfume Batches, Bottles & Refills",
+        scopeEn: "Batches, bottles, refill/replace & stock check",
+        scopeVi: "Quản lý lô, chai, nạp/thay & đối soát tồn kho",
         defaultStatus: "ACTIVE",
     },
     {
         id: 6,
         email: "viewer@scentstation.local",
         roleCode: "VW",
-        accountLabel: "Executive Analytics Viewer",
+        accountLabelEn: "Viewer",
+        accountLabelVi: "Người xem (Chỉ đọc)",
         brandTenant: null,
-        brandScopeDisplay: "Read-Only Business Intelligence & Reports",
+        scopeEn: "Read-only dashboard & reports",
+        scopeVi: "Chỉ xem dashboard và báo cáo trong phạm vi được cấp",
         defaultStatus: "ACTIVE",
     },
     {
         id: 7,
         email: "locked@scentstation.local",
         roleCode: "TE",
-        accountLabel: "Field Technician (Suspended)",
+        accountLabelEn: "Locked Account (Test)",
+        accountLabelVi: "Tài khoản bị khóa (Kiểm thử)",
         brandTenant: null,
-        brandScopeDisplay: "Account Locked Due to Security Policy",
+        scopeEn: "Locked by security policy",
+        scopeVi: "Bị khóa do chính sách bảo mật",
         defaultStatus: "LOCKED",
     },
 ];
@@ -127,7 +139,7 @@ export default function ForgotPasswordPage() {
         return t;
     }, []);
 
-    const [lang, setLang] = useState<"en" | "vi">("en");
+    const [lang, setLang] = useState<"en" | "vi">("vi");
     const [langOpen, setLangOpen] = useState<boolean>(false);
     const [isMuted, setIsMuted] = useState<boolean>(true);
     const [showAccountSwitcher, setShowAccountSwitcher] = useState<boolean>(true);
@@ -138,8 +150,9 @@ export default function ForgotPasswordPage() {
         setError("");
         try {
             localStorage.setItem(LANGUAGE_STORAGE_KEY, nextLang);
+            window.dispatchEvent(new Event("scentstation-sync"));
         } catch {
-            // Ignore storage errors
+            // Ignore
         }
     }, []);
 
@@ -205,9 +218,7 @@ export default function ForgotPasswordPage() {
 
             try {
                 const savedLang = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-                if (savedLang === "vi" || savedLang === "en") {
-                    setLang(savedLang);
-                }
+                if (savedLang === "vi" || savedLang === "en") setLang(savedLang);
             } catch {
                 // Safe fallback
             }
@@ -226,9 +237,7 @@ export default function ForgotPasswordPage() {
 
             const params = new URLSearchParams(window.location.search);
             const emailParam = params.get("email");
-            if (emailParam) {
-                setEmail(emailParam.trim());
-            }
+            if (emailParam) setEmail(emailParam.trim());
         }
 
         return () => {
@@ -243,23 +252,18 @@ export default function ForgotPasswordPage() {
         if (tokenSecondsLeft <= 0) {
             setError(
                 lang === "en"
-                    ? "Your password reset token has expired. Please request a new recovery link."
-                    : "Mã liên kết khôi phục mật khẩu đã hết hạn. Vui lòng yêu cầu lại mã mới."
+                    ? "Recovery token expired. Please request a new one."
+                    : "Mã khôi phục đã hết hạn. Vui lòng yêu cầu mã mới."
             );
             setStep("REQUEST_LINK");
             return;
         }
-        const timer = setInterval(() => {
-            setTokenSecondsLeft((prev) => Math.max(0, prev - 1));
-        }, 1000);
+        const timer = setInterval(() => setTokenSecondsLeft((prev) => Math.max(0, prev - 1)), 1000);
         return () => clearInterval(timer);
     }, [step, tokenSecondsLeft, lang]);
 
     const matchedAccount = useMemo(
-        () =>
-            ENTERPRISE_ACCOUNTS.find(
-                (a) => a.email.toLowerCase() === email.trim().toLowerCase()
-            ) || null,
+        () => ENTERPRISE_ACCOUNTS.find((a) => a.email.toLowerCase() === email.trim().toLowerCase()) || null,
         [email]
     );
 
@@ -289,35 +293,29 @@ export default function ForgotPasswordPage() {
 
         const cleanEmail = email.trim().toLowerCase();
         if (!cleanEmail) {
-            setError(
-                lang === "en"
-                    ? "Please enter your corporate email address."
-                    : "Vui lòng nhập địa chỉ email doanh nghiệp của bạn."
-            );
+            setError(lang === "en" ? "Please enter your email." : "Vui lòng nhập email.");
             return;
         }
-
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
             setError(
                 lang === "en"
-                    ? "Please enter a valid email address (e.g., admin@scentstation.local)."
+                    ? "Invalid email format (e.g. admin@scentstation.local)."
                     : "Định dạng email không hợp lệ (VD: admin@scentstation.local)."
             );
             return;
         }
-
         if (!matchedAccount) {
             setError(
                 lang === "en"
-                    ? `No registered corporate account found for "${cleanEmail}".`
-                    : `Không tìm thấy tài khoản doanh nghiệp "${cleanEmail}" trong hệ thống.`
+                    ? `No account found for "${cleanEmail}".`
+                    : `Không tìm thấy tài khoản "${cleanEmail}".`
             );
             return;
         }
 
         setIsProcessing(true);
         await new Promise<void>((resolve) => {
-            registerTimeout(() => resolve(), 350);
+            registerTimeout(() => resolve(), 300);
         });
         if (!isMountedRef.current) return;
 
@@ -329,7 +327,7 @@ export default function ForgotPasswordPage() {
         setIsProcessing(false);
 
         appendAuditLog({
-            actor: matchedAccount.accountLabel,
+            actor: lang === "en" ? matchedAccount.accountLabelEn : matchedAccount.accountLabelVi,
             role: matchedAccount.roleCode,
             tenant: matchedAccount.brandTenant,
             action: "PASSWORD_RESET_LINK_ISSUED",
@@ -342,16 +340,14 @@ export default function ForgotPasswordPage() {
     const handleVerifyResetToken = (e: FormEvent) => {
         e.preventDefault();
         setError("");
-
         if (resetToken.trim().toUpperCase() !== generatedToken.toUpperCase()) {
             setError(
                 lang === "en"
-                    ? `Invalid verification token. Please use "${generatedToken}" to continue.`
-                    : `Mã xác thực không khớp. Vui lòng nhập đúng mã "${generatedToken}".`
+                    ? `Invalid token. Use "${generatedToken}".`
+                    : `Mã xác thực không khớp. Nhập đúng mã "${generatedToken}".`
             );
             return;
         }
-
         setStep("RESET_PASSWORD");
     };
 
@@ -363,8 +359,8 @@ export default function ForgotPasswordPage() {
         if (!isPasswordPolicyValid) {
             setError(
                 lang === "en"
-                    ? "Please ensure your new password meets all security criteria and matches the confirmation field."
-                    : "Vui lòng đảm bảo mật khẩu mới đáp ứng đủ 6 tiêu chí bảo mật và khớp với ô xác nhận."
+                    ? "Password must meet all 6 criteria below."
+                    : "Mật khẩu mới cần đáp ứng đủ 6 tiêu chí bên dưới."
             );
             return;
         }
@@ -372,7 +368,7 @@ export default function ForgotPasswordPage() {
         const cleanEmail = email.trim().toLowerCase();
         setIsProcessing(true);
         await new Promise<void>((resolve) => {
-            registerTimeout(() => resolve(), 380);
+            registerTimeout(() => resolve(), 320);
         });
         if (!isMountedRef.current) return;
 
@@ -403,10 +399,7 @@ export default function ForgotPasswordPage() {
                             ? { ...s, status: "REVOKED_BY_PASSWORD_RESET", isCurrent: false }
                             : s
                     );
-                    localStorage.setItem(
-                        ACTIVE_SESSIONS_STORAGE_KEY,
-                        JSON.stringify(updatedSessions)
-                    );
+                    localStorage.setItem(ACTIVE_SESSIONS_STORAGE_KEY, JSON.stringify(updatedSessions));
                 }
             }
         } catch {
@@ -414,16 +407,17 @@ export default function ForgotPasswordPage() {
         }
 
         appendAuditLog({
-            actor: matchedAccount?.accountLabel || cleanEmail,
+            actor: matchedAccount
+                ? lang === "en"
+                    ? matchedAccount.accountLabelEn
+                    : matchedAccount.accountLabelVi
+                : cleanEmail,
             role: matchedAccount?.roleCode || "USER",
             tenant: matchedAccount?.brandTenant || null,
             action: "PASSWORD_RESET_COMPLETED",
             entityId: cleanEmail,
             severity: "INFO",
-            details: {
-                lockoutCleared: true,
-                previousSessionsRevoked: true,
-            },
+            details: { lockoutCleared: true, previousSessionsRevoked: true },
         });
 
         setIsProcessing(false);
@@ -433,11 +427,8 @@ export default function ForgotPasswordPage() {
     const timerPct = Math.round((tokenSecondsLeft / 300) * 100);
 
     return (
-        <main
-            className="fp-viewport notranslate"
-            translate="no"
-            onClick={() => setLangOpen(false)}
-        >
+        <main className="fp-viewport notranslate" translate="no" onClick={() => setLangOpen(false)}>
+            {/* GIỮ VIDEO NỀN */}
             <div className="fp-video-stage" aria-hidden="true">
                 <video
                     ref={videoRef}
@@ -457,42 +448,33 @@ export default function ForgotPasswordPage() {
 
             <header className="fp-header">
                 <div className="fp-header-inner">
-                    <div
-                        className="fp-brand-block"
-                        onClick={() => router.push("/")}
-                    >
+                    <div className="fp-brand-block" onClick={() => router.push("/")}>
                         <span className="fp-brand-title" translate="no">
                             ScentStation
                         </span>
-                        <span className="fp-brand-sub">
-                            {lang === "en"
-                                ? "Haute Parfumerie & Automated Sampling Boutiques"
-                                : "Hệ Thống Trải Nghiệm Nước Hoa Tự Động Cao Cấp"}
-                        </span>
                     </div>
 
-                    <div
-                        className="fp-header-actions"
-                        onClick={(e) => e.stopPropagation()}
-                    >
+                    <div className="fp-header-actions" onClick={(e) => e.stopPropagation()}>
                         <Link href="/login" className="fp-ghost-btn">
                             <ArrowLeft size={14} color="#D4AF37" />
-                            <span>
-                                {lang === "en" ? "Back to Sign In" : "Về Trang Đăng Nhập"}
-                            </span>
+                            <span>{lang === "en" ? "Back to Sign In" : "Về trang đăng nhập"}</span>
                         </Link>
 
                         <button
                             type="button"
                             onClick={() => setIsMuted(!isMuted)}
                             className="fp-ghost-btn"
-                            title={isMuted ? "Unmute ambient audio" : "Mute ambient audio"}
+                            title={
+                                lang === "en"
+                                    ? isMuted
+                                        ? "Unmute background audio"
+                                        : "Mute background audio"
+                                    : isMuted
+                                        ? "Bật âm thanh nền"
+                                        : "Tắt âm thanh nền"
+                            }
                         >
-                            {isMuted ? (
-                                <VolumeX size={15} color="#94A3B8" />
-                            ) : (
-                                <Volume2 size={15} color="#D4AF37" />
-                            )}
+                            {isMuted ? <VolumeX size={15} color="#94A3B8" /> : <Volume2 size={15} color="#D4AF37" />}
                         </button>
 
                         <div className="fp-lang-wrapper">
@@ -518,23 +500,19 @@ export default function ForgotPasswordPage() {
                                 <div className="fp-lang-dropdown">
                                     <button
                                         type="button"
-                                        onClick={() => handleChangeLanguage("en")}
-                                        className={`fp-lang-option ${
-                                            lang === "en" ? "fp-lang-option-active" : ""
-                                        }`}
-                                    >
-                                        <span>English (EN)</span>
-                                        {lang === "en" && <Check size={14} color="#D4AF37" />}
-                                    </button>
-                                    <button
-                                        type="button"
                                         onClick={() => handleChangeLanguage("vi")}
-                                        className={`fp-lang-option ${
-                                            lang === "vi" ? "fp-lang-option-active" : ""
-                                        }`}
+                                        className={`fp-lang-option ${lang === "vi" ? "fp-lang-option-active" : ""}`}
                                     >
                                         <span>Tiếng Việt (VI)</span>
                                         {lang === "vi" && <Check size={14} color="#D4AF37" />}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleChangeLanguage("en")}
+                                        className={`fp-lang-option ${lang === "en" ? "fp-lang-option-active" : ""}`}
+                                    >
+                                        <span>English (EN)</span>
+                                        {lang === "en" && <Check size={14} color="#D4AF37" />}
                                     </button>
                                 </div>
                             )}
@@ -544,83 +522,17 @@ export default function ForgotPasswordPage() {
             </header>
 
             <div className="fp-workspace">
+                {/* CỘT TRÁI: CHỌN NHANH TÀI KHOẢN */}
                 <div className="fp-info-column">
-                    <div className="fp-security-pill">
-                        <ShieldCheck size={15} color="#34D399" />
-                        <span>
-                            {lang === "en"
-                                ? "IDENTITY VERIFICATION & ACCOUNT RECOVERY"
-                                : "XÁC MINH DANH TÍNH & KHÔI PHỤC TÀI KHOẢN"}
-                        </span>
-                    </div>
-
                     <h1 className="fp-hero-title">
-                        {lang === "en"
-                            ? "Credential Recovery & Lockout Resolution"
-                            : "Khôi Phục Mật Khẩu & Mở Khóa Bảo Mật"}
+                        {lang === "en" ? "Password Recovery" : "Khôi phục mật khẩu"}
                     </h1>
 
                     <p className="fp-hero-desc">
                         {lang === "en"
-                            ? "Securely restore access to your corporate workspace. Completing the verification process updates your credentials, clears temporary security lockouts, and revokes any older active sessions."
-                            : "Khôi phục quyền truy cập an toàn vào không gian làm việc của bạn. Sau khi xác minh hoàn tất, hệ thống sẽ cập nhật mật khẩu mới, gỡ bỏ trạng thái tạm khóa và đăng xuất các phiên cũ."}
+                            ? "Resetting your password clears security lockouts and revokes older active sessions."
+                            : "Đặt lại mật khẩu sẽ gỡ trạng thái khóa tài khoản và thu hồi các phiên đăng nhập cũ."}
                     </p>
-
-                    <div className="fp-pillars-list">
-                        <div className="fp-pillar-card">
-                            <div className="fp-pillar-icon">
-                                <Clock size={17} color="#D4AF37" />
-                            </div>
-                            <div>
-                                <div className="fp-pillar-title">
-                                    {lang === "en"
-                                        ? "Time-Limited Verification Token"
-                                        : "Mã Xác Thực Giới Hạn Thời Gian"}
-                                </div>
-                                <div className="fp-pillar-desc">
-                                    {lang === "en"
-                                        ? "One-time recovery links expire automatically after 5 minutes to prevent unauthorized access."
-                                        : "Liên kết khôi phục dùng một lần tự động hết hạn sau 5 phút nhằm ngăn chặn truy cập trái phép."}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="fp-pillar-card">
-                            <div className="fp-pillar-icon">
-                                <ShieldAlert size={17} color="#34D399" />
-                            </div>
-                            <div>
-                                <div className="fp-pillar-title">
-                                    {lang === "en"
-                                        ? "Automated Lockout Resolution"
-                                        : "Tự Động Gỡ Khóa Tài Khoản"}
-                                </div>
-                                <div className="fp-pillar-desc">
-                                    {lang === "en"
-                                        ? "Resetting your password immediately clears failed login counters and restores active status."
-                                        : "Đặt lại mật khẩu sẽ xóa bộ đếm nhập sai và kích hoạt lại tài khoản đang bị tạm đình chỉ."}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="fp-pillar-card">
-                            <div className="fp-pillar-icon">
-                                <History size={17} color="#F5E6AD" />
-                            </div>
-                            <div>
-                                <div className="fp-pillar-title">
-                                    {lang === "en"
-                                        ? "Instant Session Revocation"
-                                        : "Thu Hồi Phiên Đăng Nhập Cũ"}
-                                </div>
-                                <div className="fp-pillar-desc">
-                                    {lang === "en"
-                                        ? "All previous browser sessions tied to the account are invalidated upon password update."
-                                        : "Mọi phiên đăng nhập trước đó trên các thiết bị khác đều bị vô hiệu hóa ngay khi đổi mật khẩu."}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
                     <div className="fp-directory-card">
                         <button
@@ -629,11 +541,11 @@ export default function ForgotPasswordPage() {
                             className="fp-directory-header-btn"
                         >
                             <span style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}>
-                                <Sparkles size={13} color="#D4AF37" />
+                                <Users size={14} color="#D4AF37" />
                                 <span>
                                     {lang === "en"
-                                        ? "Demo Account Selector (Quick Autofill)"
-                                        : "Chọn Nhanh Tài Khoản Demo Cần Khôi Phục"}
+                                        ? "Demo Accounts (Click to Autofill)"
+                                        : "Tài khoản kiểm thử (Bấm để điền nhanh)"}
                                 </span>
                             </span>
                             <ChevronDown
@@ -662,48 +574,30 @@ export default function ForgotPasswordPage() {
                                             onClick={() => {
                                                 setEmail(acc.email);
                                                 setError("");
-                                                if (step === "COMPLETED") {
-                                                    setStep("REQUEST_LINK");
-                                                }
+                                                if (step === "COMPLETED") setStep("REQUEST_LINK");
                                             }}
                                             className={`fp-account-row ${
                                                 email.trim().toLowerCase() === cleanKey ? "fp-account-row-active" : ""
                                             }`}
                                         >
                                             <div style={{ minWidth: 0, flex: 1 }}>
-                                                <div
-                                                    style={{
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        gap: "0.45rem",
-                                                        flexWrap: "wrap",
-                                                    }}
-                                                >
-                                                    <strong style={{ color: "#FFF", fontSize: "0.79rem" }}>
-                                                        {acc.accountLabel}
+                                                <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", flexWrap: "wrap" }}>
+                                                    <strong style={{ color: "#FFF", fontSize: "0.84rem" }}>
+                                                        {lang === "en" ? acc.accountLabelEn : acc.accountLabelVi}
                                                     </strong>
-                                                    <span
-                                                        translate="no"
-                                                        style={{
-                                                            fontFamily: "Space Grotesk, monospace",
-                                                            fontSize: "0.69rem",
-                                                            color: "#F5E6AD",
-                                                        }}
-                                                    >
+                                                    <span style={{ fontSize: "0.75rem", color: "#F5E6AD" }}>
                                                         {acc.email}
                                                     </span>
                                                 </div>
-                                                <div style={{ fontSize: "0.68rem", color: "#94A3B8", marginTop: "2px" }}>
-                                                    {acc.brandScopeDisplay}
+                                                <div style={{ fontSize: "0.74rem", color: "#94A3B8", marginTop: "2px" }}>
+                                                    {lang === "en" ? acc.scopeEn : acc.scopeVi}
                                                 </div>
                                             </div>
 
                                             <span
-                                                translate="no"
                                                 style={{
-                                                    fontSize: "0.63rem",
+                                                    fontSize: "0.7rem",
                                                     fontWeight: 700,
-                                                    fontFamily: "Space Grotesk, monospace",
                                                     padding: "0.22rem 0.55rem",
                                                     borderRadius: "999px",
                                                     whiteSpace: "nowrap",
@@ -719,17 +613,17 @@ export default function ForgotPasswordPage() {
                                                                 ? "rgba(212,175,55,0.45)"
                                                                 : "rgba(52,211,153,0.4)"
                                                     }`,
-                                                    color: isLocked
-                                                        ? "#F87171"
-                                                        : hasCustomPw
-                                                            ? "#F5E6AD"
-                                                            : "#34D399",
+                                                    color: isLocked ? "#F87171" : hasCustomPw ? "#F5E6AD" : "#34D399",
                                                 }}
                                             >
                                                 {isLocked
-                                                    ? "SUSPENDED"
+                                                    ? lang === "en"
+                                                        ? "LOCKED"
+                                                        : "BỊ KHÓA"
                                                     : hasCustomPw
-                                                        ? "UPDATED"
+                                                        ? lang === "en"
+                                                            ? "UPDATED"
+                                                            : "ĐÃ ĐỔI"
                                                         : acc.roleCode}
                                             </span>
                                         </button>
@@ -740,74 +634,47 @@ export default function ForgotPasswordPage() {
                     </div>
                 </div>
 
+                {/* CỘT PHẢI: FORM KHÔI PHỤC 4 BƯỚC */}
                 <section className="fp-card-container">
                     <div className="fp-card">
-                        <span className="fp-card-eyebrow">
-                            {lang === "en" ? "ACCOUNT RECOVERY PORTAL" : "CỔNG KHÔI PHỤC TÀI KHOẢN"}
-                        </span>
-
                         <h2 className="fp-card-title">
-                            {lang === "en" ? "Reset Corporate Password" : "Đặt Lại Mật Khẩu"}
+                            {lang === "en" ? "Reset Password" : "Đặt lại mật khẩu"}
                         </h2>
                         <p className="fp-card-subtitle">
                             {step === "REQUEST_LINK" &&
                                 (lang === "en"
-                                    ? "Enter your registered corporate email address to receive a one-time recovery token."
-                                    : "Nhập địa chỉ email doanh nghiệp đã đăng ký để nhận mã xác thực khôi phục mật khẩu.")}
+                                    ? "Enter your email to generate a 5-minute recovery token."
+                                    : "Nhập email để nhận mã xác thực có hiệu lực trong 5 phút.")}
                             {step === "VERIFY_TOKEN" &&
                                 (lang === "en"
-                                    ? `A time-limited verification token has been issued for ${email}. Confirm the token below to continue.`
-                                    : `Mã xác thực có thời hạn đã được cấp cho ${email}. Vui lòng xác nhận mã bên dưới để tiếp tục.`)}
+                                    ? `Confirm the verification token issued for ${email}.`
+                                    : `Xác nhận mã khôi phục đã cấp cho ${email}.`)}
                             {step === "RESET_PASSWORD" &&
                                 (lang === "en"
-                                    ? `Create a strong new password for ${email} (${matchedAccount?.accountLabel || "Account"}).`
-                                    : `Thiết lập mật khẩu mới đạt chuẩn bảo mật cho ${email} (${matchedAccount?.accountLabel || "Tài khoản"}).`)}
+                                    ? `Set a new password for ${email}.`
+                                    : `Thiết lập mật khẩu mới cho ${email}.`)}
                             {step === "COMPLETED" &&
                                 (lang === "en"
-                                    ? "Your password has been updated and your account is ready for sign-in."
-                                    : "Mật khẩu của bạn đã được cập nhật và tài khoản đã sẵn sàng đăng nhập.")}
+                                    ? "Password updated. You can sign in now."
+                                    : "Đã cập nhật mật khẩu. Bạn có thể đăng nhập ngay.")}
                         </p>
 
-                        <div className="fp-stepper" translate="no">
-                            <div
-                                className={`fp-step-pill ${
-                                    step === "REQUEST_LINK" ? "fp-step-active" : "fp-step-done"
-                                }`}
-                            >
+                        <div className="fp-stepper">
+                            <div className={`fp-step-pill ${step === "REQUEST_LINK" ? "fp-step-active" : "fp-step-done"}`}>
                                 <span>01</span>
-                                <span>EMAIL</span>
+                                <span>{lang === "en" ? "EMAIL" : "EMAIL"}</span>
                             </div>
-                            <div
-                                className={`fp-step-pill ${
-                                    step === "VERIFY_TOKEN"
-                                        ? "fp-step-active"
-                                        : step === "RESET_PASSWORD" || step === "COMPLETED"
-                                            ? "fp-step-done"
-                                            : ""
-                                }`}
-                            >
+                            <div className={`fp-step-pill ${step === "VERIFY_TOKEN" ? "fp-step-active" : step === "RESET_PASSWORD" || step === "COMPLETED" ? "fp-step-done" : ""}`}>
                                 <span>02</span>
-                                <span>VERIFY</span>
+                                <span>{lang === "en" ? "VERIFY" : "XÁC THỰC"}</span>
                             </div>
-                            <div
-                                className={`fp-step-pill ${
-                                    step === "RESET_PASSWORD"
-                                        ? "fp-step-active"
-                                        : step === "COMPLETED"
-                                            ? "fp-step-done"
-                                            : ""
-                                }`}
-                            >
+                            <div className={`fp-step-pill ${step === "RESET_PASSWORD" ? "fp-step-active" : step === "COMPLETED" ? "fp-step-done" : ""}`}>
                                 <span>03</span>
-                                <span>PASSWORD</span>
+                                <span>{lang === "en" ? "PASSWORD" : "MẬT KHẨU"}</span>
                             </div>
-                            <div
-                                className={`fp-step-pill ${
-                                    step === "COMPLETED" ? "fp-step-done" : ""
-                                }`}
-                            >
+                            <div className={`fp-step-pill ${step === "COMPLETED" ? "fp-step-done" : ""}`}>
                                 <span>04</span>
-                                <span>DONE</span>
+                                <span>{lang === "en" ? "DONE" : "XONG"}</span>
                             </div>
                         </div>
 
@@ -822,13 +689,11 @@ export default function ForgotPasswordPage() {
                             <form onSubmit={handleRequestResetLink} noValidate>
                                 <div className="fp-field-block">
                                     <label htmlFor="fp-email" className="fp-field-label">
-                                        <span>
-                                            {lang === "en" ? "Corporate Email Address" : "Địa Chỉ Email Doanh Nghiệp"}
-                                        </span>
+                                        <span>{lang === "en" ? "Email" : "Email nội bộ"}</span>
                                     </label>
                                     <div className={`fp-input-shell ${error ? "fp-input-error" : ""}`}>
                                         <span className="fp-input-icon">
-                                            <Mail size={17} />
+                                            <Mail size={16} />
                                         </span>
                                         <input
                                             id="fp-email"
@@ -848,40 +713,29 @@ export default function ForgotPasswordPage() {
                                 {matchedAccount && (
                                     <div className="fp-matched-badge">
                                         <div>
-                                            <div style={{ fontWeight: 700, color: "#FFF", fontSize: "0.78rem" }}>
-                                                {matchedAccount.accountLabel}
+                                            <div style={{ fontWeight: 700, color: "#FFF", fontSize: "0.84rem" }}>
+                                                {lang === "en" ? matchedAccount.accountLabelEn : matchedAccount.accountLabelVi}
                                             </div>
-                                            <div style={{ fontSize: "0.68rem", color: "#94A3B8" }}>
-                                                {matchedAccount.brandScopeDisplay}
+                                            <div style={{ fontSize: "0.74rem", color: "#94A3B8" }}>
+                                                {lang === "en" ? matchedAccount.scopeEn : matchedAccount.scopeVi}
                                             </div>
                                         </div>
-                                        <span
-                                            style={{
-                                                color: "#34D399",
-                                                fontFamily: "Space Grotesk, monospace",
-                                                fontSize: "0.68rem",
-                                                fontWeight: 700,
-                                            }}
-                                        >
-                                            ✓ {lang === "en" ? "Verified Account" : "Tài khoản hợp lệ"}
+                                        <span style={{ color: "#34D399", fontSize: "0.74rem", fontWeight: 700, whiteSpace: "nowrap" }}>
+                                            ✓ {lang === "en" ? "Valid" : "Hợp lệ"}
                                         </span>
                                     </div>
                                 )}
 
-                                <button
-                                    type="submit"
-                                    disabled={isProcessing}
-                                    className="fp-primary-btn"
-                                >
-                                    <KeyRound size={16} />
+                                <button type="submit" disabled={isProcessing} className="fp-primary-btn">
+                                    <KeyRound size={15} />
                                     <span>
                                         {isProcessing
                                             ? lang === "en"
-                                                ? "Sending Verification Token..."
-                                                : "Đang gửi mã xác thực..."
+                                                ? "Sending..."
+                                                : "Đang gửi..."
                                             : lang === "en"
                                                 ? "Send Recovery Token"
-                                                : "Gửi Mã Xác Thực Khôi Phục"}
+                                                : "Gửi mã xác thực"}
                                     </span>
                                 </button>
                             </form>
@@ -890,38 +744,16 @@ export default function ForgotPasswordPage() {
                         {step === "VERIFY_TOKEN" && (
                             <form onSubmit={handleVerifyResetToken}>
                                 <div className="fp-simulated-email-box">
-                                    <div
-                                        style={{
-                                            display: "flex",
-                                            justifyContent: "space-between",
-                                            alignItems: "center",
-                                            marginBottom: "0.35rem",
-                                        }}
-                                    >
-                                        <strong style={{ color: "#F5E6AD", fontFamily: "Space Grotesk, monospace" }}>
-                                            {lang === "en"
-                                                ? "✉ Security Dispatch Notification"
-                                                : "✉ Thông Báo Mã Khôi Phục Bảo Mật"}
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.3rem" }}>
+                                        <strong style={{ color: "#F5E6AD" }}>
+                                            {lang === "en" ? "Simulated Email Token" : "Mã xác thực (Mô phỏng)"}
                                         </strong>
-                                        <span
-                                            style={{
-                                                color: tokenSecondsLeft <= 60 ? "#F87171" : "#34D399",
-                                                fontFamily: "Space Grotesk, monospace",
-                                                fontSize: "0.7rem",
-                                                fontWeight: 700,
-                                            }}
-                                        >
-                                            {lang === "en"
-                                                ? `Expires in ${tokenSecondsLeft}s`
-                                                : `Còn ${tokenSecondsLeft}s`}
+                                        <span style={{ color: tokenSecondsLeft <= 60 ? "#F87171" : "#34D399", fontSize: "0.76rem", fontWeight: 700 }}>
+                                            {lang === "en" ? `Expires in ${tokenSecondsLeft}s` : `Còn ${tokenSecondsLeft}s`}
                                         </span>
                                     </div>
-                                    <div style={{ color: "#CBD5E1", fontSize: "0.75rem" }}>
-                                        {lang === "en" ? "Issued for: " : "Cấp cho: "}
-                                        <strong>{email}</strong> ({matchedAccount?.accountLabel})
-                                    </div>
-                                    <div style={{ color: "#CBD5E1", marginTop: "4px", fontSize: "0.75rem" }}>
-                                        {lang === "en" ? "Verification Token: " : "Mã xác thực: "}
+                                    <div style={{ color: "#CBD5E1" }}>
+                                        {lang === "en" ? "Token: " : "Mã xác thực: "}
                                         <code className="fp-token-code">{generatedToken}</code>
                                     </div>
                                     <div className="fp-timer-track">
@@ -929,10 +761,7 @@ export default function ForgotPasswordPage() {
                                             className="fp-timer-fill"
                                             style={{
                                                 width: `${timerPct}%`,
-                                                background:
-                                                    tokenSecondsLeft <= 60
-                                                        ? "#F87171"
-                                                        : "linear-gradient(90deg, #D4AF37, #34D399)",
+                                                background: tokenSecondsLeft <= 60 ? "#F87171" : "#34D399",
                                             }}
                                         />
                                     </div>
@@ -940,13 +769,11 @@ export default function ForgotPasswordPage() {
 
                                 <div className="fp-field-block">
                                     <label htmlFor="fp-token" className="fp-field-label">
-                                        <span>
-                                            {lang === "en" ? "Recovery Verification Token" : "Mã Xác Thực Khôi Phục"}
-                                        </span>
+                                        <span>{lang === "en" ? "Verification Token" : "Nhập mã xác thực"}</span>
                                     </label>
                                     <div className="fp-input-shell">
                                         <span className="fp-input-icon">
-                                            <KeyRound size={17} />
+                                            <KeyRound size={16} />
                                         </span>
                                         <input
                                             id="fp-token"
@@ -954,11 +781,7 @@ export default function ForgotPasswordPage() {
                                             value={resetToken}
                                             onChange={(e) => setResetToken(e.target.value)}
                                             className="fp-input"
-                                            style={{
-                                                fontFamily: "Space Grotesk, monospace",
-                                                fontWeight: 700,
-                                                letterSpacing: "0.08em",
-                                            }}
+                                            style={{ fontWeight: 700, letterSpacing: "0.06em" }}
                                         />
                                     </div>
                                 </div>
@@ -970,15 +793,10 @@ export default function ForgotPasswordPage() {
                                         className="fp-ghost-btn"
                                         style={{ flex: 0.55 }}
                                     >
-                                        <span>{lang === "en" ? "Change Email" : "Đổi Email"}</span>
+                                        <span>{lang === "en" ? "Back" : "Quay lại"}</span>
                                     </button>
                                     <button type="submit" className="fp-primary-btn" style={{ flex: 1.45 }}>
-                                        <Sparkles size={16} />
-                                        <span>
-                                            {lang === "en"
-                                                ? "Verify Token & Continue"
-                                                : "Xác Nhận Mã & Tiếp Tục"}
-                                        </span>
+                                        <span>{lang === "en" ? "Verify & Continue" : "Xác nhận & Tiếp tục"}</span>
                                     </button>
                                 </div>
                             </form>
@@ -988,7 +806,7 @@ export default function ForgotPasswordPage() {
                             <form onSubmit={handleConfirmNewPassword}>
                                 <div className="fp-field-block">
                                     <label htmlFor="fp-new-pw" className="fp-field-label">
-                                        <span>{lang === "en" ? "New Password" : "Mật Khẩu Mới"}</span>
+                                        <span>{lang === "en" ? "New Password" : "Mật khẩu mới"}</span>
                                         <button
                                             type="button"
                                             onClick={() => {
@@ -998,14 +816,12 @@ export default function ForgotPasswordPage() {
                                             }}
                                             className="fp-autofill-link"
                                         >
-                                            {lang === "en"
-                                                ? "Fill Strong Password"
-                                                : "Điền nhanh mật khẩu chuẩn"}
+                                            {lang === "en" ? "Autofill Sample" : "Điền mật khẩu mẫu"}
                                         </button>
                                     </label>
                                     <div className="fp-input-shell">
                                         <span className="fp-input-icon">
-                                            <Lock size={17} />
+                                            <Lock size={16} />
                                         </span>
                                         <input
                                             id="fp-new-pw"
@@ -1015,33 +831,35 @@ export default function ForgotPasswordPage() {
                                                 setNewPassword(e.target.value);
                                                 setError("");
                                             }}
-                                            placeholder={
-                                                lang === "en"
-                                                    ? "Enter new password"
-                                                    : "Nhập mật khẩu mới"
-                                            }
+                                            placeholder={lang === "en" ? "Enter new password" : "Nhập mật khẩu mới"}
                                             className="fp-input"
                                         />
                                         <button
                                             type="button"
                                             onClick={() => setShowNewPw(!showNewPw)}
                                             className="fp-eye-btn"
-                                            aria-label={showNewPw ? "Hide password" : "Show password"}
+                                            aria-label={
+                                                lang === "en"
+                                                    ? showNewPw
+                                                        ? "Hide password"
+                                                        : "Show password"
+                                                    : showNewPw
+                                                        ? "Ẩn mật khẩu"
+                                                        : "Hiện mật khẩu"
+                                            }
                                         >
-                                            {showNewPw ? <EyeOff size={17} /> : <Eye size={17} />}
+                                            {showNewPw ? <EyeOff size={16} /> : <Eye size={16} />}
                                         </button>
                                     </div>
                                 </div>
 
                                 <div className="fp-field-block">
                                     <label htmlFor="fp-confirm-pw" className="fp-field-label">
-                                        <span>
-                                            {lang === "en" ? "Confirm New Password" : "Xác Nhận Mật Khẩu Mới"}
-                                        </span>
+                                        <span>{lang === "en" ? "Confirm Password" : "Xác nhận mật khẩu mới"}</span>
                                     </label>
                                     <div className="fp-input-shell">
                                         <span className="fp-input-icon">
-                                            <Lock size={17} />
+                                            <Lock size={16} />
                                         </span>
                                         <input
                                             id="fp-confirm-pw"
@@ -1051,65 +869,65 @@ export default function ForgotPasswordPage() {
                                                 setConfirmPassword(e.target.value);
                                                 setError("");
                                             }}
-                                            placeholder={
-                                                lang === "en"
-                                                    ? "Re-enter new password"
-                                                    : "Nhập lại mật khẩu mới"
-                                            }
+                                            placeholder={lang === "en" ? "Re-enter new password" : "Nhập lại mật khẩu mới"}
                                             className="fp-input"
                                         />
                                         <button
                                             type="button"
                                             onClick={() => setShowConfirmPw(!showConfirmPw)}
                                             className="fp-eye-btn"
-                                            aria-label={showConfirmPw ? "Hide password" : "Show password"}
+                                            aria-label={
+                                                lang === "en"
+                                                    ? showConfirmPw
+                                                        ? "Hide password"
+                                                        : "Show password"
+                                                    : showConfirmPw
+                                                        ? "Ẩn mật khẩu"
+                                                        : "Hiện mật khẩu"
+                                            }
                                         >
-                                            {showConfirmPw ? <EyeOff size={17} /> : <Eye size={17} />}
+                                            {showConfirmPw ? <EyeOff size={16} /> : <Eye size={16} />}
                                         </button>
                                     </div>
                                 </div>
 
-                                <div className="fp-policy-grid" translate="no">
+                                <div className="fp-policy-grid">
                                     <div className={`fp-policy-item ${passwordPolicyChecks.minLength ? "fp-policy-pass" : ""}`}>
                                         <Check size={13} />
-                                        <span>8+ characters</span>
+                                        <span>{lang === "en" ? "8+ characters" : "Tối thiểu 8 ký tự"}</span>
                                     </div>
                                     <div className={`fp-policy-item ${passwordPolicyChecks.hasUpper ? "fp-policy-pass" : ""}`}>
                                         <Check size={13} />
-                                        <span>Uppercase (A-Z)</span>
+                                        <span>{lang === "en" ? "Uppercase (A-Z)" : "Chữ hoa (A-Z)"}</span>
                                     </div>
                                     <div className={`fp-policy-item ${passwordPolicyChecks.hasLower ? "fp-policy-pass" : ""}`}>
                                         <Check size={13} />
-                                        <span>Lowercase (a-z)</span>
+                                        <span>{lang === "en" ? "Lowercase (a-z)" : "Chữ thường (a-z)"}</span>
                                     </div>
                                     <div className={`fp-policy-item ${passwordPolicyChecks.hasDigit ? "fp-policy-pass" : ""}`}>
                                         <Check size={13} />
-                                        <span>Number (0-9)</span>
+                                        <span>{lang === "en" ? "Number (0-9)" : "Chữ số (0-9)"}</span>
                                     </div>
                                     <div className={`fp-policy-item ${passwordPolicyChecks.hasSpecial ? "fp-policy-pass" : ""}`}>
                                         <Check size={13} />
-                                        <span>Special (@#$%!)</span>
+                                        <span>{lang === "en" ? "Symbol (@#$%!)" : "Ký tự đặc biệt"}</span>
                                     </div>
                                     <div className={`fp-policy-item ${passwordPolicyChecks.matchesConfirm ? "fp-policy-pass" : ""}`}>
                                         <Check size={13} />
-                                        <span>Passwords match</span>
+                                        <span>{lang === "en" ? "Passwords match" : "Khớp mật khẩu"}</span>
                                     </div>
                                 </div>
 
-                                <button
-                                    type="submit"
-                                    disabled={isProcessing}
-                                    className="fp-primary-btn"
-                                >
-                                    <Unlock size={16} />
+                                <button type="submit" disabled={isProcessing} className="fp-primary-btn">
+                                    <Unlock size={15} />
                                     <span>
                                         {isProcessing
                                             ? lang === "en"
-                                                ? "Updating Credentials..."
-                                                : "Đang cập nhật mật khẩu..."
+                                                ? "Updating..."
+                                                : "Đang cập nhật..."
                                             : lang === "en"
-                                                ? "Update Password & Unlock Account"
-                                                : "Cập Nhật Mật Khẩu & Mở Khóa"}
+                                                ? "Save & Unlock Account"
+                                                : "Lưu & Mở khóa tài khoản"}
                                     </span>
                                 </button>
                             </form>
@@ -1118,34 +936,14 @@ export default function ForgotPasswordPage() {
                         {step === "COMPLETED" && (
                             <div>
                                 <div className="fp-alert-success" role="status">
-                                    <div
-                                        style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "0.5rem",
-                                            fontWeight: 700,
-                                            marginBottom: "0.35rem",
-                                        }}
-                                    >
-                                        <CheckCircle2 size={18} />
-                                        <span>
-                                            {lang === "en"
-                                                ? "Password Updated & Account Unlocked"
-                                                : "Đã Cập Nhật Mật Khẩu & Mở Khóa Tài Khoản"}
-                                        </span>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontWeight: 700, marginBottom: "0.3rem" }}>
+                                        <CheckCircle2 size={17} />
+                                        <span>{lang === "en" ? "Password Updated" : "Đã cập nhật mật khẩu"}</span>
                                     </div>
-                                    <div style={{ color: "#E2E8F0", fontSize: "0.76rem" }}>
-                                        {lang === "en" ? (
-                                            <>
-                                                Credentials for <strong>{email}</strong> (
-                                                {matchedAccount?.accountLabel}) have been updated, security lockouts have been cleared, and previous sessions have been revoked.
-                                            </>
-                                        ) : (
-                                            <>
-                                                Mật khẩu mới cho tài khoản <strong>{email}</strong> (
-                                                {matchedAccount?.accountLabel}) đã có hiệu lực, trạng thái khóa bảo mật đã được gỡ bỏ và các phiên cũ đã được thu hồi.
-                                            </>
-                                        )}
+                                    <div style={{ color: "#E2E8F0", fontSize: "0.82rem" }}>
+                                        {lang === "en"
+                                            ? `Account ${email} is unlocked and previous sessions have been revoked.`
+                                            : `Tài khoản ${email} đã được mở khóa và các phiên đăng nhập cũ đã bị thu hồi.`}
                                     </div>
                                 </div>
 
@@ -1157,11 +955,7 @@ export default function ForgotPasswordPage() {
                                         style={{ flex: 1.4 }}
                                     >
                                         <Lock size={15} />
-                                        <span>
-                                            {lang === "en"
-                                                ? "Continue to Sign In"
-                                                : "Quay Về Đăng Nhập Ngay"}
-                                        </span>
+                                        <span>{lang === "en" ? "Go to Sign In" : "Về trang đăng nhập"}</span>
                                     </button>
 
                                     <button
@@ -1175,35 +969,13 @@ export default function ForgotPasswordPage() {
                                         style={{ flex: 0.6 }}
                                     >
                                         <RefreshCw size={14} />
-                                        <span>{lang === "en" ? "Reset Another" : "Khôi Phục Khác"}</span>
+                                        <span>{lang === "en" ? "Reset Another" : "Đổi tài khoản khác"}</span>
                                     </button>
                                 </div>
                             </div>
                         )}
 
-                        <div className="fp-divider">
-                            <div className="fp-divider-line" />
-                            <span
-                                style={{
-                                    color: "#D4AF37",
-                                    fontSize: "0.68rem",
-                                    fontFamily: "Space Grotesk, monospace",
-                                    letterSpacing: "0.12em",
-                                }}
-                            >
-                                ✦ ENTERPRISE SECURITY
-                            </span>
-                            <div className="fp-divider-line" />
-                        </div>
-
-                        <div
-                            style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                                fontSize: "0.78rem",
-                            }}
-                        >
+                        <div className="fp-card-footer">
                             <Link
                                 href="/login"
                                 style={{
@@ -1216,20 +988,11 @@ export default function ForgotPasswordPage() {
                                 }}
                             >
                                 <ArrowLeft size={14} color="#D4AF37" />
-                                <span>
-                                    {lang === "en" ? "Return to Sign In" : "Quay lại Đăng nhập"}
-                                </span>
+                                <span>{lang === "en" ? "Return to Sign In" : "Quay lại đăng nhập"}</span>
                             </Link>
 
-                            <Link
-                                href="/"
-                                style={{
-                                    color: "#94A3B8",
-                                    textDecoration: "none",
-                                    fontWeight: 500,
-                                }}
-                            >
-                                {lang === "en" ? "Flagship Storefront" : "Trang chủ Trải nghiệm"}
+                            <Link href="/" style={{ color: "#94A3B8", textDecoration: "none", fontWeight: 500 }}>
+                                {lang === "en" ? "Kiosk Network" : "Mạng lưới Kiosk"}
                             </Link>
                         </div>
                     </div>
@@ -1238,25 +1001,10 @@ export default function ForgotPasswordPage() {
 
             <footer className="fp-footer">
                 <div className="fp-footer-inner">
-                    <div>
-                        <strong>SCENTSTATION</strong> •{" "}
-                        {lang === "en"
-                            ? "Enterprise Credential Recovery & Session Governance"
-                            : "Hệ Thống Khôi Phục Tài Khoản & Quản Trị Phiên Bảo Mật"}
-                    </div>
-                    <div className="fp-footer-links">
-                        <span>One-Time Token Verification</span>
-                        <span>•</span>
-                        <span>Automated Session Revocation</span>
-                        <span>•</span>
-                        <button
-                            type="button"
-                            onClick={() => router.push("/login")}
-                            className="fp-footer-btn"
-                        >
-                            {lang === "en" ? "Partner Sign In" : "Cổng Đăng Nhập"}
-                        </button>
-                    </div>
+                    <strong>SCENTSTATION</strong>
+                    <button type="button" onClick={() => router.push("/login")} className="fp-footer-btn">
+                        {lang === "en" ? "Staff Sign In" : "Đăng nhập nội bộ"}
+                    </button>
                 </div>
             </footer>
         </main>

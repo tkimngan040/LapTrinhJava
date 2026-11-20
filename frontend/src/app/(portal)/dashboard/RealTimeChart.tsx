@@ -5,9 +5,9 @@ import styles from "./RealTimeChart.module.css";
 
 interface DataPoint {
     time: number;
-    revenueK: number;     // Doanh thu theo khung thời gian (nghìn VND)
-    transactions: number; // Số lượt xịt / giao dịch thành công
-    successRate: number;  // Tỉ lệ vòi phun thành công (%)
+    revenueK: number;
+    transactions: number;
+    successRate: number;
 }
 
 interface RealTimeChartProps {
@@ -15,6 +15,7 @@ interface RealTimeChartProps {
     selectedBrand?: string;
     latestOrderAmount?: number;
     totalOrdersCount?: number;
+    lang?: "en" | "vi";
 }
 
 export default function RealTimeChart({
@@ -22,6 +23,7 @@ export default function RealTimeChart({
                                           selectedBrand = "ALL",
                                           latestOrderAmount = 15000,
                                           totalOrdersCount = 34,
+                                          lang = "vi",
                                       }: RealTimeChartProps) {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const [isPaused, setIsPaused] = useState<boolean>(false);
@@ -29,13 +31,15 @@ export default function RealTimeChart({
     const isPausedRef = useRef<boolean>(false);
     isPausedRef.current = isPaused;
 
-    // Dùng useRef cho latestOrderAmount & totalOrdersCount để KHÔNG làm reset lại biểu đồ mỗi 5 giây
     const latestAmountRef = useRef<number>(latestOrderAmount);
     latestAmountRef.current = latestOrderAmount;
 
     const totalOrdersRef = useRef<number>(totalOrdersCount);
     const prevOrdersRef = useRef<number>(totalOrdersCount);
     totalOrdersRef.current = totalOrdersCount;
+
+    const langRef = useRef<"en" | "vi">(lang);
+    langRef.current = lang;
 
     const dataPointsRef = useRef<DataPoint[]>([]);
     const mousePosRef = useRef<{ x: number; y: number } | null>(null);
@@ -72,7 +76,6 @@ export default function RealTimeChart({
             context.closePath();
         };
 
-        // Khởi tạo cửa sổ 60s ban đầu
         const now = Date.now();
         const initialPoints: DataPoint[] = [];
         for (let t = -60000; t <= 0; t += 500) {
@@ -96,9 +99,7 @@ export default function RealTimeChart({
 
         const simInterval = setInterval(() => {
             if (isPausedRef.current) return;
-
             const currentTime = Date.now();
-            // Kiểm tra xem vừa có đơn hàng mới thực tế phát sinh từ Dashboard hay không
             const hasNewSprayOrder = totalOrdersRef.current > prevOrdersRef.current;
             prevOrdersRef.current = totalOrdersRef.current;
 
@@ -114,14 +115,8 @@ export default function RealTimeChart({
                 )
             );
             const activePriceK = (latestAmountRef.current || 15000) / 1000;
-            const nextRevenueK = Math.min(
-                490,
-                Math.max(30, Math.round(baseTx * activePriceK))
-            );
-            const nextSuccess = Math.min(
-                100,
-                Math.max(97.5, +(99.3 + (Math.random() * 0.5 - 0.25)).toFixed(1))
-            );
+            const nextRevenueK = Math.min(490, Math.max(30, Math.round(baseTx * activePriceK)));
+            const nextSuccess = Math.min(100, Math.max(97.5, +(99.3 + (Math.random() * 0.5 - 0.25)).toFixed(1)));
 
             dataPointsRef.current.push({
                 time: currentTime,
@@ -131,9 +126,7 @@ export default function RealTimeChart({
             });
 
             const windowLimit = currentTime - 60000;
-            dataPointsRef.current = dataPointsRef.current.filter(
-                (p) => p.time >= windowLimit
-            );
+            dataPointsRef.current = dataPointsRef.current.filter((p) => p.time >= windowLimit);
         }, 500);
 
         const updateCanvasSize = () => {
@@ -146,9 +139,7 @@ export default function RealTimeChart({
         };
 
         updateCanvasSize();
-        const resizeObserver = new ResizeObserver(() => {
-            updateCanvasSize();
-        });
+        const resizeObserver = new ResizeObserver(() => updateCanvasSize());
         resizeObserver.observe(canvas);
 
         const render = () => {
@@ -161,30 +152,20 @@ export default function RealTimeChart({
                 return;
             }
 
+            const isVi = langRef.current === "vi";
             ctx.clearRect(0, 0, width, height);
 
-            const paddingLeft = 68;
+            const paddingLeft = 64;
             const paddingRight = 22;
             const paddingTop = 16;
             const paddingBottom = 32;
-
             const chartWidth = width - paddingLeft - paddingRight;
             const chartHeight = height - paddingTop - paddingBottom;
 
-            // 1. Nền & Dot-Grid
-            ctx.fillStyle = "#0a0a0a";
+            ctx.fillStyle = "#0B0D14";
             ctx.fillRect(0, 0, width, height);
 
-            ctx.fillStyle = "rgba(212, 175, 55, 0.04)";
-            const gridSize = 40;
-            for (let x = paddingLeft % gridSize; x < width; x += gridSize) {
-                for (let y = paddingTop % gridSize; y < height; y += gridSize) {
-                    ctx.fillRect(x, y, 1, 1);
-                }
-            }
-
-            // 2. Đường kẻ ngang Y-Axis
-            ctx.strokeStyle = "rgba(255, 255, 255, 0.06)";
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
             ctx.lineWidth = 1;
             ctx.setLineDash([4, 4]);
             for (let i = 0; i <= 4; i++) {
@@ -194,34 +175,24 @@ export default function RealTimeChart({
                 ctx.lineTo(width - paddingRight, y);
                 ctx.stroke();
 
-                ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
-                ctx.font = "10px system-ui, sans-serif";
+                ctx.fillStyle = "#94A3B8";
+                ctx.font = "11px 'Plus Jakarta Sans', sans-serif";
                 ctx.textAlign = "right";
                 const labelVal = Math.round(500 - i * 125);
-                ctx.fillText(`${labelVal}k`, paddingLeft - 10, y + 3);
+                ctx.fillText(`${labelVal}k`, paddingLeft - 10, y + 4);
             }
             ctx.setLineDash([]);
 
-            // 3. Nhãn thời gian thực trục X
-            ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
-            ctx.font = "10px system-ui, sans-serif";
+            ctx.fillStyle = "#94A3B8";
+            ctx.font = "11px 'Plus Jakarta Sans', sans-serif";
             ctx.textAlign = "center";
             const nowTime = Date.now();
             const windowStart = nowTime - 60000;
-            const timeLabels = [
-                { offset: 0 },
-                { offset: 15000 },
-                { offset: 30000 },
-                { offset: 45000 },
-                { offset: 60000 },
-            ];
-            timeLabels.forEach(({ offset }) => {
+            [0, 15000, 30000, 45000, 60000].forEach((offset) => {
                 const targetTime = windowStart + offset;
                 const x = paddingLeft + ((targetTime - windowStart) / 60000) * chartWidth;
                 if (x >= paddingLeft && x <= width - paddingRight) {
-                    const timeStr = new Date(targetTime).toLocaleTimeString("vi-VN", {
-                        hour12: false,
-                    });
+                    const timeStr = new Date(targetTime).toLocaleTimeString("vi-VN", { hour12: false });
                     ctx.fillText(timeStr, x, height - 10);
                 }
             });
@@ -240,170 +211,75 @@ export default function RealTimeChart({
                         key: "revenueK" as keyof DataPoint,
                         max: 500,
                         color: "#D4AF37",
-                        name: "Revenue",
-                        unit: "k VND",
+                        name: isVi ? "Doanh thu" : "Revenue",
+                        unit: "k",
                     },
                     {
                         key: "transactions" as keyof DataPoint,
                         max: 40,
-                        color: "#00ff88",
-                        name: "Sprays / Orders",
-                        unit: " tx",
+                        color: "#34D399",
+                        name: isVi ? "Lượt xịt" : "Sprays",
+                        unit: isVi ? " đơn" : " tx",
                     },
                     {
                         key: "successRate" as keyof DataPoint,
                         max: 100,
-                        color: "#00c4ff",
-                        name: "Dispense Rate",
+                        color: "#38BDF8",
+                        name: isVi ? "Tỉ lệ đạt" : "Success",
                         unit: "%",
                     },
                 ];
 
                 seriesConfigs.forEach((series) => {
-                    let r = 212,
-                        g = 175,
-                        b = 55;
-                    if (series.color === "#00ff88") {
-                        r = 0;
-                        g = 255;
-                        b = 136;
-                    } else if (series.color === "#00c4ff") {
-                        r = 0;
-                        g = 196;
-                        b = 255;
-                    }
-
-                    const grad = ctx.createLinearGradient(0, paddingTop, 0, paddingTop + chartHeight);
-                    grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.22)`);
-                    grad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0.0)`);
-
-                    ctx.beginPath();
-                    const firstPt = getCoords(
-                        points[0][series.key] as number,
-                        series.max,
-                        points[0].time
-                    );
-                    ctx.moveTo(firstPt.x, paddingTop + chartHeight);
-                    ctx.lineTo(firstPt.x, firstPt.y);
-
-                    for (let i = 0; i < points.length - 1; i++) {
-                        const p0 = getCoords(
-                            points[Math.max(0, i - 1)][series.key] as number,
-                            series.max,
-                            points[Math.max(0, i - 1)].time
-                        );
-                        const p1 = getCoords(
-                            points[i][series.key] as number,
-                            series.max,
-                            points[i].time
-                        );
-                        const p2 = getCoords(
-                            points[i + 1][series.key] as number,
-                            series.max,
-                            points[i + 1].time
-                        );
-                        const p3 = getCoords(
-                            points[Math.min(points.length - 1, i + 2)][series.key] as number,
-                            series.max,
-                            points[Math.min(points.length - 1, i + 2)].time
-                        );
-
-                        const cp1x = p1.x + (p2.x - p0.x) / 6;
-                        const cp1y = p1.y + (p2.y - p0.y) / 6;
-                        const cp2x = p2.x - (p3.x - p1.x) / 6;
-                        const cp2y = p2.y - (p3.y - p1.y) / 6;
-
-                        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
-                    }
-
-                    const lastPt = getCoords(
-                        points[points.length - 1][series.key] as number,
-                        series.max,
-                        points[points.length - 1].time
-                    );
-                    ctx.lineTo(lastPt.x, paddingTop + chartHeight);
-                    ctx.closePath();
-                    ctx.fillStyle = grad;
-                    ctx.fill();
-
                     ctx.save();
                     ctx.strokeStyle = series.color;
                     ctx.lineWidth = 2.2;
                     ctx.lineCap = "round";
                     ctx.lineJoin = "round";
-                    ctx.shadowColor = series.color;
-                    ctx.shadowBlur = 8;
-
                     ctx.beginPath();
+                    const firstPt = getCoords(points[0][series.key] as number, series.max, points[0].time);
                     ctx.moveTo(firstPt.x, firstPt.y);
-                    for (let i = 0; i < points.length - 1; i++) {
-                        const p0 = getCoords(
-                            points[Math.max(0, i - 1)][series.key] as number,
-                            series.max,
-                            points[Math.max(0, i - 1)].time
-                        );
-                        const p1 = getCoords(
-                            points[i][series.key] as number,
-                            series.max,
-                            points[i].time
-                        );
-                        const p2 = getCoords(
-                            points[i + 1][series.key] as number,
-                            series.max,
-                            points[i + 1].time
-                        );
-                        const p3 = getCoords(
-                            points[Math.min(points.length - 1, i + 2)][series.key] as number,
-                            series.max,
-                            points[Math.min(points.length - 1, i + 2)].time
-                        );
-
-                        const cp1x = p1.x + (p2.x - p0.x) / 6;
-                        const cp1y = p1.y + (p2.y - p0.y) / 6;
-                        const cp2x = p2.x - (p3.x - p1.x) / 6;
-                        const cp2y = p2.y - (p3.y - p1.y) / 6;
-
-                        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+                    for (let i = 1; i < points.length; i++) {
+                        const pt = getCoords(points[i][series.key] as number, series.max, points[i].time);
+                        ctx.lineTo(pt.x, pt.y);
                     }
                     ctx.stroke();
                     ctx.restore();
                 });
 
-                // 4. Legend góc phải
-                const legendX = width - paddingRight - 190;
-                const legendY = paddingTop + 10;
-                const legendW = 180;
+                const legendW = 185;
                 const legendH = 78;
+                const legendX = width - paddingRight - legendW - 8;
+                const legendY = paddingTop + 8;
 
                 ctx.save();
-                ctx.fillStyle = "rgba(5, 5, 10, 0.82)";
-                ctx.strokeStyle = "rgba(212, 175, 55, 0.3)";
+                ctx.fillStyle = "rgba(18, 22, 34, 0.9)";
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.14)";
                 ctx.lineWidth = 1;
                 drawRoundedRect(ctx, legendX, legendY, legendW, legendH, 8);
                 ctx.fill();
                 ctx.stroke();
 
                 seriesConfigs.forEach((series, idx) => {
-                    const rowY = legendY + 19 + idx * 20;
+                    const rowY = legendY + 20 + idx * 20;
                     ctx.fillStyle = series.color;
                     ctx.beginPath();
                     ctx.arc(legendX + 12, rowY - 3, 3.5, 0, Math.PI * 2);
                     ctx.fill();
 
-                    ctx.fillStyle = "rgba(255, 255, 255, 0.78)";
-                    ctx.font = "11px system-ui, sans-serif";
+                    ctx.fillStyle = "#CBD5E1";
+                    ctx.font = "11px 'Plus Jakarta Sans', sans-serif";
                     ctx.textAlign = "left";
                     ctx.fillText(series.name, legendX + 24, rowY);
 
                     const rawVal = points[points.length - 1][series.key] as number;
                     const val = series.key === "successRate" ? rawVal.toFixed(1) : rawVal.toFixed(0);
                     ctx.textAlign = "right";
-                    ctx.fillStyle = "#ffffff";
+                    ctx.fillStyle = "#FFFFFF";
                     ctx.fillText(`${val}${series.unit}`, legendX + legendW - 12, rowY);
                 });
                 ctx.restore();
 
-                // 5. Tooltip khi hover chuột trên biểu đồ
                 const mouse = mousePosRef.current;
                 if (
                     mouse &&
@@ -412,7 +288,7 @@ export default function RealTimeChart({
                     mouse.y >= paddingTop &&
                     mouse.y <= paddingTop + chartHeight
                 ) {
-                    ctx.strokeStyle = "rgba(212, 175, 55, 0.45)";
+                    ctx.strokeStyle = "rgba(212, 175, 55, 0.5)";
                     ctx.lineWidth = 1;
                     ctx.setLineDash([3, 3]);
                     ctx.beginPath();
@@ -434,43 +310,42 @@ export default function RealTimeChart({
                         }
                     }
 
-                    const tipW = 185;
+                    const tipW = 190;
                     const tipH = 98;
-                    let tipX = mouse.x + 15;
+                    let tipX = mouse.x + 14;
                     let tipY = mouse.y - 40;
-                    if (tipX + tipW > width - paddingRight) tipX = mouse.x - tipW - 15;
+                    if (tipX + tipW > width - paddingRight) tipX = mouse.x - tipW - 14;
                     if (tipY < paddingTop) tipY = paddingTop;
 
                     ctx.save();
-                    ctx.fillStyle = "rgba(10, 10, 16, 0.95)";
+                    ctx.fillStyle = "rgba(18, 22, 34, 0.96)";
                     ctx.strokeStyle = "rgba(212, 175, 55, 0.5)";
                     ctx.lineWidth = 1;
                     drawRoundedRect(ctx, tipX, tipY, tipW, tipH, 8);
                     ctx.fill();
                     ctx.stroke();
 
-                    ctx.fillStyle = "#D4AF37";
-                    ctx.font = "bold 10px system-ui, sans-serif";
+                    ctx.fillStyle = "#F5E6AD";
+                    ctx.font = "bold 11px 'Plus Jakarta Sans', sans-serif";
                     ctx.textAlign = "left";
                     const dateStr = new Date(closest.time).toLocaleTimeString("vi-VN");
-                    ctx.fillText(`Timestamp: ${dateStr}`, tipX + 12, tipY + 18);
+                    ctx.fillText(`${isVi ? "Thời điểm" : "Time"}: ${dateStr}`, tipX + 12, tipY + 19);
 
                     seriesConfigs.forEach((series, idx) => {
-                        const rowY = tipY + 38 + idx * 19;
+                        const rowY = tipY + 39 + idx * 19;
                         ctx.fillStyle = series.color;
                         ctx.beginPath();
-                        ctx.arc(tipX + 15, rowY - 3, 3, 0, Math.PI * 2);
+                        ctx.arc(tipX + 14, rowY - 3, 3, 0, Math.PI * 2);
                         ctx.fill();
 
-                        ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
-                        ctx.font = "11px system-ui, sans-serif";
-                        ctx.fillText(series.name, tipX + 26, rowY);
+                        ctx.fillStyle = "#CBD5E1";
+                        ctx.font = "11px 'Plus Jakarta Sans', sans-serif";
+                        ctx.fillText(series.name, tipX + 24, rowY);
 
                         const rawVal = closest[series.key] as number;
-                        const val =
-                            series.key === "successRate" ? rawVal.toFixed(1) : rawVal.toFixed(0);
+                        const val = series.key === "successRate" ? rawVal.toFixed(1) : rawVal.toFixed(0);
                         ctx.textAlign = "right";
-                        ctx.fillStyle = "#ffffff";
+                        ctx.fillStyle = "#FFFFFF";
                         ctx.fillText(`${val}${series.unit}`, tipX + tipW - 12, rowY);
                         ctx.textAlign = "left";
                     });
@@ -482,37 +357,31 @@ export default function RealTimeChart({
         };
 
         animFrameRef.current = requestAnimationFrame(render);
-
         return () => {
             clearInterval(simInterval);
             resizeObserver.disconnect();
             if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
         };
-    }, [selectedDateRange, selectedBrand]); // Đã gỡ latestOrderAmount khỏi dependency để biểu đồ chạy mượt không bị khởi tạo lại
-
-    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-        const rect = e.currentTarget.getBoundingClientRect();
-        mousePosRef.current = {
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top,
-        };
-    };
-
-    const handleMouseLeave = () => {
-        mousePosRef.current = null;
-    };
+    }, [selectedDateRange, selectedBrand]);
 
     return (
         <div
             className={styles.chartWrapper}
-            onMouseMove={handleMouseMove}
-            onMouseLeave={handleMouseLeave}
+            onMouseMove={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                mousePosRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            }}
+            onMouseLeave={() => {
+                mousePosRef.current = null;
+            }}
             onClick={() => setIsPaused(!isPaused)}
-            title="Hover to inspect time points, click to pause/resume live stream"
+            title={lang === "vi" ? "Rê chuột để xem chi tiết, bấm để tạm dừng/tiếp tục" : "Hover to inspect, click to pause/resume"}
         >
             <canvas ref={canvasRef} className={styles.canvas} />
             {isPaused && (
-                <div className={styles.pauseOverlay}>STREAM PAUSED (CLICK TO RESUME)</div>
+                <div className={styles.pauseOverlay}>
+                    {lang === "vi" ? "ĐÃ TẠM DỪNG (BẤM ĐỂ TIẾP TỤC)" : "PAUSED (CLICK TO RESUME)"}
+                </div>
             )}
         </div>
     );

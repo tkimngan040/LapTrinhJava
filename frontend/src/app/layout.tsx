@@ -2,50 +2,19 @@
 
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import {
-    Geist,
-    Geist_Mono,
-    Bodoni_Moda,
-    Montserrat,
-    Space_Grotesk,
-} from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-    variable: "--font-geist-sans",
-    subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-    variable: "--font-geist-mono",
-    subsets: ["latin"],
-});
-
-const bodoni = Bodoni_Moda({
-    variable: "--font-bodoni",
-    subsets: ["latin", "latin-ext"],
-    weight: ["400", "500", "600", "700"],
-    style: ["normal", "italic"],
-    display: "swap",
-});
-
-const montserrat = Montserrat({
-    variable: "--font-montserrat",
+const plusJakarta = Plus_Jakarta_Sans({
+    variable: "--font-plus-jakarta",
     subsets: ["latin", "vietnamese"],
-    weight: ["300", "400", "500", "600", "700"],
-    display: "swap",
-});
-
-const spaceGrotesk = Space_Grotesk({
-    variable: "--font-space-grotesk",
-    subsets: ["latin", "vietnamese"],
-    weight: ["500", "600", "700"],
+    weight: ["400", "500", "600", "700", "800"],
     display: "swap",
 });
 
 export const metadata: Metadata = {
-    title: "ScentStation — Haute Parfumerie & Automated Sampling Boutiques",
-    description: "Multi-Brand Luxury Smart Fragrance Experience & IoT Management Platform",
+    title: "ScentStation — Quản lý Kiosk",
+    description: "Hệ thống quản lý trạm Kiosk nước hoa, tồn kho và giao dịch",
     other: {
         google: "notranslate",
     },
@@ -57,10 +26,19 @@ export default function RootLayout({
     children: ReactNode;
 }>) {
     return (
-        <html lang="en" translate="no" className="notranslate" suppressHydrationWarning>
+        <html
+            lang="vi"
+            translate="no"
+            className={`${plusJakarta.variable} notranslate`}
+            suppressHydrationWarning
+        >
         <body
             suppressHydrationWarning
-            className={`${geistSans.variable} ${geistMono.variable} ${bodoni.variable} ${montserrat.variable} ${spaceGrotesk.variable} antialiased notranslate`}
+            className="bg-[#0B0D14] text-[#F8FAFC] antialiased notranslate"
+            style={{
+                fontFamily:
+                    "var(--font-plus-jakarta), 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif",
+            }}
         >
         {children}
         </body>
