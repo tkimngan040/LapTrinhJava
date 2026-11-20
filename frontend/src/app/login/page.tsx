@@ -9,7 +9,6 @@ import {
     Eye,
     EyeOff,
     Globe,
-    ShieldCheck,
     ArrowLeft,
     CheckCircle2,
     AlertOctagon,
@@ -22,10 +21,7 @@ import {
     LayoutDashboard,
     LogOut,
     ChevronDown,
-    Building2,
-    Cpu,
     Users,
-    Sparkles,
 } from "lucide-react";
 import styles from "./login.module.css";
 
@@ -36,29 +32,32 @@ export interface SeedAccountItem {
     email: string;
     passwordPlain: string;
     roleCode: AuthenticatedRoleCode;
-    accountLabel: string;
+    accountLabelEn: string;
+    accountLabelVi: string;
     brandTenant: string | null;
-    brandScopeDisplay: string;
+    scopeEn: string;
+    scopeVi: string;
     status: "ACTIVE" | "LOCKED" | "INACTIVE";
     requires2FA: boolean;
     tokenVersion: number;
     defaultRedirect: string;
 }
 
+// Khớp ma trận 6 nhóm người dùng nội bộ (PSA, BA, OM, TE, IS, VW)
 const ROLE_ACCESS_MAP: Record<string, AuthenticatedRoleCode[]> = {
     "/dashboard": ["PSA", "BA", "OM", "VW"],
     "/alerts": ["PSA", "BA", "OM", "TE", "IS"],
     "/profile": ["PSA", "BA", "OM", "TE", "IS", "VW"],
     "/brands": ["PSA", "BA"],
-    "/products": ["PSA", "BA", "OM", "IS"],
+    "/products": ["PSA", "BA", "OM", "TE", "IS"],
     "/machines": ["PSA", "BA", "OM", "TE", "IS"],
-    "/transactions": ["PSA", "BA", "OM"],
+    "/transactions": ["PSA", "BA", "OM", "VW"],
     "/inventory": ["PSA", "BA", "OM", "IS"],
-    "/refill": ["OM", "TE", "IS"],
+    "/refill": ["PSA", "BA", "OM", "TE", "IS"],
     "/maintenance": ["PSA", "BA", "OM", "TE"],
     "/users": ["PSA", "BA"],
     "/reports": ["PSA", "BA", "OM", "VW"],
-    "/settings": ["PSA", "BA"],
+    "/settings": ["PSA", "BA", "OM"],
 };
 
 const ENTERPRISE_SEED_ACCOUNTS: SeedAccountItem[] = [
@@ -67,9 +66,11 @@ const ENTERPRISE_SEED_ACCOUNTS: SeedAccountItem[] = [
         email: "admin@scentstation.local",
         passwordPlain: "Admin@12345",
         roleCode: "PSA",
-        accountLabel: "Platform Super Administrator",
+        accountLabelEn: "Platform Super Administrator",
+        accountLabelVi: "Quản trị viên nền tảng",
         brandTenant: null,
-        brandScopeDisplay: "Global Platform Governance • All 21 Maisons",
+        scopeEn: "Tenants/Brands, platform users, settings & audit",
+        scopeVi: "Quản trị thương hiệu, tài khoản nền tảng, cài đặt & audit",
         status: "ACTIVE",
         requires2FA: false,
         tokenVersion: 1,
@@ -80,9 +81,11 @@ const ENTERPRISE_SEED_ACCOUNTS: SeedAccountItem[] = [
         email: "brand.admin@scentstation.local",
         passwordPlain: "Admin@12345",
         roleCode: "BA",
-        accountLabel: "Chanel Brand Administrator",
+        accountLabelEn: "Brand Administrator (Chanel)",
+        accountLabelVi: "Quản trị viên thương hiệu (Chanel)",
         brandTenant: "Chanel",
-        brandScopeDisplay: "Chanel Maison Workspace • 2FA Protected",
+        scopeEn: "Chanel products, slots, staff & reports • 2FA",
+        scopeVi: "Sản phẩm, khoang máy, nhân sự & báo cáo Chanel • 2FA",
         status: "ACTIVE",
         requires2FA: true,
         tokenVersion: 1,
@@ -93,9 +96,11 @@ const ENTERPRISE_SEED_ACCOUNTS: SeedAccountItem[] = [
         email: "ops.manager@scentstation.local",
         passwordPlain: "Admin@12345",
         roleCode: "OM",
-        accountLabel: "Operations Manager",
+        accountLabelEn: "Operations Manager",
+        accountLabelVi: "Quản lý vận hành",
         brandTenant: null,
-        brandScopeDisplay: "Fleet Operations, Alerts & Transaction Reconciliation",
+        scopeEn: "Machines, alerts, tickets & order reconciliation",
+        scopeVi: "Giám sát máy, cảnh báo, điều phối ticket & đối soát đơn",
         status: "ACTIVE",
         requires2FA: false,
         tokenVersion: 1,
@@ -106,9 +111,11 @@ const ENTERPRISE_SEED_ACCOUNTS: SeedAccountItem[] = [
         email: "tech@scentstation.local",
         passwordPlain: "Admin@12345",
         roleCode: "TE",
-        accountLabel: "Lead Field Technician",
+        accountLabelEn: "Technician",
+        accountLabelVi: "Kỹ thuật viên",
         brandTenant: null,
-        brandScopeDisplay: "Hardware Diagnostics, Maintenance & Calibration",
+        scopeEn: "Assigned tickets, checklist & post-repair test",
+        scopeVi: "Ticket được giao, checklist bảo trì & kiểm tra sau sửa",
         status: "ACTIVE",
         requires2FA: false,
         tokenVersion: 1,
@@ -119,9 +126,11 @@ const ENTERPRISE_SEED_ACCOUNTS: SeedAccountItem[] = [
         email: "inventory@scentstation.local",
         passwordPlain: "Admin@12345",
         roleCode: "IS",
-        accountLabel: "Warehouse & Inventory Specialist",
+        accountLabelEn: "Inventory Staff",
+        accountLabelVi: "Nhân viên kho",
         brandTenant: null,
-        brandScopeDisplay: "Perfume Batches, Bottle Registration & Refills",
+        scopeEn: "Batches, bottles, refill/replace & stock check",
+        scopeVi: "Quản lý lô, chai, nạp/thay & đối soát tồn kho",
         status: "ACTIVE",
         requires2FA: false,
         tokenVersion: 1,
@@ -132,9 +141,11 @@ const ENTERPRISE_SEED_ACCOUNTS: SeedAccountItem[] = [
         email: "viewer@scentstation.local",
         passwordPlain: "Admin@12345",
         roleCode: "VW",
-        accountLabel: "Executive Analytics Viewer",
+        accountLabelEn: "Viewer",
+        accountLabelVi: "Người xem (Chỉ đọc)",
         brandTenant: null,
-        brandScopeDisplay: "Read-Only Business Intelligence & Reports",
+        scopeEn: "Read-only dashboard & reports",
+        scopeVi: "Chỉ xem dashboard và báo cáo trong phạm vi được cấp",
         status: "ACTIVE",
         requires2FA: false,
         tokenVersion: 1,
@@ -145,9 +156,11 @@ const ENTERPRISE_SEED_ACCOUNTS: SeedAccountItem[] = [
         email: "locked@scentstation.local",
         passwordPlain: "Admin@12345",
         roleCode: "TE",
-        accountLabel: "Field Technician (Suspended)",
+        accountLabelEn: "Locked Account (Test)",
+        accountLabelVi: "Tài khoản bị khóa (Kiểm thử)",
         brandTenant: null,
-        brandScopeDisplay: "Account Locked Due to Security Policy",
+        scopeEn: "Locked by security policy",
+        scopeVi: "Bị khóa do chính sách bảo mật",
         status: "LOCKED",
         requires2FA: false,
         tokenVersion: 2,
@@ -157,74 +170,44 @@ const ENTERPRISE_SEED_ACCOUNTS: SeedAccountItem[] = [
 
 const I18N_CONTENT = {
     en: {
-        platformSubtitle: "Haute Parfumerie & Automated Sampling Boutiques",
-        backToGateway: "Back to Flagship Store",
-        heroTitle: "Enterprise Fragrance & Telemetry Governance",
-        heroDesc:
-            "Centralized multi-tenant workspace for partner fragrance houses and operations teams. Manage curated catalogs, monitor real-time station telemetry, and oversee financial reconciliation.",
-        kpi1: "Partner Maisons",
-        kpi2: "Curated Signatures",
-        kpi3: "Calibrated Mist",
-        pillar1Title: "Multi-Tenant Brand Isolation",
-        pillar1Desc: "Dedicated workspace boundaries ensuring each luxury maison manages its own catalog, pricing, and analytics.",
-        pillar2Title: "Real-Time IoT Fleet Telemetry",
-        pillar2Desc: "Live heartbeat monitoring, load-cell volume tracking, and cryptographically signed dispensing commands.",
-        pillar3Title: "Role-Scoped Access Control",
-        pillar3Desc: "Granular permissions tailored for Administrators, Operations, Technicians, Inventory Staff, and Viewers.",
-        seedToggleLabel: "Demo Role Switcher (Quick Autofill)",
-        cardTitle: "Partner & Staff Sign In",
-        cardSubtitle: "Enter your corporate credentials to access your authorized workspace.",
-        emailLabel: "Corporate Email",
+        backToGateway: "Back to Kiosk Network",
+        heroTitle: "Internal Management Portal",
+        heroDesc: "Sign in with a staff account. Access and actions are strictly scoped by role and tenant.",
+        seedToggleLabel: "Demo Accounts (6 Internal Roles)",
+        cardTitle: "Sign In",
+        cardSubtitle: "Use your corporate email and password.",
+        emailLabel: "Email",
         emailPlaceholder: "name@scentstation.local",
         passwordLabel: "Password",
-        passwordPlaceholder: "Enter your password",
-        rememberMe: "Keep me signed in on this device",
+        passwordPlaceholder: "Enter password",
+        rememberMe: "Remember this device",
         forgotPassword: "Forgot password?",
-        signInBtn: "Sign In to Workspace",
-        signingInBtn: "Authenticating...",
-        securityHeading: "Enterprise Role-Based Security",
-        securityBody:
-            "Protected by cryptographic password hashing, stateless session verification, and strict tenant boundary enforcement. All authentication events are recorded for security compliance.",
-        errEmailEmpty: "Please enter your email address.",
-        errEmailFormat: "Please enter a valid email address (e.g., admin@scentstation.local).",
+        signInBtn: "Sign In",
+        signingInBtn: "Signing in...",
+        errEmailEmpty: "Please enter your email.",
+        errEmailFormat: "Invalid email format (e.g. admin@scentstation.local).",
         errPasswordEmpty: "Please enter your password.",
-        errGenericCredentials:
-            "Invalid email or password. Please verify your credentials and try again.",
+        errGenericCredentials: "Invalid email or password.",
     },
     vi: {
-        platformSubtitle: "Hệ Thống Trải Nghiệm Nước Hoa Tự Động Cao Cấp",
-        backToGateway: "Về Trang Chủ Trải Nghiệm",
-        heroTitle: "Hệ Thống Quản Trị & Giám Sát Trạm Hương Thơm",
-        heroDesc:
-            "Không gian quản trị tập trung đa thương hiệu dành cho các nhà hương đối tác và đội ngũ vận hành. Quản lý danh mục sản phẩm, giám sát cảm biến thời gian thực và đối soát giao dịch.",
-        kpi1: "Thương Hiệu Cao Cấp",
-        kpi2: "Tuyệt Tác Tuyển Chọn",
-        kpi3: "Định Lượng Phun Chuẩn",
-        pillar1Title: "Cô Lập Dữ Liệu Đa Thương Hiệu",
-        pillar1Desc: "Không gian làm việc độc lập giúp mỗi thương hiệu quản lý danh mục, giá bán và báo cáo doanh thu riêng biệt.",
-        pillar2Title: "Giám Sát Thiết Bị IoT Thời Gian Thực",
-        pillar2Desc: "Theo dõi trạng thái kết nối, định lượng dung tích từng bình chứa và xác thực lệnh phun an toàn.",
-        pillar3Title: "Phân Quyền Theo Vai Trò Nghiêm Ngặt",
-        pillar3Desc: "Giao diện và chức năng được cấp phát chính xác theo từng vị trí: Quản trị viên, Vận hành, Kỹ thuật, Kho và Kiểm toán.",
-        seedToggleLabel: "Chuyển Nhanh Tài Khoản Demo (Tự Động Điền)",
-        cardTitle: "Đăng Nhập Cổng Quản Trị",
-        cardSubtitle: "Sử dụng tài khoản nội bộ để truy cập không gian làm việc được phân quyền.",
-        emailLabel: "Email Doanh Nghiệp",
+        backToGateway: "Về trang mạng lưới Kiosk",
+        heroTitle: "Cổng quản trị nội bộ",
+        heroDesc: "Đăng nhập bằng tài khoản nhân viên. Dữ liệu và thao tác được giới hạn theo vai trò và phạm vi được cấp.",
+        seedToggleLabel: "Tài khoản kiểm thử (6 vai trò nội bộ)",
+        cardTitle: "Đăng nhập",
+        cardSubtitle: "Nhập email và mật khẩu nội bộ của bạn.",
+        emailLabel: "Email",
         emailPlaceholder: "name@scentstation.local",
-        passwordLabel: "Mật Khẩu",
-        passwordPlaceholder: "Nhập mật khẩu của bạn",
-        rememberMe: "Duy trì đăng nhập trên thiết bị này",
+        passwordLabel: "Mật khẩu",
+        passwordPlaceholder: "Nhập mật khẩu",
+        rememberMe: "Ghi nhớ đăng nhập",
         forgotPassword: "Quên mật khẩu?",
-        signInBtn: "Đăng Nhập Hệ Thống",
+        signInBtn: "Đăng nhập",
         signingInBtn: "Đang xác thực...",
-        securityHeading: "Bảo Mật Phân Quyền Doanh Nghiệp",
-        securityBody:
-            "Hệ thống bảo vệ dữ liệu bằng mã hóa mật khẩu một chiều, kiểm soát phiên truy cập tức thời và cô lập phạm vi thương hiệu. Mọi hoạt động đăng nhập đều được ghi nhận.",
-        errEmailEmpty: "Vui lòng nhập địa chỉ email của bạn.",
+        errEmailEmpty: "Vui lòng nhập email.",
         errEmailFormat: "Định dạng email không hợp lệ (VD: admin@scentstation.local).",
-        errPasswordEmpty: "Vui lòng nhập mật khẩu của bạn.",
-        errGenericCredentials:
-            "Email hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại thông tin.",
+        errPasswordEmpty: "Vui lòng nhập mật khẩu.",
+        errGenericCredentials: "Email hoặc mật khẩu không chính xác.",
     },
 };
 
@@ -250,7 +233,7 @@ export default function LoginPage() {
     }, []);
 
     const [isVideoMuted, setIsVideoMuted] = useState<boolean>(true);
-    const [language, setLanguage] = useState<"en" | "vi">("en");
+    const [language, setLanguage] = useState<"en" | "vi">("vi");
     const [langOpen, setLangOpen] = useState<boolean>(false);
     const t = I18N_CONTENT[language];
 
@@ -261,8 +244,9 @@ export default function LoginPage() {
         setPasswordError("");
         try {
             localStorage.setItem(LANGUAGE_STORAGE_KEY, nextLang);
+            window.dispatchEvent(new Event("scentstation-sync"));
         } catch {
-            // Ignore storage errors
+            // Ignore
         }
     }, []);
 
@@ -341,7 +325,7 @@ export default function LoginPage() {
                 });
                 localStorage.setItem(AUDIT_LOGS_STORAGE_KEY, JSON.stringify(logs.slice(0, 250)));
             } catch {
-                // Ignore storage quota errors
+                // Ignore
             }
         },
         []
@@ -378,9 +362,7 @@ export default function LoginPage() {
             if (!allowedRoles || allowedRoles.includes(account.roleCode)) {
                 if (account.brandTenant && account.roleCode !== "PSA") {
                     const params = new URLSearchParams(queryString || "");
-                    if (!params.has("brand")) {
-                        params.set("brand", account.brandTenant);
-                    }
+                    if (!params.has("brand")) params.set("brand", account.brandTenant);
                     const qs = params.toString();
                     return qs ? `${pathWithoutQuery}?${qs}` : pathWithoutQuery;
                 }
@@ -396,20 +378,22 @@ export default function LoginPage() {
             const isRemember = rememberMeRef.current;
             const sessionId = `SES-${Date.now()}-${Math.floor(100 + Math.random() * 899)}`;
             const nowIso = new Date().toISOString();
+            const label = language === "en" ? account.accountLabelEn : account.accountLabelVi;
+            const scopeDisplay = language === "en" ? account.scopeEn : account.scopeVi;
 
             const sessionPayload = {
                 token: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.scentstation_${account.roleCode}_v${account.tokenVersion}_${Date.now()}`,
                 user: {
                     id: account.id,
                     sessionId,
-                    fullName: account.accountLabel,
-                    name: account.accountLabel,
+                    fullName: label,
+                    name: label,
                     email: account.email,
                     role: account.roleCode,
                     roleCode: account.roleCode,
                     brand: account.brandTenant,
                     brandScope: account.brandTenant,
-                    brandScopeDisplay: account.brandScopeDisplay,
+                    brandScopeDisplay: scopeDisplay,
                     tokenVersion: account.tokenVersion,
                     roles: [account.roleCode],
                     authenticatedAt: nowIso,
@@ -444,10 +428,10 @@ export default function LoginPage() {
                     sessionId,
                     userId: account.id,
                     email: account.email,
-                    userName: account.accountLabel,
+                    userName: label,
                     roleCode: account.roleCode,
                     brandScope: account.brandTenant,
-                    device: "Windows Desktop • Chrome Web Portal",
+                    device: "Windows Desktop • Chrome",
                     ipAddress: "127.0.0.1",
                     location: "Ho Chi Minh City, VN",
                     loginTime: nowIso,
@@ -457,10 +441,7 @@ export default function LoginPage() {
                     status: "ACTIVE",
                     isCurrent: true,
                 });
-                localStorage.setItem(
-                    ACTIVE_SESSIONS_STORAGE_KEY,
-                    JSON.stringify(updatedSessions.slice(0, 25))
-                );
+                localStorage.setItem(ACTIVE_SESSIONS_STORAGE_KEY, JSON.stringify(updatedSessions.slice(0, 25)));
             } catch {
                 // Safe fallback
             }
@@ -471,13 +452,7 @@ export default function LoginPage() {
                 try {
                     const rawSec = localStorage.getItem(AUTH_SECURITY_STATE_KEY);
                     const parsed = rawSec ? JSON.parse(rawSec) : {};
-                    localStorage.setItem(
-                        AUTH_SECURITY_STATE_KEY,
-                        JSON.stringify({
-                            ...parsed,
-                            failedAttempts: nextFail,
-                        })
-                    );
+                    localStorage.setItem(AUTH_SECURITY_STATE_KEY, JSON.stringify({ ...parsed, failedAttempts: nextFail }));
                 } catch {
                     // Safe fallback
                 }
@@ -485,24 +460,18 @@ export default function LoginPage() {
             });
 
             appendSecurityAuditLog({
-                actor: account.accountLabel,
+                actor: label,
                 role: account.roleCode,
                 tenant: account.brandTenant,
                 action: "LOGIN_SUCCESS",
                 entityId: account.email,
                 severity: "INFO",
-                details: {
-                    sessionId,
-                    method: authMethod,
-                    tokenVersion: account.tokenVersion,
-                    redirectedTo: targetRoute,
-                    rememberMe: isRemember,
-                },
+                details: { sessionId, method: authMethod, redirectedTo: targetRoute, rememberMe: isRemember },
             });
 
             router.push(targetRoute);
         },
-        [appendSecurityAuditLog, resolvePermittedDestination, router]
+        [appendSecurityAuditLog, language, resolvePermittedDestination, router]
     );
 
     const handleSignOutCurrentSession = useCallback(() => {
@@ -514,7 +483,7 @@ export default function LoginPage() {
                 action: "LOGOUT_SUCCESS",
                 entityId: existingSessionUser.email,
                 severity: "INFO",
-                details: { source: "Login Session Switcher" },
+                details: { source: "Login Page" },
             });
         }
         sessionStorage.removeItem("scentstation-token");
@@ -524,9 +493,7 @@ export default function LoginPage() {
         localStorage.removeItem("scentstation-user");
         setExistingSessionUser(null);
         setAuthSuccess(
-            language === "en"
-                ? "You have been signed out of the previous session."
-                : "Đã đăng xuất khỏi phiên làm việc trước đó."
+            language === "en" ? "Signed out of previous session." : "Đã đăng xuất khỏi phiên trước."
         );
     }, [appendSecurityAuditLog, existingSessionUser, language]);
 
@@ -539,9 +506,7 @@ export default function LoginPage() {
 
             try {
                 const savedLang = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-                if (savedLang === "vi" || savedLang === "en") {
-                    setLanguage(savedLang);
-                }
+                if (savedLang === "vi" || savedLang === "en") setLanguage(savedLang);
             } catch {
                 // Safe fallback
             }
@@ -556,11 +521,7 @@ export default function LoginPage() {
                             const conn = m.connectionStatus || (m.status === "OFFLINE" ? "OFFLINE" : "ONLINE");
                             const oper =
                                 m.operatingStatus ||
-                                (m.status === "MAINTENANCE"
-                                    ? "MAINTENANCE"
-                                    : m.status === "OFFLINE"
-                                        ? "ERROR"
-                                        : "ACTIVE");
+                                (m.status === "MAINTENANCE" ? "MAINTENANCE" : m.status === "OFFLINE" ? "ERROR" : "ACTIVE");
                             return conn === "ONLINE" && oper === "ACTIVE";
                         }).length;
                         setOnlineKiosksCount(onlineCnt);
@@ -619,7 +580,6 @@ export default function LoginPage() {
     useEffect(() => {
         const anyModalOpen = isForgotOpen || Boolean(pending2FAUser);
         document.body.style.overflow = anyModalOpen ? "hidden" : "";
-
         const handleEsc = (e: KeyboardEvent) => {
             if (e.key === "Escape") {
                 setIsForgotOpen(false);
@@ -663,7 +623,7 @@ export default function LoginPage() {
 
         setLoading(true);
         await new Promise<void>((resolve) => {
-            registerTimeout(() => resolve(), 360);
+            registerTimeout(() => resolve(), 320);
         });
         if (!isMountedRef.current) return;
 
@@ -688,16 +648,16 @@ export default function LoginPage() {
 
         const failCount = failedAttempts[cleanEmail] || 0;
         const isSeedLocked = matched.status === "LOCKED" && !unlockedEmails[cleanEmail];
+        const matchedLabel = language === "en" ? matched.accountLabelEn : matched.accountLabelVi;
 
         if (isSeedLocked || failCount >= 5) {
-            const lockMsg =
+            setAuthError(
                 language === "en"
-                    ? `This account (${cleanEmail}) has been temporarily locked due to multiple failed sign-in attempts. Please reset your password or contact an administrator.`
-                    : `Tài khoản (${cleanEmail}) đã bị tạm khóa do nhập sai mật khẩu quá 5 lần. Vui lòng khôi phục mật khẩu hoặc liên hệ Quản trị viên.`;
-            setAuthError(lockMsg);
-
+                    ? `Account (${cleanEmail}) is locked due to security policy or 5 failed attempts.`
+                    : `Tài khoản (${cleanEmail}) đang bị khóa do chính sách bảo mật hoặc nhập sai quá 5 lần.`
+            );
             appendSecurityAuditLog({
-                actor: matched.accountLabel,
+                actor: matchedLabel,
                 role: matched.roleCode,
                 tenant: matched.brandTenant,
                 action: "LOGIN_REFUSED_ACCOUNT_LOCKED",
@@ -718,9 +678,8 @@ export default function LoginPage() {
             persistSecurityState(nextFailMap, updatedPasswords, unlockedEmails);
 
             const left = Math.max(0, 5 - nextFail);
-
             appendSecurityAuditLog({
-                actor: matched.accountLabel,
+                actor: matchedLabel,
                 role: matched.roleCode,
                 tenant: matched.brandTenant,
                 action: left === 0 ? "ACCOUNT_LOCKED_MAX_ATTEMPTS" : "LOGIN_FAILED_WRONG_PASSWORD",
@@ -732,11 +691,11 @@ export default function LoginPage() {
             setAuthError(
                 left === 0
                     ? language === "en"
-                        ? `Maximum failed attempts reached. Account "${cleanEmail}" is now locked for security.`
-                        : `Đã vượt quá 5 lần thử. Tài khoản "${cleanEmail}" đã bị khóa để bảo mật.`
+                        ? `Account "${cleanEmail}" is now locked after 5 failed attempts.`
+                        : `Tài khoản "${cleanEmail}" đã bị khóa sau 5 lần nhập sai.`
                     : language === "vi"
-                        ? `Email hoặc mật khẩu không chính xác. Còn ${left}/5 lần thử trước khi tài khoản bị tạm khóa.`
-                        : `Invalid email or password. ${left}/5 attempt(s) remaining before temporary lockout.`
+                        ? `Sai mật khẩu. Còn ${left}/5 lần thử trước khi bị khóa.`
+                        : `Invalid password. ${left}/5 attempt(s) remaining before lockout.`
             );
             setLoading(false);
             return;
@@ -760,18 +719,9 @@ export default function LoginPage() {
         if (otpInput.trim() !== "123456") {
             setOtpError(
                 language === "en"
-                    ? "Invalid 6-digit verification code. Please enter 123456 for demonstration."
-                    : "Mã xác thực 6 chữ số không chính xác. Vui lòng nhập mã demo: 123456."
+                    ? "Invalid 6-digit code. Demo code: 123456."
+                    : "Mã xác thực 6 chữ số không đúng. Mã kiểm thử: 123456."
             );
-            appendSecurityAuditLog({
-                actor: pending2FAUser.accountLabel,
-                role: pending2FAUser.roleCode,
-                tenant: pending2FAUser.brandTenant,
-                action: "2FA_VERIFICATION_FAILED",
-                entityId: pending2FAUser.email,
-                severity: "WARNING",
-                details: { enteredOtp: otpInput },
-            });
             return;
         }
         const userToAuth = pending2FAUser;
@@ -789,14 +739,12 @@ export default function LoginPage() {
                 setForgotError(t.errEmailFormat);
                 return;
             }
-            const matchedAccount = ENTERPRISE_SEED_ACCOUNTS.find(
-                (acc) => acc.email.toLowerCase() === clean
-            );
+            const matchedAccount = ENTERPRISE_SEED_ACCOUNTS.find((acc) => acc.email.toLowerCase() === clean);
             if (!matchedAccount) {
                 setForgotError(
                     language === "en"
-                        ? `No registered corporate account found for "${clean}".`
-                        : `Không tìm thấy tài khoản doanh nghiệp "${clean}".`
+                        ? `No account found for "${clean}".`
+                        : `Không tìm thấy tài khoản "${clean}".`
                 );
                 return;
             }
@@ -814,19 +762,18 @@ export default function LoginPage() {
             if (!hasMinLen || !hasUpper || !hasLower || !hasDigit || !hasSpecial) {
                 setForgotError(
                     language === "en"
-                        ? "Password must meet all security requirements (min 8 characters, uppercase, lowercase, number, and special character)."
-                        : "Mật khẩu mới phải đáp ứng đủ các tiêu chí bảo mật (tối thiểu 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt)."
+                        ? "Password must be at least 8 characters with uppercase, lowercase, number, and symbol."
+                        : "Mật khẩu cần tối thiểu 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt."
                 );
                 return;
             }
             if (newPassword !== confirmPassword) {
                 setForgotError(
-                    language === "en"
-                        ? "Password confirmation does not match."
-                        : "Mật khẩu xác nhận không khớp."
+                    language === "en" ? "Passwords do not match." : "Mật khẩu xác nhận không khớp."
                 );
                 return;
             }
+
             const clean = forgotEmail.trim().toLowerCase();
             const nextPasswords = { ...updatedPasswords, [clean]: newPassword };
             const nextFailures = { ...failedAttempts, [clean]: 0 };
@@ -853,6 +800,7 @@ export default function LoginPage() {
 
     return (
         <main className={`${styles.viewport} notranslate`} translate="no" onClick={() => setLangOpen(false)}>
+            {/* GIỮ VIDEO NỀN */}
             <div className={styles.videoBackdropContainer} aria-hidden="true">
                 <video
                     ref={videoRef}
@@ -872,25 +820,14 @@ export default function LoginPage() {
 
             <header className={styles.topHeader}>
                 <div className={styles.topHeaderInner}>
-                    <div
-                        className={styles.brandTypographyOnly}
-                        onClick={() => router.push("/")}
-                    >
+                    <div className={styles.brandTypographyOnly} onClick={() => router.push("/")}>
                         <span className={styles.brandNameText} translate="no">
                             ScentStation
                         </span>
-                        <span className={styles.brandSubText}>{t.platformSubtitle}</span>
                     </div>
 
-                    <div
-                        className={styles.headerControlsRight}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <button
-                            type="button"
-                            onClick={() => router.push("/")}
-                            className={styles.videoControlBtn}
-                        >
+                    <div className={styles.headerControlsRight} onClick={(e) => e.stopPropagation()}>
+                        <button type="button" onClick={() => router.push("/")} className={styles.videoControlBtn}>
                             <ArrowLeft size={14} color="#D4AF37" />
                             <span>{t.backToGateway}</span>
                         </button>
@@ -899,13 +836,17 @@ export default function LoginPage() {
                             type="button"
                             onClick={() => setIsVideoMuted(!isVideoMuted)}
                             className={styles.videoControlBtn}
-                            title={isVideoMuted ? "Unmute ambient audio" : "Mute ambient audio"}
+                            title={
+                                language === "en"
+                                    ? isVideoMuted
+                                        ? "Unmute background audio"
+                                        : "Mute background audio"
+                                    : isVideoMuted
+                                        ? "Bật âm thanh nền"
+                                        : "Tắt âm thanh nền"
+                            }
                         >
-                            {isVideoMuted ? (
-                                <VolumeX size={15} color="#94A3B8" />
-                            ) : (
-                                <Volume2 size={15} color="#D4AF37" />
-                            )}
+                            {isVideoMuted ? <VolumeX size={15} color="#94A3B8" /> : <Volume2 size={15} color="#D4AF37" />}
                         </button>
 
                         <div className={styles.langSelectorWrapper}>
@@ -931,23 +872,19 @@ export default function LoginPage() {
                                 <div className={styles.langDropdown}>
                                     <button
                                         type="button"
-                                        onClick={() => handleChangeLanguage("en")}
-                                        className={`${styles.langOption} ${
-                                            language === "en" ? styles.langOptionActive : ""
-                                        }`}
-                                    >
-                                        <span>English (EN)</span>
-                                        {language === "en" && <Check size={14} color="#D4AF37" />}
-                                    </button>
-                                    <button
-                                        type="button"
                                         onClick={() => handleChangeLanguage("vi")}
-                                        className={`${styles.langOption} ${
-                                            language === "vi" ? styles.langOptionActive : ""
-                                        }`}
+                                        className={`${styles.langOption} ${language === "vi" ? styles.langOptionActive : ""}`}
                                     >
                                         <span>Tiếng Việt (VI)</span>
                                         {language === "vi" && <Check size={14} color="#D4AF37" />}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleChangeLanguage("en")}
+                                        className={`${styles.langOption} ${language === "en" ? styles.langOptionActive : ""}`}
+                                    >
+                                        <span>English (EN)</span>
+                                        {language === "en" && <Check size={14} color="#D4AF37" />}
                                     </button>
                                 </div>
                             )}
@@ -957,71 +894,19 @@ export default function LoginPage() {
             </header>
 
             <div className={styles.mainWorkspace}>
+                {/* CỘT TRÁI: TRẠNG THÁI & CHỌN NHANH 6 VAI TRÒ */}
                 <div className={styles.telemetryPanel}>
                     <div className={styles.statusPill}>
                         <span className={styles.statusDot} />
                         <span>
                             {language === "en"
-                                ? `LIVE NETWORK • ${onlineKiosksCount} OF ${totalKiosksCount} BOUTIQUE STATIONS ONLINE`
-                                : `MẠNG LƯỚI TRỰC TUYẾN • ${onlineKiosksCount}/${totalKiosksCount} TRẠM ĐANG HOẠT ĐỘNG`}
+                                ? `${onlineKiosksCount}/${totalKiosksCount} stations online`
+                                : `${onlineKiosksCount}/${totalKiosksCount} trạm đang hoạt động`}
                         </span>
                     </div>
 
                     <h1 className={styles.heroHeading}>{t.heroTitle}</h1>
                     <p className={styles.heroDescription}>{t.heroDesc}</p>
-
-                    <div className={styles.kpiGrid}>
-                        <div className={styles.kpiCard}>
-                            <div className={styles.kpiValue} translate="no">
-                                21 Maisons
-                            </div>
-                            <div className={styles.kpiLabel}>{t.kpi1}</div>
-                        </div>
-                        <div className={styles.kpiCard}>
-                            <div className={styles.kpiValue} translate="no">
-                                34 Scents
-                            </div>
-                            <div className={styles.kpiLabel}>{t.kpi2}</div>
-                        </div>
-                        <div className={styles.kpiCard}>
-                            <div className={styles.kpiValue} translate="no">
-                                0.12 ml
-                            </div>
-                            <div className={styles.kpiLabel}>{t.kpi3}</div>
-                        </div>
-                    </div>
-
-                    <div className={styles.architecturePillars}>
-                        <div className={styles.pillarItem}>
-                            <div className={styles.pillarIconBox}>
-                                <Building2 size={17} color="#D4AF37" />
-                            </div>
-                            <div>
-                                <div className={styles.pillarTitle}>{t.pillar1Title}</div>
-                                <div className={styles.pillarDesc}>{t.pillar1Desc}</div>
-                            </div>
-                        </div>
-
-                        <div className={styles.pillarItem}>
-                            <div className={styles.pillarIconBox}>
-                                <Cpu size={17} color="#34D399" />
-                            </div>
-                            <div>
-                                <div className={styles.pillarTitle}>{t.pillar2Title}</div>
-                                <div className={styles.pillarDesc}>{t.pillar2Desc}</div>
-                            </div>
-                        </div>
-
-                        <div className={styles.pillarItem}>
-                            <div className={styles.pillarIconBox}>
-                                <Users size={17} color="#F5E6AD" />
-                            </div>
-                            <div>
-                                <div className={styles.pillarTitle}>{t.pillar3Title}</div>
-                                <div className={styles.pillarDesc}>{t.pillar3Desc}</div>
-                            </div>
-                        </div>
-                    </div>
 
                     <div className={styles.seedDirectoryCard}>
                         <button
@@ -1030,7 +915,7 @@ export default function LoginPage() {
                             className={styles.seedDirectoryHeaderBtn}
                         >
                             <span style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}>
-                                <Sparkles size={13} color="#D4AF37" />
+                                <Users size={14} color="#D4AF37" />
                                 <span>{t.seedToggleLabel}</span>
                             </span>
                             <ChevronDown
@@ -1068,39 +953,23 @@ export default function LoginPage() {
                                             }`}
                                         >
                                             <div style={{ minWidth: 0, flex: 1 }}>
-                                                <div
-                                                    style={{
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        gap: "0.45rem",
-                                                        flexWrap: "wrap",
-                                                    }}
-                                                >
-                                                    <strong style={{ color: "#FFF", fontSize: "0.79rem" }}>
-                                                        {acc.accountLabel}
+                                                <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", flexWrap: "wrap" }}>
+                                                    <strong style={{ color: "#FFF", fontSize: "0.84rem" }}>
+                                                        {language === "en" ? acc.accountLabelEn : acc.accountLabelVi}
                                                     </strong>
-                                                    <span
-                                                        translate="no"
-                                                        style={{
-                                                            fontFamily: "Space Grotesk, monospace",
-                                                            fontSize: "0.69rem",
-                                                            color: "#F5E6AD",
-                                                        }}
-                                                    >
+                                                    <span style={{ fontSize: "0.75rem", color: "#F5E6AD" }}>
                                                         {acc.email}
                                                     </span>
                                                 </div>
-                                                <div style={{ fontSize: "0.68rem", color: "#94A3B8", marginTop: "2px" }}>
-                                                    {acc.brandScopeDisplay}
+                                                <div style={{ fontSize: "0.74rem", color: "#94A3B8", marginTop: "2px" }}>
+                                                    {language === "en" ? acc.scopeEn : acc.scopeVi}
                                                 </div>
                                             </div>
 
                                             <span
-                                                translate="no"
                                                 style={{
-                                                    fontSize: "0.63rem",
+                                                    fontSize: "0.7rem",
                                                     fontWeight: 700,
-                                                    fontFamily: "Space Grotesk, monospace",
                                                     padding: "0.22rem 0.55rem",
                                                     borderRadius: "999px",
                                                     whiteSpace: "nowrap",
@@ -1116,15 +985,13 @@ export default function LoginPage() {
                                                                 ? "rgba(251,191,36,0.4)"
                                                                 : "rgba(52,211,153,0.4)"
                                                     }`,
-                                                    color: isCurrentlyLocked
-                                                        ? "#F87171"
-                                                        : acc.requires2FA
-                                                            ? "#FBBF24"
-                                                            : "#34D399",
+                                                    color: isCurrentlyLocked ? "#F87171" : acc.requires2FA ? "#FBBF24" : "#34D399",
                                                 }}
                                             >
                                                 {isCurrentlyLocked
-                                                    ? "SUSPENDED"
+                                                    ? language === "en"
+                                                        ? "LOCKED"
+                                                        : "BỊ KHÓA"
                                                     : acc.requires2FA
                                                         ? `${acc.roleCode} • 2FA`
                                                         : acc.roleCode}
@@ -1137,19 +1004,19 @@ export default function LoginPage() {
                     </div>
                 </div>
 
+                {/* CỘT PHẢI: FORM ĐĂNG NHẬP */}
                 <section className={styles.authCardContainer}>
                     <div className={styles.authCard}>
                         <div className={styles.authHeader}>
-                            <span className={styles.authEyebrow}>
-                                {language === "en" ? "CORPORATE ACCESS PORTAL" : "CỔNG TRUY CẬP DOANH NGHIỆP"}
-                            </span>
                             <h2 className={styles.authTitle}>{t.cardTitle}</h2>
                             <p className={styles.authSubtitle}>{t.cardSubtitle}</p>
 
                             {existingSessionUser && (
                                 <div className={styles.activeSessionBanner}>
-                                    <div style={{ fontSize: "0.73rem", color: "#E2E8F0" }}>
-                                        <span style={{ color: "#34D399", fontWeight: 700 }}>● Signed in as:</span>{" "}
+                                    <div style={{ fontSize: "0.78rem", color: "#E2E8F0" }}>
+                                        <span style={{ color: "#34D399", fontWeight: 700 }}>
+                                            ● {language === "en" ? "Signed in:" : "Đang đăng nhập:"}
+                                        </span>{" "}
                                         <strong>{existingSessionUser.fullName}</strong> ({existingSessionUser.roleCode})
                                     </div>
                                     <div style={{ display: "flex", gap: "0.4rem" }}>
@@ -1175,7 +1042,7 @@ export default function LoginPage() {
 
                             {requestedRedirect && (
                                 <div className={styles.redirectNoticePill}>
-                                    {language === "en" ? "Continuing to:" : "Chuyển hướng sau khi đăng nhập:"}{" "}
+                                    {language === "en" ? "Redirect after sign in:" : "Chuyển đến sau khi đăng nhập:"}{" "}
                                     <strong>{requestedRedirect}</strong>
                                 </div>
                             )}
@@ -1184,15 +1051,11 @@ export default function LoginPage() {
                         <form onSubmit={handleSignInSubmit} noValidate>
                             <div className={styles.fieldBlock}>
                                 <label htmlFor="login-email" className={styles.fieldLabel}>
-                                    <span>{t.emailLabel}</span>
+                                    {t.emailLabel}
                                 </label>
-                                <div
-                                    className={`${styles.inputShell} ${
-                                        emailError ? styles.inputShellError : ""
-                                    }`}
-                                >
+                                <div className={`${styles.inputShell} ${emailError ? styles.inputShellError : ""}`}>
                                     <span className={styles.inputIconPrefix}>
-                                        <Mail size={17} />
+                                        <Mail size={16} />
                                     </span>
                                     <input
                                         id="login-email"
@@ -1217,15 +1080,11 @@ export default function LoginPage() {
 
                             <div className={styles.fieldBlock}>
                                 <label htmlFor="login-password" className={styles.fieldLabel}>
-                                    <span>{t.passwordLabel}</span>
+                                    {t.passwordLabel}
                                 </label>
-                                <div
-                                    className={`${styles.inputShell} ${
-                                        passwordError ? styles.inputShellError : ""
-                                    }`}
-                                >
+                                <div className={`${styles.inputShell} ${passwordError ? styles.inputShellError : ""}`}>
                                     <span className={styles.inputIconPrefix}>
-                                        <Lock size={17} />
+                                        <Lock size={16} />
                                     </span>
                                     <input
                                         id="login-password"
@@ -1243,10 +1102,18 @@ export default function LoginPage() {
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
-                                        aria-label={showPassword ? "Hide password" : "Show password"}
+                                        aria-label={
+                                            language === "en"
+                                                ? showPassword
+                                                    ? "Hide password"
+                                                    : "Show password"
+                                                : showPassword
+                                                    ? "Ẩn mật khẩu"
+                                                    : "Hiện mật khẩu"
+                                        }
                                         className={styles.eyeToggleBtn}
                                     >
-                                        {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                                     </button>
                                 </div>
                                 {passwordError && (
@@ -1262,11 +1129,7 @@ export default function LoginPage() {
                                         type="checkbox"
                                         checked={rememberMe}
                                         onChange={(e) => setRememberMe(e.target.checked)}
-                                        style={{
-                                            accentColor: "#D4AF37",
-                                            width: "15px",
-                                            height: "15px",
-                                        }}
+                                        style={{ accentColor: "#D4AF37", width: "15px", height: "15px" }}
                                     />
                                     <span>{t.rememberMe}</span>
                                 </label>
@@ -1307,17 +1170,15 @@ export default function LoginPage() {
                                                         setAuthError("");
                                                         setAuthSuccess(
                                                             language === "en"
-                                                                ? `Administrator Override: Account "${cleanKey}" has been unlocked.`
-                                                                : `Quản trị viên đã mở khóa cho tài khoản "${cleanKey}".`
+                                                                ? `Unlocked account "${cleanKey}".`
+                                                                : `Đã mở khóa tài khoản "${cleanKey}".`
                                                         );
                                                     }}
                                                     className={styles.adminUnlockBtn}
                                                 >
                                                     <Unlock size={12} />
                                                     <span>
-                                                        {language === "en"
-                                                            ? "Unlock Account (Admin Override)"
-                                                            : "Mở khóa nhanh (Quyền Super Admin)"}
+                                                        {language === "en" ? "Unlock (Demo)" : "Mở khóa (Kiểm thử)"}
                                                     </span>
                                                 </button>
                                             )}
@@ -1330,58 +1191,22 @@ export default function LoginPage() {
                                 <div className={styles.authSuccessAlert} role="status">
                                     <CheckCircle2
                                         size={15}
-                                        style={{
-                                            display: "inline",
-                                            marginRight: "6px",
-                                            verticalAlign: "text-bottom",
-                                        }}
+                                        style={{ display: "inline", marginRight: "6px", verticalAlign: "text-bottom" }}
                                     />
                                     {authSuccess}
                                 </div>
                             )}
 
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className={styles.signInBtn}
-                            >
+                            <button type="submit" disabled={loading} className={styles.signInBtn}>
                                 <Lock size={15} />
                                 <span>{loading ? t.signingInBtn : t.signInBtn}</span>
                             </button>
                         </form>
-
-                        <div className={styles.securityInfoPanel}>
-                            <ShieldCheck
-                                size={20}
-                                color="#34D399"
-                                style={{ flexShrink: 0, marginTop: "2px" }}
-                            />
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                <div
-                                    style={{
-                                        fontSize: "0.76rem",
-                                        fontWeight: 700,
-                                        color: "#F5E6AD",
-                                    }}
-                                >
-                                    {t.securityHeading}
-                                </div>
-                                <div
-                                    style={{
-                                        fontSize: "0.69rem",
-                                        color: "#94A3B8",
-                                        lineHeight: 1.5,
-                                        marginTop: "3px",
-                                    }}
-                                >
-                                    {t.securityBody}
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </section>
             </div>
 
+            {/* MODAL QUÊN MẬT KHẨU */}
             {isForgotOpen && (() => {
                 const cleanForgot = forgotEmail.trim().toLowerCase();
                 const matchedForgotAcc = ENTERPRISE_SEED_ACCOUNTS.find(
@@ -1404,54 +1229,25 @@ export default function LoginPage() {
                 return (
                     <div className={styles.modalOverlay} onClick={() => setIsForgotOpen(false)}>
                         <div className={styles.recoveryModalCard} onClick={(e) => e.stopPropagation()}>
-                            <div
-                                style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "flex-start",
-                                    marginBottom: "0.85rem",
-                                }}
-                            >
-                                <div>
-                                    <span
-                                        translate="no"
-                                        style={{
-                                            fontSize: "0.65rem",
-                                            color: "#D4AF37",
-                                            fontWeight: 700,
-                                            letterSpacing: "0.14em",
-                                            fontFamily: "Space Grotesk, monospace",
-                                            display: "block",
-                                        }}
-                                    >
-                                        ACCOUNT CREDENTIAL RECOVERY
-                                    </span>
-                                    <h3
-                                        style={{
-                                            margin: "0.18rem 0 0 0",
-                                            fontSize: "1.25rem",
-                                            color: "#FFF",
-                                            fontFamily: "Bodoni Moda, Georgia, serif",
-                                            fontWeight: 600,
-                                        }}
-                                    >
-                                        <KeyRound
-                                            size={18}
-                                            color="#D4AF37"
-                                            style={{ display: "inline", marginRight: "8px", verticalAlign: "middle" }}
-                                        />
-                                        {language === "en" ? "Reset Corporate Password" : "Khôi Phục Mật Khẩu"}
-                                    </h3>
-                                </div>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.85rem" }}>
+                                <h3 style={{ margin: 0, fontSize: "1.15rem", color: "#FFF", fontWeight: 700 }}>
+                                    <KeyRound
+                                        size={17}
+                                        color="#D4AF37"
+                                        style={{ display: "inline", marginRight: "8px", verticalAlign: "middle" }}
+                                    />
+                                    {language === "en" ? "Reset Password" : "Khôi phục mật khẩu"}
+                                </h3>
                                 <button
                                     type="button"
                                     onClick={() => setIsForgotOpen(false)}
+                                    title={language === "en" ? "Close" : "Đóng"}
                                     style={{
-                                        background: "rgba(255,255,255,0.05)",
+                                        background: "rgba(255,255,255,0.06)",
                                         border: "1px solid rgba(255,255,255,0.12)",
                                         borderRadius: "8px",
                                         padding: "0.3rem",
-                                        color: "#94A3B8",
+                                        color: "#CBD5E1",
                                         cursor: "pointer",
                                         display: "flex",
                                     }}
@@ -1460,52 +1256,26 @@ export default function LoginPage() {
                                 </button>
                             </div>
 
-                            <div className={styles.recoveryStepper} translate="no">
-                                <div
-                                    className={`${styles.recoveryStepPill} ${
-                                        forgotStep === "EMAIL"
-                                            ? styles.recoveryStepActive
-                                            : styles.recoveryStepDone
-                                    }`}
-                                >
+                            <div className={styles.recoveryStepper}>
+                                <div className={`${styles.recoveryStepPill} ${forgotStep === "EMAIL" ? styles.recoveryStepActive : styles.recoveryStepDone}`}>
                                     <span>01</span>
-                                    <span>VERIFY EMAIL</span>
+                                    <span>{language === "en" ? "EMAIL" : "XÁC MINH EMAIL"}</span>
                                 </div>
-                                <div
-                                    className={`${styles.recoveryStepPill} ${
-                                        forgotStep === "NEW_PW"
-                                            ? styles.recoveryStepActive
-                                            : forgotStep === "SUCCESS"
-                                                ? styles.recoveryStepDone
-                                                : ""
-                                    }`}
-                                >
+                                <div className={`${styles.recoveryStepPill} ${forgotStep === "NEW_PW" ? styles.recoveryStepActive : forgotStep === "SUCCESS" ? styles.recoveryStepDone : ""}`}>
                                     <span>02</span>
-                                    <span>NEW PASSWORD</span>
+                                    <span>{language === "en" ? "NEW PASSWORD" : "MẬT KHẨU MỚI"}</span>
                                 </div>
-                                <div
-                                    className={`${styles.recoveryStepPill} ${
-                                        forgotStep === "SUCCESS" ? styles.recoveryStepDone : ""
-                                    }`}
-                                >
+                                <div className={`${styles.recoveryStepPill} ${forgotStep === "SUCCESS" ? styles.recoveryStepDone : ""}`}>
                                     <span>03</span>
-                                    <span>COMPLETE</span>
+                                    <span>{language === "en" ? "DONE" : "HOÀN TẤT"}</span>
                                 </div>
                             </div>
 
-                            {forgotError && (
-                                <div className={styles.authErrorAlert}>{forgotError}</div>
-                            )}
+                            {forgotError && <div className={styles.authErrorAlert}>{forgotError}</div>}
 
                             {forgotStep === "EMAIL" && (
                                 <form onSubmit={handleForgotPasswordFlow}>
-                                    <p style={{ fontSize: "0.8rem", color: "#CBD5E1", lineHeight: 1.5, margin: "0 0 0.75rem 0" }}>
-                                        {language === "en"
-                                            ? "Enter your registered corporate email address to verify your identity and set a new password:"
-                                            : "Nhập địa chỉ email doanh nghiệp đã đăng ký để xác minh danh tính và thiết lập mật khẩu mới:"}
-                                    </p>
-
-                                    <div className={styles.quickAccountChips} translate="no">
+                                    <div className={styles.quickAccountChips}>
                                         {ENTERPRISE_SEED_ACCOUNTS.map((acc) => {
                                             const isSelected = acc.email.toLowerCase() === cleanForgot;
                                             return (
@@ -1516,9 +1286,7 @@ export default function LoginPage() {
                                                         setForgotEmail(acc.email);
                                                         setForgotError("");
                                                     }}
-                                                    className={`${styles.quickChipBtn} ${
-                                                        isSelected ? styles.quickChipBtnActive : ""
-                                                    }`}
+                                                    className={`${styles.quickChipBtn} ${isSelected ? styles.quickChipBtnActive : ""}`}
                                                 >
                                                     {acc.roleCode}: {acc.email.split("@")[0]}
                                                 </button>
@@ -1546,45 +1314,39 @@ export default function LoginPage() {
                                     {matchedForgotAcc && (
                                         <div className={styles.accountPreviewBox}>
                                             <div>
-                                                <div style={{ fontWeight: 700, color: "#FFF", fontSize: "0.78rem" }}>
-                                                    {matchedForgotAcc.accountLabel}
+                                                <div style={{ fontWeight: 700, color: "#FFF", fontSize: "0.84rem" }}>
+                                                    {language === "en" ? matchedForgotAcc.accountLabelEn : matchedForgotAcc.accountLabelVi}
                                                 </div>
-                                                <div style={{ fontSize: "0.68rem", color: "#94A3B8" }}>
-                                                    {matchedForgotAcc.brandScopeDisplay}
+                                                <div style={{ fontSize: "0.74rem", color: "#94A3B8" }}>
+                                                    {language === "en" ? matchedForgotAcc.scopeEn : matchedForgotAcc.scopeVi}
                                                 </div>
                                             </div>
                                             <span
-                                                translate="no"
                                                 style={{
-                                                    fontSize: "0.64rem",
+                                                    fontSize: "0.7rem",
                                                     fontWeight: 700,
-                                                    fontFamily: "Space Grotesk, monospace",
                                                     padding: "0.22rem 0.55rem",
                                                     borderRadius: "999px",
-                                                    background: isForgotAccLocked
-                                                        ? "rgba(248,113,113,0.16)"
-                                                        : "rgba(52,211,153,0.14)",
-                                                    border: `1px solid ${
-                                                        isForgotAccLocked
-                                                            ? "rgba(248,113,113,0.4)"
-                                                            : "rgba(52,211,153,0.4)"
-                                                    }`,
+                                                    background: isForgotAccLocked ? "rgba(248,113,113,0.16)" : "rgba(52,211,153,0.14)",
+                                                    border: `1px solid ${isForgotAccLocked ? "rgba(248,113,113,0.4)" : "rgba(52,211,153,0.4)"}`,
                                                     color: isForgotAccLocked ? "#F87171" : "#34D399",
                                                     whiteSpace: "nowrap",
                                                 }}
                                             >
-                                                {isForgotAccLocked ? "SUSPENDED" : "VERIFIED"}
+                                                {isForgotAccLocked
+                                                    ? language === "en"
+                                                        ? "LOCKED"
+                                                        : "BỊ KHÓA"
+                                                    : language === "en"
+                                                        ? "VALID"
+                                                        : "HỢP LỆ"}
                                             </span>
                                         </div>
                                     )}
 
                                     <div className={styles.modalActionStack}>
                                         <button type="submit" className={styles.signInBtn}>
-                                            <span>
-                                                {language === "en"
-                                                    ? "Continue to Password Reset"
-                                                    : "Tiếp Tục Đặt Lại Mật Khẩu"}
-                                            </span>
+                                            <span>{language === "en" ? "Continue" : "Tiếp tục"}</span>
                                         </button>
                                     </div>
                                 </form>
@@ -1594,13 +1356,12 @@ export default function LoginPage() {
                                 <form onSubmit={handleForgotPasswordFlow}>
                                     <div
                                         style={{
-                                            padding: "0.65rem 0.85rem",
-                                            borderRadius: "11px",
+                                            padding: "0.6rem 0.85rem",
+                                            borderRadius: "10px",
                                             background: "rgba(52, 211, 153, 0.1)",
-                                            border: "1px solid rgba(52, 211, 153, 0.38)",
+                                            border: "1px solid rgba(52, 211, 153, 0.35)",
                                             color: "#34D399",
-                                            fontSize: "0.75rem",
-                                            lineHeight: 1.45,
+                                            fontSize: "0.8rem",
                                             marginBottom: "0.85rem",
                                             display: "flex",
                                             justifyContent: "space-between",
@@ -1610,7 +1371,7 @@ export default function LoginPage() {
                                         }}
                                     >
                                         <span>
-                                            ✓ Account verified: <strong>{forgotEmail}</strong>
+                                            ✓ {language === "en" ? "Account:" : "Tài khoản:"} <strong>{forgotEmail}</strong>
                                         </span>
                                         <button
                                             type="button"
@@ -1624,13 +1385,13 @@ export default function LoginPage() {
                                                 border: "1px solid #D4AF37",
                                                 color: "#F5E6AD",
                                                 borderRadius: "6px",
-                                                padding: "0.2rem 0.5rem",
-                                                fontSize: "0.66rem",
+                                                padding: "0.22rem 0.55rem",
+                                                fontSize: "0.72rem",
                                                 fontWeight: 700,
                                                 cursor: "pointer",
                                             }}
                                         >
-                                            Fill Strong Password
+                                            {language === "en" ? "Autofill Sample" : "Điền mật khẩu mẫu"}
                                         </button>
                                     </div>
 
@@ -1646,18 +1407,22 @@ export default function LoginPage() {
                                                 setNewPassword(e.target.value);
                                                 setForgotError("");
                                             }}
-                                            placeholder={
-                                                language === "en"
-                                                    ? "Enter new password"
-                                                    : "Nhập mật khẩu mới"
-                                            }
+                                            placeholder={language === "en" ? "New password" : "Nhập mật khẩu mới"}
                                             className={styles.textInput}
                                         />
                                         <button
                                             type="button"
                                             onClick={() => setShowNewPassword(!showNewPassword)}
                                             className={styles.eyeToggleBtn}
-                                            aria-label={showNewPassword ? "Hide new password" : "Show new password"}
+                                            aria-label={
+                                                language === "en"
+                                                    ? showNewPassword
+                                                        ? "Hide password"
+                                                        : "Show password"
+                                                    : showNewPassword
+                                                        ? "Ẩn mật khẩu"
+                                                        : "Hiện mật khẩu"
+                                            }
                                         >
                                             {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                                         </button>
@@ -1675,39 +1440,35 @@ export default function LoginPage() {
                                                 setConfirmPassword(e.target.value);
                                                 setForgotError("");
                                             }}
-                                            placeholder={
-                                                language === "en"
-                                                    ? "Confirm new password"
-                                                    : "Nhập lại mật khẩu mới"
-                                            }
+                                            placeholder={language === "en" ? "Confirm new password" : "Nhập lại mật khẩu mới"}
                                             className={styles.textInput}
                                         />
                                     </div>
 
-                                    <div className={styles.pwCriteriaGrid} translate="no">
+                                    <div className={styles.pwCriteriaGrid}>
                                         <div className={`${styles.pwCriteriaItem} ${pwChecks.len ? styles.pwCriteriaPass : ""}`}>
                                             <Check size={12} />
-                                            <span>8+ characters</span>
+                                            <span>{language === "en" ? "8+ characters" : "Tối thiểu 8 ký tự"}</span>
                                         </div>
                                         <div className={`${styles.pwCriteriaItem} ${pwChecks.upper ? styles.pwCriteriaPass : ""}`}>
                                             <Check size={12} />
-                                            <span>Uppercase (A-Z)</span>
+                                            <span>{language === "en" ? "Uppercase (A-Z)" : "Chữ hoa (A-Z)"}</span>
                                         </div>
                                         <div className={`${styles.pwCriteriaItem} ${pwChecks.lower ? styles.pwCriteriaPass : ""}`}>
                                             <Check size={12} />
-                                            <span>Lowercase (a-z)</span>
+                                            <span>{language === "en" ? "Lowercase (a-z)" : "Chữ thường (a-z)"}</span>
                                         </div>
                                         <div className={`${styles.pwCriteriaItem} ${pwChecks.digit ? styles.pwCriteriaPass : ""}`}>
                                             <Check size={12} />
-                                            <span>Number (0-9)</span>
+                                            <span>{language === "en" ? "Number (0-9)" : "Chữ số (0-9)"}</span>
                                         </div>
                                         <div className={`${styles.pwCriteriaItem} ${pwChecks.special ? styles.pwCriteriaPass : ""}`}>
                                             <Check size={12} />
-                                            <span>Special (@#$%!)</span>
+                                            <span>{language === "en" ? "Symbol (@#$%!)" : "Ký tự đặc biệt"}</span>
                                         </div>
                                         <div className={`${styles.pwCriteriaItem} ${pwChecks.match ? styles.pwCriteriaPass : ""}`}>
                                             <Check size={12} />
-                                            <span>Passwords match</span>
+                                            <span>{language === "en" ? "Passwords match" : "Khớp mật khẩu"}</span>
                                         </div>
                                     </div>
 
@@ -1721,12 +1482,8 @@ export default function LoginPage() {
                                             <span>{language === "en" ? "Back" : "Quay lại"}</span>
                                         </button>
                                         <button type="submit" className={styles.signInBtn} style={{ flex: 1.55 }}>
-                                            <Unlock size={16} />
-                                            <span>
-                                                {language === "en"
-                                                    ? "Update Password & Unlock"
-                                                    : "Cập Nhật & Mở Khóa"}
-                                            </span>
+                                            <Unlock size={15} />
+                                            <span>{language === "en" ? "Save & Unlock" : "Lưu & Mở khóa"}</span>
                                         </button>
                                     </div>
                                 </form>
@@ -1736,20 +1493,12 @@ export default function LoginPage() {
                                 <div>
                                     <div className={styles.authSuccessAlert}>
                                         <strong>
-                                            {language === "en"
-                                                ? "✓ Password Updated Successfully"
-                                                : "✓ Đã Cập Nhật Mật Khẩu Thành Công"}
+                                            ✓ {language === "en" ? "Password updated" : "Đã cập nhật mật khẩu"}
                                         </strong>
                                         <div style={{ marginTop: "0.25rem", color: "#E2E8F0" }}>
-                                            {language === "en" ? (
-                                                <>
-                                                    Your new password for <strong>{forgotEmail}</strong> is active and any security lockouts have been cleared.
-                                                </>
-                                            ) : (
-                                                <>
-                                                    Mật khẩu mới cho tài khoản <strong>{forgotEmail}</strong> đã có hiệu lực và trạng thái khóa bảo mật đã được gỡ bỏ.
-                                                </>
-                                            )}
+                                            {language === "en"
+                                                ? `Account ${forgotEmail} is unlocked and ready to sign in.`
+                                                : `Tài khoản ${forgotEmail} đã được mở khóa và sẵn sàng đăng nhập.`}
                                         </div>
                                     </div>
                                     <button
@@ -1760,17 +1509,13 @@ export default function LoginPage() {
                                             setIsForgotOpen(false);
                                             setAuthSuccess(
                                                 language === "en"
-                                                    ? "Password updated. You may now sign in with your new credentials."
-                                                    : "Đã điền mật khẩu mới. Bạn có thể bấm Đăng nhập ngay."
+                                                    ? "New password filled. Click Sign In."
+                                                    : "Đã điền mật khẩu mới. Bấm Đăng nhập."
                                             );
                                         }}
                                         className={styles.signInBtn}
                                     >
-                                        <span>
-                                            {language === "en"
-                                                ? "Return to Sign In"
-                                                : "Quay Lại Đăng Nhập"}
-                                        </span>
+                                        <span>{language === "en" ? "Back to Sign In" : "Quay lại đăng nhập"}</span>
                                     </button>
                                 </div>
                             )}
@@ -1779,46 +1524,24 @@ export default function LoginPage() {
                 );
             })()}
 
+            {/* MODAL XÁC THỰC 2FA */}
             {pending2FAUser && (
                 <div className={styles.modalOverlay}>
                     <div className={styles.modalCard}>
-                        <span
-                            translate="no"
-                            style={{
-                                fontSize: "0.65rem",
-                                color: "#D4AF37",
-                                fontWeight: 700,
-                                letterSpacing: "0.14em",
-                                fontFamily: "Space Grotesk, monospace",
-                                display: "block",
-                                marginBottom: "0.2rem",
-                            }}
-                        >
-                            TWO-FACTOR AUTHENTICATION
-                        </span>
-                        <h3
-                            style={{
-                                margin: "0 0 0.45rem 0",
-                                fontSize: "1.24rem",
-                                color: "#FFF",
-                                fontFamily: "Bodoni Moda, Georgia, serif",
-                            }}
-                        >
-                            {language === "en"
-                                ? "Security Verification Required"
-                                : "Xác Thực Bảo Mật Hai Lớp"}
+                        <h3 style={{ margin: "0 0 0.45rem 0", fontSize: "1.18rem", color: "#FFF", fontWeight: 700 }}>
+                            {language === "en" ? "Two-Factor Verification (2FA)" : "Xác thực hai lớp (2FA)"}
                         </h3>
-                        <p style={{ fontSize: "0.8rem", color: "#CBD5E1", lineHeight: 1.55, margin: 0 }}>
+                        <p style={{ fontSize: "0.84rem", color: "#CBD5E1", lineHeight: 1.55, margin: 0 }}>
                             {language === "en" ? (
                                 <>
-                                    Enter the 6-digit verification code for{" "}
-                                    <strong>{pending2FAUser.accountLabel}</strong> (Demo code:{" "}
+                                    Enter the 6-digit code for{" "}
+                                    <strong>{pending2FAUser.accountLabelEn}</strong> (Demo code:{" "}
                                     <strong style={{ color: "#F5E6AD" }}>123456</strong>).
                                 </>
                             ) : (
                                 <>
-                                    Nhập mã xác thực gồm 6 chữ số cho tài khoản{" "}
-                                    <strong>{pending2FAUser.accountLabel}</strong> (Mã demo:{" "}
+                                    Nhập mã 6 chữ số cho tài khoản{" "}
+                                    <strong>{pending2FAUser.accountLabelVi}</strong> (Mã kiểm thử:{" "}
                                     <strong style={{ color: "#F5E6AD" }}>123456</strong>).
                                 </>
                             )}
@@ -1841,10 +1564,9 @@ export default function LoginPage() {
                                     className={styles.textInput}
                                     style={{
                                         textAlign: "center",
-                                        fontSize: "1.25rem",
+                                        fontSize: "1.2rem",
                                         fontWeight: 700,
                                         letterSpacing: "0.35em",
-                                        fontFamily: "Space Grotesk, monospace",
                                     }}
                                 />
                             </div>
@@ -1861,7 +1583,7 @@ export default function LoginPage() {
                                     className={styles.signInBtn}
                                     style={{ width: "auto", padding: "0 1.4rem", height: "42px" }}
                                 >
-                                    {language === "en" ? "Verify & Continue" : "Xác Thực & Tiếp Tục"}
+                                    {language === "en" ? "Verify" : "Xác thực"}
                                 </button>
                             </div>
                         </form>
@@ -1871,25 +1593,10 @@ export default function LoginPage() {
 
             <footer className={styles.footerBar}>
                 <div className={styles.footerInner}>
-                    <div>
-                        <strong>SCENTSTATION</strong> •{" "}
-                        {language === "en"
-                            ? "Enterprise Identity & Access Governance"
-                            : "Hệ Thống Quản Trị Định Danh & Phân Quyền Doanh Nghiệp"}
-                    </div>
-                    <div className={styles.footerRight}>
-                        <span>BCrypt Security</span>
-                        <span>•</span>
-                        <span>Multi-Tenant Isolation</span>
-                        <span>•</span>
-                        <button
-                            type="button"
-                            onClick={() => router.push("/")}
-                            className={styles.footerLinkBtn}
-                        >
-                            {t.backToGateway}
-                        </button>
-                    </div>
+                    <strong>SCENTSTATION</strong>
+                    <button type="button" onClick={() => router.push("/")} className={styles.footerLinkBtn}>
+                        {t.backToGateway}
+                    </button>
                 </div>
             </footer>
         </main>

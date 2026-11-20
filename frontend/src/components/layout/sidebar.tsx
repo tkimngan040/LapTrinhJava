@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
     LayoutDashboard,
     Sparkles,
@@ -19,24 +19,26 @@ import {
     Settings,
     ChevronLeft,
     ChevronRight,
-    Zap,
 } from "lucide-react";
+import { InternalRole, isRouteAllowedForRole, normalizeRole } from "@/lib/rbac";
 
-const menuItems = [
-    { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { label: "Alerts", href: "/alerts", icon: BellRing },
-    { label: "Brands", href: "/brands", icon: Sparkles },
-    { label: "Products", href: "/products", icon: FlaskConical },
-    { label: "Machines", href: "/machines", icon: Cpu },
-    { label: "Transactions", href: "/transactions", icon: ArrowLeftRight },
-    { label: "Inventory", href: "/inventory", icon: Boxes },
-    { label: "Refill / Replace", href: "/refill", icon: Droplets },
-    { label: "Maintenance", href: "/maintenance", icon: Wrench },
-    { label: "Users & Roles", href: "/users", icon: Users },
-    { label: "Reports", href: "/reports", icon: BarChart3 },
-    { label: "Profile / Account", href: "/profile", icon: UserCircle },
-    { label: "Settings & Audit", href: "/settings", icon: Settings },
+const MENU_ITEMS = [
+    { labelVi: "Tổng quan", labelEn: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { labelVi: "Cảnh báo", labelEn: "Alerts", href: "/alerts", icon: BellRing },
+    { labelVi: "Thương hiệu", labelEn: "Brands", href: "/brands", icon: Sparkles },
+    { labelVi: "Sản phẩm", labelEn: "Products", href: "/products", icon: FlaskConical },
+    { labelVi: "Đội máy", labelEn: "Machines", href: "/machines", icon: Cpu },
+    { labelVi: "Giao dịch", labelEn: "Transactions", href: "/transactions", icon: ArrowLeftRight },
+    { labelVi: "Tồn kho", labelEn: "Inventory", href: "/inventory", icon: Boxes },
+    { labelVi: "Nạp & Thay bình", labelEn: "Refill / Replace", href: "/refill", icon: Droplets },
+    { labelVi: "Bảo trì", labelEn: "Maintenance", href: "/maintenance", icon: Wrench },
+    { labelVi: "Người dùng", labelEn: "Users & Roles", href: "/users", icon: Users },
+    { labelVi: "Báo cáo", labelEn: "Reports", href: "/reports", icon: BarChart3 },
+    { labelVi: "Hồ sơ cá nhân", labelEn: "Profile", href: "/profile", icon: UserCircle },
+    { labelVi: "Cài đặt", labelEn: "Settings", href: "/settings", icon: Settings },
 ];
+
+const LANGUAGE_STORAGE_KEY = "scentstation_preferred_lang_v1";
 
 type SidebarProps = {
     role?: string;
@@ -50,155 +52,118 @@ export default function Sidebar({
                                     onToggleAction,
                                 }: SidebarProps) {
     const pathname = usePathname();
-    const [storedRole, setStoredRole] = useState<string | null>("PSA");
+    const [lang, setLang] = useState<"en" | "vi">("vi");
+    const [resolvedRole, setResolvedRole] = useState<InternalRole>(normalizeRole(roleProp));
+
+    const syncSidebarContext = useCallback(() => {
+        try {
+            const savedLang = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+            if (savedLang && (savedLang.toLowerCase() === "vi" || savedLang.toLowerCase() === "en")) {
+                setLang(savedLang.toLowerCase() as "en" | "vi");
+            }
+
+            const rawUser =
+                sessionStorage.getItem("scentstation-user") ||
+                localStorage.getItem("scentstation-user");
+            if (rawUser) {
+                const u = JSON.parse(rawUser);
+                setResolvedRole(normalizeRole(u.roleCode || u.role || roleProp));
+            } else {
+                const demoRole = sessionStorage.getItem("scentstation-demo-role");
+                setResolvedRole(normalizeRole(roleProp || demoRole || "PSA"));
+            }
+        } catch {
+            setResolvedRole(normalizeRole(roleProp));
+        }
+    }, [roleProp]);
 
     useEffect(() => {
-        const savedRole = sessionStorage.getItem("scentstation-demo-role");
-        if (savedRole) {
-            setStoredRole(savedRole);
-        }
-    }, []);
+        syncSidebarContext();
+        window.addEventListener("storage", syncSidebarContext);
+        window.addEventListener("focus", syncSidebarContext);
+        window.addEventListener("scentstation-sync", syncSidebarContext);
+        return () => {
+            window.removeEventListener("storage", syncSidebarContext);
+            window.removeEventListener("focus", syncSidebarContext);
+            window.removeEventListener("scentstation-sync", syncSidebarContext);
+        };
+    }, [syncSidebarContext]);
 
-    const role = roleProp ?? storedRole ?? "PSA";
-    const visibleItems =
-        role === "VW"
-            ? menuItems.filter(
-                (item) =>
-                    item.href === "/dashboard" ||
-                    item.href === "/reports" ||
-                    item.href === "/profile"
-            )
-            : menuItems;
+    const visibleItems = MENU_ITEMS.filter((item) =>
+        isRouteAllowedForRole(resolvedRole, item.href)
+    );
 
     return (
         <aside
-            className={`relative isolate flex min-h-screen shrink-0 flex-col overflow-hidden bg-[#07070C] border-r border-[rgba(212,175,55,0.18)] text-white transition-all duration-300 ${
-                collapsed ? "w-[80px]" : "w-[280px]"
+            className={`relative flex min-h-screen shrink-0 flex-col border-r border-white/10 bg-[#0B0D14] text-white transition-all duration-200 ${
+                collapsed ? "w-[76px]" : "w-[250px]"
             }`}
-            style={{
-                boxShadow: "5px 0 30px rgba(0, 0, 0, 0.8)",
-            }}
         >
-            {/* Background Radial Glow & Noise Effect tinh tế */}
+            {/* Brand Header & Toggle */}
             <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-0 z-0 opacity-30 bg-no-repeat"
-                style={{
-                    backgroundImage: "url('/images/sidebar-luxury.png')",
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                }}
-            />
-            <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-[#0A0A10]/95 via-[#07070C]/90 to-[#030305]"
-            />
-
-            {/* Hiệu ứng ánh sáng điểm nhấn góc trên */}
-            <div
-                aria-hidden="true"
-                className="pointer-events-none absolute -top-20 -left-20 w-40 h-40 rounded-full bg-[rgba(212,175,55,0.15)] blur-[50px] z-0"
-            />
-
-            {/* Toggle button thu gọn / mở rộng sắc nét */}
-            <button
-                type="button"
-                onClick={onToggleAction}
-                aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-                title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-                className={`absolute top-7 z-30 flex h-9 w-9 items-center justify-center
-                rounded-xl border border-[rgba(212,175,55,0.4)]
-                bg-[#12121A] text-[#D4AF37]
-                shadow-[0_0_15px_rgba(212,175,55,0.2)]
-                transition-all duration-200
-                hover:scale-105 hover:bg-[#1E1E2C] hover:border-[#D4AF37] hover:shadow-[0_0_20px_rgba(212,175,55,0.4)]
-                focus-visible:outline-none
-                ${collapsed ? "left-1/2 -translate-x-1/2" : "right-4"}`}
-            >
-                {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-            </button>
-
-            {/* Brand Header */}
-            <div
-                className={`relative z-10 flex min-h-[90px] items-center border-b border-[rgba(255,255,255,0.08)] ${
-                    collapsed ? "justify-center px-2" : "px-6 py-5 pr-14"
-                }`}
-            >
-                {collapsed ? (
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[rgba(212,175,55,0.15)] border border-[rgba(212,175,55,0.4)] text-[#D4AF37] font-bold text-lg shadow-[0_0_15px_rgba(212,175,55,0.2)]">
-                        S
-                    </div>
-                ) : (
-                    <div>
-                        <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-white via-[#F3E7C4] to-[#D4AF37] bg-clip-text text-transparent">
-                            ScentStation
-                        </h1>
-                        <p className="mt-0.5 text-xs tracking-wider text-[#94A3B8] font-medium uppercase">
-                            Experience Platform
-                        </p>
-                    </div>
-                )}
-            </div>
-
-            {/* Navigation Menu */}
-            <div
-                className={`relative z-10 flex-1 overflow-y-auto py-5 ${
-                    collapsed ? "px-2.5" : "px-4"
+                className={`flex min-h-[76px] items-center border-b border-white/10 ${
+                    collapsed ? "justify-center px-2" : "justify-between px-5"
                 }`}
             >
                 {!collapsed && (
-                    <div className="mb-3 px-3 flex items-center justify-between">
-                        <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#94A3B8]">
-                            Workspace ({visibleItems.length})
-                        </span>
-                        <Zap size={12} className="text-[#D4AF37] animate-pulse" />
+                    <div>
+                        <h1 className="text-lg font-extrabold tracking-tight text-white">
+                            ScentStation
+                        </h1>
+                        <p className="text-[11px] font-semibold text-[#94A3B8]">
+                            {lang === "en" ? "Operations Portal" : "Cổng quản trị"}
+                        </p>
                     </div>
                 )}
 
+                <button
+                    type="button"
+                    onClick={onToggleAction}
+                    aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                    title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 bg-[#121622] text-[#D4AF37] transition-colors hover:border-[#D4AF37] hover:bg-[#181D2C] cursor-pointer"
+                >
+                    {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+                </button>
+            </div>
+
+            {/* Navigation Menu */}
+            <div className={`flex-1 overflow-y-auto py-4 ${collapsed ? "px-2" : "px-3"}`}>
                 <nav className="space-y-1">
                     {visibleItems.map((item) => {
                         const active =
-                            pathname === item.href ||
-                            pathname.startsWith(`${item.href}/`);
+                            pathname === item.href || pathname.startsWith(`${item.href}/`);
                         const IconComponent = item.icon;
+                        const label = lang === "en" ? item.labelEn : item.labelVi;
 
                         return (
                             <Link
                                 key={item.href}
                                 href={item.href}
                                 aria-current={active ? "page" : undefined}
-                                title={collapsed ? item.label : undefined}
-                                className={`group relative flex items-center gap-3.5 rounded-xl border py-2.5 text-sm font-medium transition-all duration-200 ${
-                                    collapsed ? "justify-center px-2" : "px-3.5"
+                                title={collapsed ? label : undefined}
+                                className={`relative flex items-center gap-3 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
+                                    collapsed ? "justify-center px-2" : "px-3"
                                 } ${
                                     active
-                                        ? "border-[rgba(212,175,55,0.5)] bg-[rgba(212,175,55,0.12)] text-[#F3E7C4] shadow-[0_0_20px_rgba(212,175,55,0.18)]"
-                                        : "border-transparent text-[#94A3B8] hover:border-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.04)] hover:text-white"
+                                        ? "border-[rgba(212,175,55,0.45)] bg-[rgba(212,175,55,0.14)] text-[#F5E6AD]"
+                                        : "border-transparent text-[#94A3B8] hover:bg-white/5 hover:text-white"
                                 }`}
                             >
-                                {/* Hiệu ứng thanh phát quang bên trái khi active */}
                                 {active && (
-                                    <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-[#D4AF37] shadow-[0_0_10px_#D4AF37]" />
+                                    <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-[#D4AF37]" />
                                 )}
 
                                 <IconComponent
-                                    size={19}
-                                    strokeWidth={active ? 2.2 : 1.7}
-                                    className={`shrink-0 transition-transform duration-200 group-hover:scale-110 ${
-                                        active
-                                            ? "text-[#D4AF37]"
-                                            : "text-[#64748B] group-hover:text-[#D4AF37]"
+                                    size={18}
+                                    strokeWidth={active ? 2.2 : 1.8}
+                                    className={`shrink-0 ${
+                                        active ? "text-[#D4AF37]" : "text-[#64748B]"
                                     }`}
                                 />
 
                                 {!collapsed && (
-                                    <span className="whitespace-nowrap tracking-wide">
-                                        {item.label}
-                                    </span>
-                                )}
-
-                                {active && !collapsed && (
-                                    <span className="ml-auto flex h-2 w-2 rounded-full bg-[#D4AF37] shadow-[0_0_8px_#D4AF37]" />
+                                    <span className="whitespace-nowrap truncate">{label}</span>
                                 )}
                             </Link>
                         );
@@ -206,21 +171,19 @@ export default function Sidebar({
                 </nav>
             </div>
 
-            {/* Footer trạng thái hệ thống nhỏ gọn sống động */}
+            {/* Footer */}
             {!collapsed && (
-                <div className="relative z-10 p-4 m-3 rounded-xl border border-[rgba(212,175,55,0.15)] bg-[rgba(10,10,16,0.6)] backdrop-blur-md">
-                    <div className="flex items-center gap-3">
-                        <div className="relative flex h-2.5 w-2.5">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-[11px] font-semibold text-white tracking-wider">
-                                IoT Network Active
-                            </span>
-                            <span className="text-[10px] text-[#94A3B8]">
-                                7 Kiosks • 34 SKUs Synced
-                            </span>
+                <div className="m-3 rounded-xl border border-white/10 bg-[#121622] px-3.5 py-3">
+                    <div className="flex items-center gap-2.5">
+                        <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 shrink-0" />
+                        <div className="min-w-0">
+                            <p className="text-xs font-bold text-white truncate">
+                                {lang === "en" ? "IoT Network Online" : "Mạng IoT trực tuyến"}
+                            </p>
+                            <p className="text-[11px] text-[#94A3B8] truncate">
+                                {resolvedRole} • {visibleItems.length}{" "}
+                                {lang === "en" ? "modules" : "phân hệ"}
+                            </p>
                         </div>
                     </div>
                 </div>

@@ -4,7 +4,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-    Sparkles,
     ShieldCheck,
     MapPin,
     Volume2,
@@ -84,6 +83,7 @@ export interface SyncedKioskUnit {
     brand: string;
     locationName: string;
     address: string;
+    addressEn?: string;
     status: "ONLINE" | "MAINTENANCE" | "OFFLINE";
     connectionStatus: "ONLINE" | "OFFLINE";
     operatingStatus: "ACTIVE" | "MAINTENANCE" | "DISABLED" | "ERROR";
@@ -106,20 +106,21 @@ export interface SyncedKioskUnit {
     }[];
 }
 
+// Khớp ma trận 6 nhóm người dùng nội bộ (PSA, BA, OM, TE, IS, VW)
 const ROLE_ACCESS_MAP: Record<string, RoleCode[]> = {
     "/dashboard": ["PSA", "BA", "OM", "VW"],
     "/alerts": ["PSA", "BA", "OM", "TE", "IS"],
     "/profile": ["PSA", "BA", "OM", "TE", "IS", "VW"],
     "/brands": ["PSA", "BA"],
-    "/products": ["PSA", "BA", "OM", "IS"],
+    "/products": ["PSA", "BA", "OM", "TE", "IS"],
     "/machines": ["PSA", "BA", "OM", "TE", "IS"],
-    "/transactions": ["PSA", "BA", "OM"],
+    "/transactions": ["PSA", "BA", "OM", "VW"],
     "/inventory": ["PSA", "BA", "OM", "IS"],
-    "/refill": ["OM", "TE", "IS"],
+    "/refill": ["PSA", "BA", "OM", "TE", "IS"],
     "/maintenance": ["PSA", "BA", "OM", "TE"],
     "/users": ["PSA", "BA"],
     "/reports": ["PSA", "BA", "OM", "VW"],
-    "/settings": ["PSA", "BA"],
+    "/settings": ["PSA", "BA", "OM"],
 };
 
 const ROLE_DEFAULT_HOME: Record<RoleCode, string> = {
@@ -162,7 +163,7 @@ const DEFAULT_34_CATALOG: SyncedCatalogItem[] = [
     { slotNumber: 27, skuCode: "SKU-ROJ-27", name: "Roja Parfums Elysium", brand: "Roja Parfums", category: "Niche", family: "Aromatic Fougere", notes: "Grapefruit, Lime, Vetiver, Ambergris", bottleVolumeMl: 100, pricePerSpray: 22000, retail10ml: 660000, fullBottlePrice: 7600000, kioskCode: "KIOSK-SGN-03", location: "Crescent Mall D7, HCMC", remainingVolumeMl: 11.0, lowStockThresholdMl: 15, sprayDurationMs: 1200, image: "/images/roja-elysium.jpg", status: "ACTIVE" },
     { slotNumber: 28, skuCode: "SKU-TF-28", name: "Tom Ford Black Orchid", brand: "Tom Ford", category: "Unisex", family: "Oriental Chypre", notes: "Black Truffle, Black Orchid, Patchouli", bottleVolumeMl: 100, pricePerSpray: 16000, retail10ml: 480000, fullBottlePrice: 4350000, kioskCode: "KIOSK-HN-02", location: "Trang Tien Plaza, Hanoi", remainingVolumeMl: 48.0, lowStockThresholdMl: 15, sprayDurationMs: 1200, image: "/images/tom-ford-black-orchid.jpg", status: "ACTIVE" },
     { slotNumber: 29, skuCode: "SKU-VAL-29", name: "Valentino Born in Roma", brand: "Valentino", category: "Women", family: "Oriental Floral", notes: "Blackcurrant, Jasmine, Bourbon Vanilla", bottleVolumeMl: 100, pricePerSpray: 13000, retail10ml: 390000, fullBottlePrice: 3400000, kioskCode: "KIOSK-SGN-03", location: "Crescent Mall D7, HCMC", remainingVolumeMl: 81.0, lowStockThresholdMl: 15, sprayDurationMs: 1200, image: "/images/valentino-born-in-roma.jpg", status: "ACTIVE" },
-    { slotNumber: 30, skuCode: "SKU-VER-30", name: "Versace Bright Crystal", brand: "Versace", category: "Women", family: "Floral Fruity", notes: "Yuzu, Pomegranate, Peony, Lotus", bottleVolumeMl: 90, pricePerSpray: 11500, retail10ml: 345000, fullBottlePrice: 2450000, kioskCode: "KIOSK-004", location: "Aeon Mall Tan Phu Celadon, HCMC", remainingVolumeMl: 62.0, lowStockThresholdMl: 15, sprayDurationMs: 1200, image: "/images/versace-bright-crystal.jpg", status: "ACTIVE" },
+    { slotNumber: 30, skuCode: "SKU-VER-30", name: "Versace Bright Crystal", brand: "Versace", category: "Women", family: "Floral Fruity", notes: "Yuzu, Pomegranate, Peony, Lotus", bottleVolumeMl: 90, pricePerSpray: 11500, retail10ml: 345000, fullBottlePrice: 2450000, kioskCode: "KIOSK-004", location: "Aeon Mall Tan Phu, HCMC", remainingVolumeMl: 62.0, lowStockThresholdMl: 15, sprayDurationMs: 1200, image: "/images/versace-bright-crystal.jpg", status: "ACTIVE" },
     { slotNumber: 31, skuCode: "SKU-VER-31", name: "Versace Dylan Blue", brand: "Versace", category: "Men", family: "Aromatic Fougere", notes: "Bergamot, Grapefruit, Ambroxan, Incense", bottleVolumeMl: 100, pricePerSpray: 12000, retail10ml: 360000, fullBottlePrice: 2550000, kioskCode: "KIOSK-DAD-01", location: "IndoChina Riverside, Da Nang", remainingVolumeMl: 77.0, lowStockThresholdMl: 15, sprayDurationMs: 1200, image: "/images/versace-dylan-blue.jpg", status: "ACTIVE" },
     { slotNumber: 32, skuCode: "SKU-VER-32", name: "Versace Eros", brand: "Versace", category: "Men", family: "Aromatic Fougere", notes: "Mint Leaves, Green Apple, Tonka Bean", bottleVolumeMl: 100, pricePerSpray: 12500, retail10ml: 375000, fullBottlePrice: 2700000, kioskCode: "KIOSK-SGN-02", location: "Vincom Dong Khoi, HCMC", remainingVolumeMl: 83.0, lowStockThresholdMl: 15, sprayDurationMs: 1200, image: "/images/versace-eros.jpg", status: "ACTIVE" },
     { slotNumber: 33, skuCode: "SKU-YSL-33", name: "YSL Libre Eau de Parfum", brand: "Yves Saint Laurent", category: "Women", family: "Oriental Fougere", notes: "French Lavender, Orange Blossom, Vanilla", bottleVolumeMl: 90, pricePerSpray: 14000, retail10ml: 420000, fullBottlePrice: 3750000, kioskCode: "KIOSK-SGN-01", location: "Takashimaya D1, HCMC", remainingVolumeMl: 14.0, lowStockThresholdMl: 15, sprayDurationMs: 1200, image: "/images/ysl-libre.jpg", status: "ACTIVE" },
@@ -171,7 +172,8 @@ const DEFAULT_34_CATALOG: SyncedCatalogItem[] = [
 
 const DEFAULT_8_KIOSKS: SyncedKioskUnit[] = [
     {
-        id: "demo-device", code: "demo-device", serialNumber: "SN-2026-8801", deviceIdentity: "DEV-SGN-8801", brand: "Creed", locationName: "Diamond Plaza Luxury Atrium", address: "34 Le Duan, District 1, Ho Chi Minh City",
+        id: "demo-device", code: "demo-device", serialNumber: "SN-2026-8801", deviceIdentity: "DEV-SGN-8801", brand: "Creed", locationName: "Diamond Plaza Atrium",
+        address: "34 Lê Duẩn, Quận 1, TP.HCM", addressEn: "34 Le Duan, District 1, HCMC",
         status: "ONLINE", connectionStatus: "ONLINE", operatingStatus: "ACTIVE", doorOpen: false, leakDetected: false,
         chamberTemp: "21.2°C", firmwareVersion: "v2.4.8-LTS", configVersion: "cfg-2026.11", todaySprays: 42, todayRevenue: 815000,
         slots: [
@@ -182,7 +184,8 @@ const DEFAULT_8_KIOSKS: SyncedKioskUnit[] = [
         ],
     },
     {
-        id: "KIOSK-SGN-01", code: "KIOSK-SGN-01", serialNumber: "SN-2026-8802", deviceIdentity: "DEV-SGN-8802", brand: "Chanel", locationName: "Saigon Centre Takashimaya Flagship", address: "65 Le Loi, District 1, Ho Chi Minh City",
+        id: "KIOSK-SGN-01", code: "KIOSK-SGN-01", serialNumber: "SN-2026-8802", deviceIdentity: "DEV-SGN-8802", brand: "Chanel", locationName: "Saigon Centre Takashimaya",
+        address: "65 Lê Lợi, Quận 1, TP.HCM", addressEn: "65 Le Loi, District 1, HCMC",
         status: "ONLINE", connectionStatus: "ONLINE", operatingStatus: "ACTIVE", doorOpen: false, leakDetected: false,
         chamberTemp: "21.4°C", firmwareVersion: "v2.4.8-LTS", configVersion: "cfg-2026.11", todaySprays: 56, todayRevenue: 840000,
         slots: [
@@ -193,7 +196,8 @@ const DEFAULT_8_KIOSKS: SyncedKioskUnit[] = [
         ],
     },
     {
-        id: "KIOSK-SGN-02", code: "KIOSK-SGN-02", serialNumber: "SN-2026-8803", deviceIdentity: "DEV-SGN-8803", brand: "Yves Saint Laurent", locationName: "Vincom Center Dong Khoi", address: "72 Le Thanh Ton, District 1, Ho Chi Minh City",
+        id: "KIOSK-SGN-02", code: "KIOSK-SGN-02", serialNumber: "SN-2026-8803", deviceIdentity: "DEV-SGN-8803", brand: "Yves Saint Laurent", locationName: "Vincom Center Đồng Khởi",
+        address: "72 Lê Thánh Tôn, Quận 1, TP.HCM", addressEn: "72 Le Thanh Ton, District 1, HCMC",
         status: "ONLINE", connectionStatus: "ONLINE", operatingStatus: "ACTIVE", doorOpen: false, leakDetected: false,
         chamberTemp: "21.8°C", firmwareVersion: "v2.4.8-LTS", configVersion: "cfg-2026.11", todaySprays: 38, todayRevenue: 532000,
         slots: [
@@ -204,7 +208,8 @@ const DEFAULT_8_KIOSKS: SyncedKioskUnit[] = [
         ],
     },
     {
-        id: "KIOSK-SGN-03", code: "KIOSK-SGN-03", serialNumber: "SN-2026-8808", deviceIdentity: "DEV-SGN-8808", brand: "Montblanc", locationName: "Crescent Mall Luxury Wing", address: "101 Ton Dat Tien, District 7, Ho Chi Minh City",
+        id: "KIOSK-SGN-03", code: "KIOSK-SGN-03", serialNumber: "SN-2026-8808", deviceIdentity: "DEV-SGN-8808", brand: "Montblanc", locationName: "Crescent Mall",
+        address: "101 Tôn Dật Tiên, Quận 7, TP.HCM", addressEn: "101 Ton Dat Tien, District 7, HCMC",
         status: "ONLINE", connectionStatus: "ONLINE", operatingStatus: "ACTIVE", doorOpen: false, leakDetected: false,
         chamberTemp: "21.6°C", firmwareVersion: "v2.4.8-LTS", configVersion: "cfg-2026.11", todaySprays: 34, todayRevenue: 412000,
         slots: [
@@ -215,7 +220,8 @@ const DEFAULT_8_KIOSKS: SyncedKioskUnit[] = [
         ],
     },
     {
-        id: "KIOSK-HN-01", code: "KIOSK-HN-01", serialNumber: "SN-2026-8804", deviceIdentity: "DEV-HAN-8804", brand: "Dior", locationName: "Lotte Center West Lake Lounge", address: "272 Vo Chi Cong, Tay Ho, Hanoi",
+        id: "KIOSK-HN-01", code: "KIOSK-HN-01", serialNumber: "SN-2026-8804", deviceIdentity: "DEV-HAN-8804", brand: "Dior", locationName: "Lotte West Lake",
+        address: "272 Võ Chí Công, Tây Hồ, Hà Nội", addressEn: "272 Vo Chi Cong, Tay Ho, Hanoi",
         status: "ONLINE", connectionStatus: "ONLINE", operatingStatus: "ACTIVE", doorOpen: false, leakDetected: false,
         chamberTemp: "22.0°C", firmwareVersion: "v2.4.8-LTS", configVersion: "cfg-2026.11", todaySprays: 49, todayRevenue: 710500,
         slots: [
@@ -226,7 +232,8 @@ const DEFAULT_8_KIOSKS: SyncedKioskUnit[] = [
         ],
     },
     {
-        id: "KIOSK-HN-02", code: "KIOSK-HN-02", serialNumber: "SN-2026-8805", deviceIdentity: "DEV-HAN-8805", brand: "Maison Margiela", locationName: "Trang Tien Plaza Luxury Wing", address: "24 Hai Ba Trung, Hoan Kiem, Hanoi",
+        id: "KIOSK-HN-02", code: "KIOSK-HN-02", serialNumber: "SN-2026-8805", deviceIdentity: "DEV-HAN-8805", brand: "Maison Margiela", locationName: "Tràng Tiền Plaza",
+        address: "24 Hai Bà Trưng, Hoàn Kiếm, Hà Nội", addressEn: "24 Hai Ba Trung, Hoan Kiem, Hanoi",
         status: "MAINTENANCE", connectionStatus: "ONLINE", operatingStatus: "MAINTENANCE", doorOpen: false, leakDetected: false,
         chamberTemp: "23.1°C", firmwareVersion: "v2.4.6-LTS", configVersion: "cfg-2026.10", todaySprays: 14, todayRevenue: 203000,
         slots: [
@@ -237,7 +244,8 @@ const DEFAULT_8_KIOSKS: SyncedKioskUnit[] = [
         ],
     },
     {
-        id: "KIOSK-DAD-01", code: "KIOSK-DAD-01", serialNumber: "SN-2026-8806", deviceIdentity: "DEV-DAD-8806", brand: "Versace", locationName: "IndoChina Riverside Mall Lobby", address: "74 Bach Dang, Hai Chau, Da Nang",
+        id: "KIOSK-DAD-01", code: "KIOSK-DAD-01", serialNumber: "SN-2026-8806", deviceIdentity: "DEV-DAD-8806", brand: "Versace", locationName: "IndoChina Riverside",
+        address: "74 Bạch Đằng, Hải Châu, Đà Nẵng", addressEn: "74 Bach Dang, Hai Chau, Da Nang",
         status: "ONLINE", connectionStatus: "ONLINE", operatingStatus: "ACTIVE", doorOpen: false, leakDetected: false,
         chamberTemp: "21.9°C", firmwareVersion: "v2.4.8-LTS", configVersion: "cfg-2026.11", todaySprays: 31, todayRevenue: 372000,
         slots: [
@@ -248,7 +256,8 @@ const DEFAULT_8_KIOSKS: SyncedKioskUnit[] = [
         ],
     },
     {
-        id: "KIOSK-004", code: "KIOSK-004", serialNumber: "SN-2026-8807", deviceIdentity: "DEV-SGN-8807", brand: "Tom Ford", locationName: "Aeon Mall Tan Phu Celadon", address: "30 Bo Bao Tan Thang, Tan Phu, HCMC",
+        id: "KIOSK-004", code: "KIOSK-004", serialNumber: "SN-2026-8807", deviceIdentity: "DEV-SGN-8807", brand: "Tom Ford", locationName: "Aeon Mall Tân Phú",
+        address: "30 Bờ Bao Tân Thắng, Tân Phú, TP.HCM", addressEn: "30 Bo Bao Tan Thang, Tan Phu, HCMC",
         status: "OFFLINE", connectionStatus: "OFFLINE", operatingStatus: "ERROR", doorOpen: false, leakDetected: false,
         chamberTemp: "24.2°C", firmwareVersion: "v2.4.5-LTS", configVersion: "cfg-2026.09", todaySprays: 9, todayRevenue: 144000,
         slots: [
@@ -268,9 +277,8 @@ const AUDIT_LOGS_STORAGE_KEY = "scentstation_audit_logs_v2";
 const KIOSK_PER_UNIT_STOCK_KEY = "scentstation_per_kiosk_stock_matrix_v2";
 const LANGUAGE_STORAGE_KEY = "scentstation_preferred_lang_v1";
 
-const isExactFragranceMatch = (nameA: string, nameB: string): boolean => {
-    return nameA.trim().toLowerCase() === nameB.trim().toLowerCase();
-};
+const isExactFragranceMatch = (nameA: string, nameB: string): boolean =>
+    nameA.trim().toLowerCase() === nameB.trim().toLowerCase();
 
 const normalizeUserRoleCode = (rawRole?: string): RoleCode => {
     if (!rawRole) return "PSA";
@@ -284,6 +292,87 @@ const normalizeUserRoleCode = (rawRole?: string): RoleCode => {
     return "PSA";
 };
 
+// Các hàm dịch đầy đủ 100% EN <-> VI cho nhãn trạng thái, danh mục, khoang và địa chỉ
+const formatCategoryLabel = (
+    cat: "ALL" | "Niche" | "Men" | "Women" | "Unisex",
+    lang: "en" | "vi"
+): string => {
+    if (lang === "en") {
+        if (cat === "ALL") return "All";
+        return cat;
+    }
+    switch (cat) {
+        case "ALL":
+            return "Tất cả";
+        case "Niche":
+            return "Cao cấp";
+        case "Men":
+            return "Nam";
+        case "Women":
+            return "Nữ";
+        case "Unisex":
+            return "Nam & Nữ";
+    }
+};
+
+const formatKioskStatusLabel = (
+    status: "ONLINE" | "MAINTENANCE" | "OFFLINE",
+    lang: "en" | "vi"
+): string => {
+    if (lang === "en") {
+        if (status === "ONLINE") return "Online";
+        if (status === "MAINTENANCE") return "Maintenance";
+        return "Offline";
+    }
+    if (status === "ONLINE") return "Sẵn sàng";
+    if (status === "MAINTENANCE") return "Bảo trì";
+    return "Mất kết nối";
+};
+
+const formatOrderStatusLabel = (
+    status: OrderLifecycleState,
+    lang: "en" | "vi"
+): string => {
+    const map: Record<OrderLifecycleState, { en: string; vi: string }> = {
+        PENDING: { en: "Pending", vi: "Chờ thanh toán" },
+        PAID: { en: "Paid", vi: "Đã thanh toán" },
+        DISPENSING: { en: "Dispensing", vi: "Đang phun" },
+        DISPENSED: { en: "Dispensed", vi: "Hoàn tất" },
+        FAILED: { en: "Failed", vi: "Thất bại" },
+        UNCERTAIN: { en: "Uncertain", vi: "Chờ đối soát" },
+        CANCELLED: { en: "Cancelled", vi: "Đã hủy" },
+        EXPIRED: { en: "Expired", vi: "Hết hạn" },
+        REFUNDED: { en: "Refunded", vi: "Đã hoàn tiền" },
+    };
+    return map[status][lang];
+};
+
+const formatSlotLabel = (rawSlot: string, lang: "en" | "vi"): string => {
+    const cleaned = rawSlot.trim().toUpperCase();
+    if (lang === "en") {
+        return cleaned.replace("KHOANG", "SLOT");
+    }
+    return cleaned.replace("SLOT", "KHOANG");
+};
+
+const getLocalizedAddress = (kiosk: SyncedKioskUnit, lang: "en" | "vi"): string => {
+    if (lang === "en" && kiosk.addressEn) return kiosk.addressEn;
+    return kiosk.address;
+};
+
+const formatCatalogLocation = (loc: string, lang: "en" | "vi"): string => {
+    if (lang === "en") return loc;
+    return loc
+        .replace("D1, HCMC", "Q.1, TP.HCM")
+        .replace("D7, HCMC", "Q.7, TP.HCM")
+        .replace("HCMC", "TP.HCM")
+        .replace("Hanoi", "Hà Nội")
+        .replace("Da Nang", "Đà Nẵng")
+        .replace("Vincom Dong Khoi", "Vincom Đồng Khởi")
+        .replace("Trang Tien Plaza", "Tràng Tiền Plaza")
+        .replace("Aeon Mall Tan Phu", "Aeon Mall Tân Phú");
+};
+
 export default function ScentStationLandingPage() {
     const router = useRouter();
     const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -293,7 +382,7 @@ export default function ScentStationLandingPage() {
     const stepTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
     const processedWebhookRefs = useRef<Set<string>>(new Set());
 
-    const [lang, setLang] = useState<"en" | "vi">("en");
+    const [lang, setLang] = useState<"en" | "vi">("vi");
     const [isMuted, setIsMuted] = useState<boolean>(true);
     const [catalog, setCatalog] = useState<SyncedCatalogItem[]>(DEFAULT_34_CATALOG);
     const [kiosks, setKiosks] = useState<SyncedKioskUnit[]>(DEFAULT_8_KIOSKS);
@@ -329,10 +418,7 @@ export default function ScentStationLandingPage() {
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
-            if (
-                kioskDropdownRef.current &&
-                !kioskDropdownRef.current.contains(e.target as Node)
-            ) {
+            if (kioskDropdownRef.current && !kioskDropdownRef.current.contains(e.target as Node)) {
                 setIsKioskDropdownOpen(false);
             }
         };
@@ -347,22 +433,16 @@ export default function ScentStationLandingPage() {
 
     const sleepSafe = useCallback((ms: number) => {
         return new Promise<boolean>((resolve) => {
-            const t = setTimeout(() => {
-                resolve(isMountedRef.current);
-            }, ms);
+            const t = setTimeout(() => resolve(isMountedRef.current), ms);
             stepTimersRef.current.push(t);
         });
     }, []);
 
     const triggerToast = useCallback((msg: string, variant: ToastVariant = "success") => {
-        if (toastTimerRef.current) {
-            clearTimeout(toastTimerRef.current);
-        }
+        if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
         setToastState({ msg, variant });
         toastTimerRef.current = setTimeout(() => {
-            if (isMountedRef.current) {
-                setToastState(null);
-            }
+            if (isMountedRef.current) setToastState(null);
             toastTimerRef.current = null;
         }, 4200);
     }, []);
@@ -372,6 +452,7 @@ export default function ScentStationLandingPage() {
         setLang(nextLang);
         try {
             localStorage.setItem(LANGUAGE_STORAGE_KEY, nextLang);
+            window.dispatchEvent(new Event("scentstation-sync"));
         } catch {
             // Safe fallback
         }
@@ -392,7 +473,7 @@ export default function ScentStationLandingPage() {
                 logs.unshift({
                     id: `AUD-${Date.now()}-${Math.floor(100 + Math.random() * 899)}`,
                     timestamp: new Date().toISOString(),
-                    actor: activeSessionUser?.fullName || "Kiosk Customer",
+                    actor: activeSessionUser?.fullName || (lang === "en" ? "Kiosk Customer" : "Khách Kiosk"),
                     role: activeSessionUser?.roleCode || "CU",
                     tenant: entry.brandTenant,
                     action: entry.action,
@@ -404,10 +485,10 @@ export default function ScentStationLandingPage() {
                 });
                 localStorage.setItem(AUDIT_LOGS_STORAGE_KEY, JSON.stringify(logs.slice(0, 250)));
             } catch {
-                // Ignore storage quota errors
+                // Ignore
             }
         },
-        [activeSessionUser]
+        [activeSessionUser, lang]
     );
 
     const upsertOrderAndAlertsToStorage = useCallback(
@@ -476,7 +557,11 @@ export default function ScentStationLandingPage() {
                             orderState: payload.status,
                             severity: payload.status === "UNCERTAIN" ? "HIGH" : "CRITICAL",
                             status: "OPEN_FOR_OM_REVIEW",
-                            reason: payload.failureReason || "Hardware execution unconfirmed",
+                            reason:
+                                payload.failureReason ||
+                                (lang === "en"
+                                    ? "Unconfirmed dispense result from machine"
+                                    : "Chưa xác nhận kết quả xịt từ máy"),
                             createdAt: new Date().toISOString(),
                         });
                     }
@@ -512,8 +597,12 @@ export default function ScentStationLandingPage() {
                             thresholdMl: al.thresholdMl,
                             description:
                                 al.remainingMl < 0.12
-                                    ? `Slot 0${al.slotNumber} (${al.product}) is depleted (${al.remainingMl}ml remaining). Slot locked.`
-                                    : `Slot 0${al.slotNumber} (${al.product}) reached low level (${al.remainingMl}ml / threshold ${al.thresholdMl}ml). Schedule refill.`,
+                                    ? lang === "en"
+                                        ? `Slot 0${al.slotNumber} (${al.product}) is empty (${al.remainingMl}ml). Slot locked.`
+                                        : `Khoang 0${al.slotNumber} (${al.product}) đã cạn (${al.remainingMl}ml). Đã khóa khoang.`
+                                    : lang === "en"
+                                        ? `Slot 0${al.slotNumber} (${al.product}) is below threshold (${al.remainingMl}ml / ${al.thresholdMl}ml). Refill needed.`
+                                        : `Khoang 0${al.slotNumber} (${al.product}) dưới ngưỡng (${al.remainingMl}ml / ${al.thresholdMl}ml). Cần nạp.`,
                         });
                     }
                 }
@@ -521,10 +610,10 @@ export default function ScentStationLandingPage() {
                 dashData.lastUpdatedAt = new Date().toISOString();
                 localStorage.setItem(DASHBOARD_STORAGE_KEY, JSON.stringify(dashData));
             } catch {
-                // Ignore storage errors
+                // Ignore
             }
         },
-        []
+        [lang]
     );
 
     const handleSelectPaymentMethod = useCallback(
@@ -533,7 +622,7 @@ export default function ScentStationLandingPage() {
             if (checkoutItem && checkoutStatus === "PENDING" && checkoutOrderId) {
                 upsertOrderAndAlertsToStorage({
                     id: checkoutOrderId,
-                    time: `Awaiting ${method} Payment`,
+                    time: lang === "en" ? `Awaiting ${method}` : `Chờ thanh toán ${method}`,
                     kiosk: checkoutItem.kioskCode,
                     slotNumber: checkoutItem.slotNumber,
                     brand: checkoutItem.brand,
@@ -548,7 +637,7 @@ export default function ScentStationLandingPage() {
                 });
             }
         },
-        [checkoutItem, checkoutOrderId, checkoutPriceSnapshot, checkoutStatus, upsertOrderAndAlertsToStorage]
+        [checkoutItem, checkoutOrderId, checkoutPriceSnapshot, checkoutStatus, lang, upsertOrderAndAlertsToStorage]
     );
 
     const handlePortalNavigation = useCallback(
@@ -557,7 +646,6 @@ export default function ScentStationLandingPage() {
                 router.push(targetPath);
                 return;
             }
-
             if (!activeSessionUser) {
                 router.push(`/login?redirect=${encodeURIComponent(targetPath)}`);
                 return;
@@ -570,8 +658,8 @@ export default function ScentStationLandingPage() {
             if (activeSessionUser.roleCode === "VW" && allowedRoles && !allowedRoles.includes("VW")) {
                 triggerToast(
                     lang === "en"
-                        ? "Read-Only Account: Redirecting to Analytics & Reports."
-                        : "Tài khoản chỉ xem: Đang chuyển hướng sang trang Báo cáo.",
+                        ? "Read-only role: Redirecting to Reports."
+                        : "Tài khoản chỉ xem: Chuyển sang trang Báo cáo.",
                     "warning"
                 );
                 router.push("/reports");
@@ -581,8 +669,8 @@ export default function ScentStationLandingPage() {
             if (allowedRoles && !allowedRoles.includes(activeSessionUser.roleCode)) {
                 triggerToast(
                     lang === "en"
-                        ? `Access Restricted: Your current role (${activeSessionUser.roleCode}) does not have permission to open ${baseRoute}.`
-                        : `Giới hạn quyền truy cập: Vai trò (${activeSessionUser.roleCode}) không được phép mở trang ${baseRoute}.`,
+                        ? `Role ${activeSessionUser.roleCode} cannot access ${baseRoute}.`
+                        : `Vai trò ${activeSessionUser.roleCode} không có quyền vào ${baseRoute}.`,
                     "error"
                 );
                 appendAuditLog({
@@ -598,9 +686,7 @@ export default function ScentStationLandingPage() {
 
             if (activeSessionUser.brandScope && activeSessionUser.roleCode !== "PSA") {
                 const params = new URLSearchParams(queryString || "");
-                if (!params.has("brand")) {
-                    params.set("brand", activeSessionUser.brandScope);
-                }
+                if (!params.has("brand")) params.set("brand", activeSessionUser.brandScope);
                 router.push(`${pathWithoutQuery}?${params.toString()}`);
                 return;
             }
@@ -610,7 +696,6 @@ export default function ScentStationLandingPage() {
         [activeSessionUser, appendAuditLog, lang, router, triggerToast]
     );
 
-    /* --- ĐỒNG BỘ KHÉP KÍN 100% VỚI MÀN 4 (/kiosk) VÀ MÀN 5 (/products) --- */
     const loadAndSyncStorageData = useCallback(() => {
         try {
             const savedLang = localStorage.getItem(LANGUAGE_STORAGE_KEY);
@@ -625,14 +710,13 @@ export default function ScentStationLandingPage() {
                 const parsedUser = JSON.parse(savedUserRaw);
                 setActiveSessionUser({
                     fullName: parsedUser.fullName || parsedUser.name || parsedUser.email || "Portal User",
-                    roleCode: normalizeUserRoleCode(parsedUser.roleCode || parsedUser.role),
+                    roleCode: normalizeUserRoleCode(parsedUser.roleCode || parsedUser.role || parsedUser.roles?.[0]),
                     brandScope: parsedUser.brand || parsedUser.brandScope || null,
                 });
             } else {
                 setActiveSessionUser(null);
             }
 
-            // 1. Đọc danh mục sản phẩm từ PRODUCTS_STORAGE_KEY để lấy status (ACTIVE/INACTIVE), giá mới, dung tích & assignedMachines
             const rawProds = localStorage.getItem(PRODUCTS_STORAGE_KEY);
             const productStatusMap = new Map<string, "ACTIVE" | "INACTIVE" | "DRAFT">();
             const productPriceMap = new Map<string, number>();
@@ -648,12 +732,8 @@ export default function ScentStationLandingPage() {
                             if (p && p.name) {
                                 const pKey = String(p.name).trim().toLowerCase();
                                 if (p.status) productStatusMap.set(pKey, p.status);
-                                if (typeof p.pricePerSpray === "number") {
-                                    productPriceMap.set(pKey, Number(p.pricePerSpray));
-                                }
-                                if (typeof p.bottleVolumeMl === "number") {
-                                    productCapacityMap.set(pKey, Number(p.bottleVolumeMl));
-                                }
+                                if (typeof p.pricePerSpray === "number") productPriceMap.set(pKey, Number(p.pricePerSpray));
+                                if (typeof p.bottleVolumeMl === "number") productCapacityMap.set(pKey, Number(p.bottleVolumeMl));
                             }
                         });
                     }
@@ -662,11 +742,8 @@ export default function ScentStationLandingPage() {
                 }
             }
 
-            // 2. Đọc ma trận dung tích tồn kho theo từng máy (KIOSK_PER_UNIT_STOCK_KEY) & đồng bộ từ assignedMachines của /products
             const rawMatrix = localStorage.getItem(KIOSK_PER_UNIT_STOCK_KEY);
-            const perKioskMatrix: Record<string, Record<string, number>> = rawMatrix
-                ? JSON.parse(rawMatrix)
-                : {};
+            const perKioskMatrix: Record<string, Record<string, number>> = rawMatrix ? JSON.parse(rawMatrix) : {};
 
             parsedProds.forEach((p: any) => {
                 if (p && p.name && Array.isArray(p.assignedMachines)) {
@@ -681,33 +758,26 @@ export default function ScentStationLandingPage() {
                 }
             });
 
-            // 3. Đọc trạng thái 8 máy Kiosk và gắn trạng thái productStatus + số ml + giá mới nhất vào từng khoang
             let currentKiosks: SyncedKioskUnit[] = DEFAULT_8_KIOSKS;
             const rawMachines = localStorage.getItem(MACHINES_STORAGE_KEY);
             if (rawMachines) {
                 const parsedMachines = JSON.parse(rawMachines);
                 if (Array.isArray(parsedMachines) && parsedMachines.length > 0) {
                     currentKiosks = parsedMachines.map((m: any) => {
+                        const seedMatch = DEFAULT_8_KIOSKS.find(
+                            (sk) => sk.code.toLowerCase() === String(m.code || m.id || "").toLowerCase()
+                        );
                         const conn = m.connectionStatus || (m.status === "OFFLINE" ? "OFFLINE" : "ONLINE");
                         const oper =
                             m.operatingStatus ||
-                            (m.status === "MAINTENANCE"
-                                ? "MAINTENANCE"
-                                : m.status === "OFFLINE"
-                                    ? "ERROR"
-                                    : "ACTIVE");
+                            (m.status === "MAINTENANCE" ? "MAINTENANCE" : m.status === "OFFLINE" ? "ERROR" : "ACTIVE");
                         const unifiedStatus: "ONLINE" | "MAINTENANCE" | "OFFLINE" =
-                            conn === "OFFLINE"
-                                ? "OFFLINE"
-                                : oper === "MAINTENANCE"
-                                    ? "MAINTENANCE"
-                                    : oper === "ACTIVE"
-                                        ? "ONLINE"
-                                        : "OFFLINE";
+                            conn === "OFFLINE" ? "OFFLINE" : oper === "MAINTENANCE" ? "MAINTENANCE" : oper === "ACTIVE" ? "ONLINE" : "OFFLINE";
                         const kCode = String(m.code || m.id || "").toLowerCase();
 
                         return {
                             ...m,
+                            addressEn: m.addressEn || seedMatch?.addressEn,
                             status: unifiedStatus,
                             connectionStatus: conn,
                             operatingStatus: oper,
@@ -721,8 +791,7 @@ export default function ScentStationLandingPage() {
                                         typeof perKioskMatrix[kCode]?.[fKey] === "number"
                                             ? perKioskMatrix[kCode][fKey]
                                             : Number(sl.remainingMl);
-                                    const latestCap =
-                                        productCapacityMap.get(fKey) || Number(sl.capacityMl || 100);
+                                    const latestCap = productCapacityMap.get(fKey) || Number(sl.capacityMl || 100);
                                     const latestPrice = productPriceMap.get(fKey);
                                     return {
                                         ...sl,
@@ -741,7 +810,6 @@ export default function ScentStationLandingPage() {
                 localStorage.setItem(MACHINES_STORAGE_KEY, JSON.stringify(DEFAULT_8_KIOSKS));
             }
 
-            // 4. Đối soát danh mục 34 mùi hương + nối thêm sản phẩm mới tạo ở /products + lọc bỏ INACTIVE / gỡ hết khỏi trạm (Chuẩn BR3 & FR2.10)
             let baseCatalog: SyncedCatalogItem[] = DEFAULT_34_CATALOG;
             if (parsedProds.length > 0) {
                 baseCatalog = DEFAULT_34_CATALOG.map((defaultItem) => {
@@ -779,20 +847,15 @@ export default function ScentStationLandingPage() {
                         location: primaryAssigned?.location || defaultItem.location,
                         physicalSlotLabel: primaryAssigned?.physicalSlotLabel,
                         remainingVolumeMl: Number(
-                            primaryAssigned?.remainingVolumeMl ??
-                            savedProd.remainingVolumeMl ??
-                            defaultItem.remainingVolumeMl
+                            primaryAssigned?.remainingVolumeMl ?? savedProd.remainingVolumeMl ?? defaultItem.remainingVolumeMl
                         ),
-                        lowStockThresholdMl: Number(
-                            savedProd.lowStockThresholdMl ?? defaultItem.lowStockThresholdMl
-                        ),
+                        lowStockThresholdMl: Number(savedProd.lowStockThresholdMl ?? defaultItem.lowStockThresholdMl),
                         status: savedProd.status || defaultItem.status || "ACTIVE",
                         image: savedProd.image || defaultItem.image,
                         assignedMachines: assignedList,
                     };
                 });
 
-                // Tự động nối thêm các sản phẩm mới (slotNumber > 34) do Admin bấm "+ Add Fragrance" tạo ở /products
                 const customAdded = parsedProds.filter(
                     (p: any) =>
                         p &&
@@ -820,9 +883,9 @@ export default function ScentStationLandingPage() {
                         slotNumber: Number(customP.slotNumber || 35 + idx),
                         skuCode: customP.skuCode || `SKU-NEW-${35 + idx}`,
                         name: customP.name,
-                        brand: customP.brand || "Luxury Maison",
+                        brand: customP.brand || "Brand",
                         category: customP.category || "Unisex",
-                        family: customP.family || "Luxury Olfactory",
+                        family: customP.family || "Perfume",
                         notes: customP.notes || "Bergamot, Amber, Musk",
                         bottleVolumeMl: Number(customP.bottleVolumeMl || 100),
                         pricePerSpray: Number(customP.pricePerSpray || 15000),
@@ -831,9 +894,7 @@ export default function ScentStationLandingPage() {
                         kioskCode: primaryAssigned?.kioskCode || "demo-device",
                         location: primaryAssigned?.location || "Diamond Plaza Atrium, HCMC",
                         physicalSlotLabel: primaryAssigned?.physicalSlotLabel || "Slot 04",
-                        remainingVolumeMl: Number(
-                            primaryAssigned?.remainingVolumeMl ?? customP.bottleVolumeMl ?? 100
-                        ),
+                        remainingVolumeMl: Number(primaryAssigned?.remainingVolumeMl ?? customP.bottleVolumeMl ?? 100),
                         lowStockThresholdMl: 15,
                         sprayDurationMs: 1200,
                         image: customP.image || "/images/dior-sauvage.jpg",
@@ -842,15 +903,10 @@ export default function ScentStationLandingPage() {
                     });
                 });
 
-                // Chuẩn BR3: Chỉ hiển thị sản phẩm đang ACTIVE và đang được lắp đặt trên ít nhất 1 máy Kiosk
                 baseCatalog = baseCatalog.filter((item) => {
-                    const savedProd = parsedProds.find((p: any) =>
-                        isExactFragranceMatch(p.name || "", item.name)
-                    );
+                    const savedProd = parsedProds.find((p: any) => isExactFragranceMatch(p.name || "", item.name));
                     const hasAssignedMachine =
-                        !savedProd ||
-                        !Array.isArray(savedProd.assignedMachines) ||
-                        savedProd.assignedMachines.length > 0;
+                        !savedProd || !Array.isArray(savedProd.assignedMachines) || savedProd.assignedMachines.length > 0;
                     return (!item.status || item.status === "ACTIVE") && hasAssignedMachine;
                 });
             } else {
@@ -862,9 +918,7 @@ export default function ScentStationLandingPage() {
                 const pKey = item.name.trim().toLowerCase();
                 const matrixMl = perKioskMatrix[kKey]?.[pKey];
                 const kioskUnit = currentKiosks.find((k) => k.code.toLowerCase() === kKey);
-                const matchedSlot = kioskUnit?.slots.find((sl) =>
-                    isExactFragranceMatch(sl.fragranceName, item.name)
-                );
+                const matchedSlot = kioskUnit?.slots.find((sl) => isExactFragranceMatch(sl.fragranceName, item.name));
                 const finalMl =
                     typeof matrixMl === "number"
                         ? matrixMl
@@ -883,19 +937,12 @@ export default function ScentStationLandingPage() {
         isMountedRef.current = true;
         loadAndSyncStorageData();
 
-        const handleCrossTabSync = () => {
-            loadAndSyncStorageData();
-        };
-
+        const handleCrossTabSync = () => loadAndSyncStorageData();
         window.addEventListener("storage", handleCrossTabSync);
         window.addEventListener("focus", handleCrossTabSync);
         window.addEventListener("scentstation-sync", handleCrossTabSync);
 
-        // Tự động đồng bộ thời gian thực mỗi 2 giây để bắt mọi thay đổi từ Màn 4 & Màn 5 mà không cần F5
-        const liveSyncTimer = setInterval(() => {
-            loadAndSyncStorageData();
-        }, 2000);
-
+        const liveSyncTimer = setInterval(() => loadAndSyncStorageData(), 2000);
         return () => {
             isMountedRef.current = false;
             window.removeEventListener("storage", handleCrossTabSync);
@@ -913,7 +960,6 @@ export default function ScentStationLandingPage() {
             return;
         }
         document.body.style.overflow = "hidden";
-
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "Escape" && checkoutStatus !== "PAID" && checkoutStatus !== "DISPENSING") {
                 setCheckoutItem(null);
@@ -930,15 +976,14 @@ export default function ScentStationLandingPage() {
         if (!checkoutItem || checkoutStatus !== "PENDING") return;
         if (checkoutSecondsLeft <= 0) {
             setCheckoutStatus("EXPIRED");
-            const expiredMsg =
+            setCheckoutErrorReason(
                 lang === "en"
-                    ? `Payment session for Order ${checkoutOrderId} has expired after 120 seconds. No charge was made and no spray was triggered.`
-                    : `Phiên thanh toán cho đơn hàng ${checkoutOrderId} đã hết hạn sau 120 giây. Không phát sinh trừ tiền và vòi phun đã được khóa an toàn.`;
-            setCheckoutErrorReason(expiredMsg);
-
+                    ? `Order ${checkoutOrderId} expired (120s). No charge made.`
+                    : `Đơn ${checkoutOrderId} đã hết hạn (120s). Không trừ tiền.`
+            );
             upsertOrderAndAlertsToStorage({
                 id: checkoutOrderId,
-                time: "Expired (120s Timeout)",
+                time: lang === "en" ? "Expired (120s)" : "Hết hạn (120s)",
                 kiosk: checkoutItem.kioskCode,
                 slotNumber: checkoutItem.slotNumber,
                 brand: checkoutItem.brand,
@@ -954,9 +999,7 @@ export default function ScentStationLandingPage() {
             });
             return;
         }
-        const timer = setInterval(() => {
-            setCheckoutSecondsLeft((prev) => Math.max(0, prev - 1));
-        }, 1000);
+        const timer = setInterval(() => setCheckoutSecondsLeft((prev) => Math.max(0, prev - 1)), 1000);
         return () => clearInterval(timer);
     }, [
         checkoutItem,
@@ -978,28 +1021,24 @@ export default function ScentStationLandingPage() {
             setCheckoutItem(null);
             return;
         }
-        const timer = setInterval(() => {
-            setAutoCloseSeconds((prev) => Math.max(0, prev - 1));
-        }, 1000);
+        const timer = setInterval(() => setAutoCloseSeconds((prev) => Math.max(0, prev - 1)), 1000);
         return () => clearInterval(timer);
     }, [checkoutItem, checkoutStatus, autoCloseSeconds]);
 
     const getKioskReadiness = useCallback(
         (kioskCode: string) => {
             const kObj = kiosks.find((k) => k.code.toLowerCase() === kioskCode.toLowerCase());
-            if (!kObj) {
-                return { ready: true, label: lang === "en" ? "Available" : "Sẵn sàng", kiosk: undefined };
-            }
+            if (!kObj) return { ready: true, label: lang === "en" ? "Ready" : "Sẵn sàng", kiosk: undefined };
             if (kObj.connectionStatus !== "ONLINE" || kObj.status === "OFFLINE") {
-                return { ready: false, label: lang === "en" ? "Station Offline" : "Mất kết nối", kiosk: kObj };
+                return { ready: false, label: lang === "en" ? "Offline" : "Mất kết nối", kiosk: kObj };
             }
             if (kObj.operatingStatus === "MAINTENANCE" || kObj.status === "MAINTENANCE") {
-                return { ready: false, label: lang === "en" ? "In Maintenance" : "Đang bảo trì", kiosk: kObj };
+                return { ready: false, label: lang === "en" ? "Maintenance" : "Bảo trì", kiosk: kObj };
             }
             if (kObj.operatingStatus !== "ACTIVE" || kObj.doorOpen || kObj.leakDetected) {
                 return { ready: false, label: lang === "en" ? "Safety Lock" : "Khóa an toàn", kiosk: kObj };
             }
-            return { ready: true, label: lang === "en" ? "Available" : "Sẵn sàng", kiosk: kObj };
+            return { ready: true, label: lang === "en" ? "Ready" : "Sẵn sàng", kiosk: kObj };
         },
         [kiosks, lang]
     );
@@ -1007,13 +1046,11 @@ export default function ScentStationLandingPage() {
     const getPhysicalSlotLabel = useCallback(
         (kioskCode: string, perfumeName: string, fallbackIndex: number): string => {
             const kObj = kiosks.find((k) => k.code.toLowerCase() === kioskCode.toLowerCase());
-            const matchedSlot = kObj?.slots.find((sl) =>
-                isExactFragranceMatch(sl.fragranceName, perfumeName)
-            );
-            if (matchedSlot) return matchedSlot.slotLabel.toUpperCase();
-            return `SLOT 0${((fallbackIndex - 1) % 4) + 1}`;
+            const matchedSlot = kObj?.slots.find((sl) => isExactFragranceMatch(sl.fragranceName, perfumeName));
+            const raw = matchedSlot ? matchedSlot.slotLabel : `Slot 0${((fallbackIndex - 1) % 4) + 1}`;
+            return formatSlotLabel(raw, lang);
         },
-        [kiosks]
+        [kiosks, lang]
     );
 
     const unique21Brands = useMemo(
@@ -1027,10 +1064,7 @@ export default function ScentStationLandingPage() {
     );
 
     const onlineKiosksCount = useMemo(
-        () =>
-            kiosks.filter(
-                (k) => k.connectionStatus === "ONLINE" && k.operatingStatus === "ACTIVE"
-            ).length,
+        () => kiosks.filter((k) => k.connectionStatus === "ONLINE" && k.operatingStatus === "ACTIVE").length,
         [kiosks]
     );
 
@@ -1044,7 +1078,6 @@ export default function ScentStationLandingPage() {
         [kiosks]
     );
 
-    // Nếu sản phẩm được lắp ở nhiều máy Kiosk (bao gồm selectedKioskCode), tự động hiển thị đúng số ml và khoang của selectedKioskCode
     const baseScopedPerfumes = useMemo(() => {
         const q = searchQuery.trim().toLowerCase();
         const selKioskLower = selectedKioskCode.toLowerCase();
@@ -1066,24 +1099,17 @@ export default function ScentStationLandingPage() {
                 return item;
             })
             .filter((item) => {
-                const matchBrand =
-                    selectedBrand === "ALL" || item.brand === selectedBrand;
+                const matchBrand = selectedBrand === "ALL" || item.brand === selectedBrand;
                 const isInstalledOnSelectedKiosk =
                     item.kioskCode.toLowerCase() === selKioskLower ||
-                    Boolean(
-                        item.assignedMachines?.some(
-                            (am) => am.kioskCode.toLowerCase() === selKioskLower
-                        )
-                    );
-                const matchKiosk =
-                    !filterBySelectedKiosk || isInstalledOnSelectedKiosk;
+                    Boolean(item.assignedMachines?.some((am) => am.kioskCode.toLowerCase() === selKioskLower));
+                const matchKiosk = !filterBySelectedKiosk || isInstalledOnSelectedKiosk;
                 const matchSearch =
                     !q ||
                     item.name.toLowerCase().includes(q) ||
                     item.skuCode.toLowerCase().includes(q) ||
                     item.brand.toLowerCase().includes(q) ||
                     item.notes.toLowerCase().includes(q) ||
-                    item.family.toLowerCase().includes(q) ||
                     item.location.toLowerCase().includes(q) ||
                     item.kioskCode.toLowerCase().includes(q);
                 return matchBrand && matchKiosk && matchSearch;
@@ -1113,9 +1139,7 @@ export default function ScentStationLandingPage() {
         searchQuery.trim() !== "";
 
     const filteredPerfumes = useMemo(() => {
-        return isAutoExpanded
-            ? totalMatchedPerfumes
-            : totalMatchedPerfumes.slice(0, 12);
+        return isAutoExpanded ? totalMatchedPerfumes : totalMatchedPerfumes.slice(0, 12);
     }, [isAutoExpanded, totalMatchedPerfumes]);
 
     const handleOpenPaymentGateway = (prod: SyncedCatalogItem, targetKioskCode?: string) => {
@@ -1125,25 +1149,20 @@ export default function ScentStationLandingPage() {
         if (!readiness.ready && readiness.kiosk) {
             triggerToast(
                 lang === "en"
-                    ? `Station Unavailable: ${readiness.kiosk.locationName} is currently ${readiness.label.toLowerCase()}. Please select an active station.`
-                    : `Trạm tạm ngưng phục vụ: ${readiness.kiosk.locationName} hiện đang ${readiness.label.toLowerCase()}. Vui lòng chọn trạm khác.`,
+                    ? `${readiness.kiosk.locationName} is ${readiness.label.toLowerCase()}.`
+                    : `${readiness.kiosk.locationName} hiện đang ${readiness.label.toLowerCase()}.`,
                 "error"
             );
             return;
         }
 
-        const targetSlot = readiness.kiosk?.slots.find((sl) =>
-            isExactFragranceMatch(sl.fragranceName, prod.name)
-        );
-
+        const targetSlot = readiness.kiosk?.slots.find((sl) => isExactFragranceMatch(sl.fragranceName, prod.name));
         if (
             (prod.status && prod.status !== "ACTIVE") ||
             (targetSlot?.productStatus && targetSlot.productStatus !== "ACTIVE")
         ) {
             triggerToast(
-                lang === "en"
-                    ? `Product Deactivated: ${prod.name} has been set to INACTIVE in the Product Catalog.`
-                    : `Sản phẩm tạm ngưng: ${prod.name} đã được chuyển sang trạng thái INACTIVE trong Danh mục sản phẩm.`,
+                lang === "en" ? `${prod.name} is inactive.` : `${prod.name} đang tạm ngưng.`,
                 "warning"
             );
             return;
@@ -1160,9 +1179,7 @@ export default function ScentStationLandingPage() {
 
         if (availableMl < 0.12) {
             triggerToast(
-                lang === "en"
-                    ? `Out of Stock: ${prod.name} has insufficient volume for a calibrated spray.`
-                    : `Hết dung tích: ${prod.name} không còn đủ định lượng cho một lần xịt tiêu chuẩn.`,
+                lang === "en" ? `${prod.name} has insufficient volume (< 0.12ml).` : `${prod.name} không đủ dung tích (< 0.12ml).`,
                 "error"
             );
             return;
@@ -1190,7 +1207,7 @@ export default function ScentStationLandingPage() {
 
         upsertOrderAndAlertsToStorage({
             id: newOrderId,
-            time: "Awaiting VIETQR Payment",
+            time: lang === "en" ? "Awaiting VIETQR" : "Chờ thanh toán VIETQR",
             kiosk: kioskCode,
             slotNumber: prod.slotNumber,
             brand: prod.brand,
@@ -1222,13 +1239,12 @@ export default function ScentStationLandingPage() {
                 setPaymentAttemptError(null);
                 setCheckoutErrorReason(
                     lang === "en"
-                        ? `Order ${checkoutOrderId} was cancelled prior to payment. No charge was applied.`
-                        : `Đơn hàng ${checkoutOrderId} đã được hủy trước khi thanh toán. Không phát sinh giao dịch trừ tiền.`
+                        ? `Order ${checkoutOrderId} cancelled before payment.`
+                        : `Đơn ${checkoutOrderId} đã hủy trước khi thanh toán.`
                 );
-
                 upsertOrderAndAlertsToStorage({
                     id: checkoutOrderId,
-                    time: "Customer Cancelled",
+                    time: lang === "en" ? "Cancelled" : "Đã hủy",
                     kiosk: checkoutItem.kioskCode,
                     slotNumber: checkoutItem.slotNumber,
                     brand: checkoutItem.brand,
@@ -1242,53 +1258,30 @@ export default function ScentStationLandingPage() {
                     failureReason: "CUSTOMER_CANCELLED_BEFORE_PAYMENT",
                     requiresHumanReview: false,
                 });
-
-                triggerToast(
-                    lang === "en"
-                        ? `Order ${checkoutOrderId} has been cancelled.`
-                        : `Đã hủy đơn hàng ${checkoutOrderId}.`,
-                    "warning"
-                );
+                triggerToast(lang === "en" ? `Cancelled ${checkoutOrderId}.` : `Đã hủy ${checkoutOrderId}.`, "warning");
                 return;
             }
 
             if (scenario === "PAYMENT_ATTEMPT_FAILED") {
                 setPaymentAttemptError(
                     lang === "en"
-                        ? `Payment transaction via ${checkoutMethod} was declined by the provider. Your order remains active so you may scan again before the timer expires.`
-                        : `Giao dịch qua ${checkoutMethod} không thành công. Đơn hàng vẫn được giữ để bạn quét lại mã QR trước khi hết thời gian.`
-                );
-                triggerToast(
-                    lang === "en"
-                        ? "Payment attempt declined. You may retry before timeout."
-                        : "Thanh toán chưa thành công. Bạn có thể thử lại trước khi hết giờ.",
-                    "warning"
+                        ? `Payment via ${checkoutMethod} failed. Order stays open for retry before timeout.`
+                        : `Thanh toán ${checkoutMethod} thất bại. Có thể quét lại trước khi hết giờ.`
                 );
                 return;
             }
 
             const providerRef = `PAY-${checkoutMethod}-${checkoutOrderId}`;
-            if (processedWebhookRefs.current.has(providerRef)) {
-                triggerToast(
-                    lang === "en"
-                        ? `Duplicate payment notification ignored (${providerRef}).`
-                        : `Đã bỏ qua thông báo thanh toán trùng lặp (${providerRef}).`,
-                    "warning"
-                );
-                return;
-            }
+            if (processedWebhookRefs.current.has(providerRef)) return;
             processedWebhookRefs.current.add(providerRef);
             setPaymentAttemptError(null);
 
             setCheckoutStatus("PAID");
             setMqttTelemetryStep(
-                lang === "en"
-                    ? `Payment verified (${providerRef}). Preparing chamber...`
-                    : `Đã xác nhận thanh toán (${providerRef}). Đang chuẩn bị buồng xịt...`
+                lang === "en" ? `Verified (${providerRef}). Sending command...` : `Đã thanh toán (${providerRef}). Đang gửi lệnh...`
             );
 
-            const stillAliveAfterPaid = await sleepSafe(650);
-            if (!stillAliveAfterPaid) return;
+            if (!(await sleepSafe(650))) return;
 
             const cmdUuid = `CMD-${checkoutOrderId}`;
             const idempotencyKey = `IDEMP-${checkoutOrderId}-SLOT0${checkoutItem.slotNumber}`;
@@ -1299,27 +1292,24 @@ export default function ScentStationLandingPage() {
             setCheckoutStatus("DISPENSING");
             setMqttTelemetryStep(
                 lang === "en"
-                    ? `Activating calibrated atomizer nozzle (0.12ml / ${checkoutItem.sprayDurationMs}ms)...`
-                    : `Đang kích hoạt vòi phun định lượng (0.12ml / ${checkoutItem.sprayDurationMs}ms)...`
+                    ? `Dispensing 0.12ml (${checkoutItem.sprayDurationMs}ms)...`
+                    : `Đang phun 0.12ml (${checkoutItem.sprayDurationMs}ms)...`
             );
 
-            const stillAliveAfterDispensing = await sleepSafe(750);
-            if (!stillAliveAfterDispensing) return;
+            if (!(await sleepSafe(750))) return;
 
             const readinessNow = getKioskReadiness(checkoutItem.kioskCode);
 
             if (scenario === "SAFETY_INTERLOCK_FAILED_AFTER_PAID" || !readinessNow.ready) {
-                const failReason =
-                    lang === "en"
-                        ? `Hardware safety interlock prevented dispensing on station ${checkoutItem.kioskCode}. Your payment (${checkoutPriceSnapshot.toLocaleString("vi-VN")} VND) has been logged under Reference ${checkoutOrderId} and routed to Operations Support for an automatic refund.`
-                        : `Khóa an toàn phần cứng trên trạm ${checkoutItem.kioskCode} đã ngắt lệnh phun. Khoản thanh toán (${checkoutPriceSnapshot.toLocaleString("vi-VN")}đ) của mã đơn ${checkoutOrderId} đã được chuyển tới bộ phận vận hành để hoàn tiền.`;
-
                 setCheckoutStatus("FAILED");
-                setCheckoutErrorReason(failReason);
-
+                setCheckoutErrorReason(
+                    lang === "en"
+                        ? `Safety interlock blocked spray on ${checkoutItem.kioskCode}. Order ${checkoutOrderId} logged for OM review & refund.`
+                        : `Khóa an toàn chặn phun trên ${checkoutItem.kioskCode}. Đơn ${checkoutOrderId} đã chuyển OM rà soát hoàn tiền.`
+                );
                 upsertOrderAndAlertsToStorage({
                     id: checkoutOrderId,
-                    time: "Paid — Dispense Interrupted",
+                    time: lang === "en" ? "Hardware fault after payment" : "Lỗi phần cứng sau thanh toán",
                     kiosk: checkoutItem.kioskCode,
                     slotNumber: checkoutItem.slotNumber,
                     brand: checkoutItem.brand,
@@ -1338,28 +1328,20 @@ export default function ScentStationLandingPage() {
                     failureReason: "SAFETY_INTERLOCK_REJECTED",
                     requiresHumanReview: true,
                 });
-
-                triggerToast(
-                    lang === "en"
-                        ? `Dispensing interrupted. Order ${checkoutOrderId} queued for refund.`
-                        : `Gián đoạn phun. Đơn ${checkoutOrderId} đã được chuyển vào danh sách hoàn tiền.`,
-                    "error"
-                );
+                triggerToast(lang === "en" ? `Dispense failed. Logged for review.` : `Lỗi phun. Đã ghi nhận để đối soát.`, "error");
                 return;
             }
 
             if (scenario === "DEVICE_TIMEOUT_UNCERTAIN") {
-                const uncertainReason =
-                    lang === "en"
-                        ? `Station ${checkoutItem.kioskCode} acknowledged command ${cmdUuid} but did not confirm completion within the safety window. To prevent accidental double-spraying, Order ${checkoutOrderId} is held for staff verification and refund review.`
-                        : `Trạm ${checkoutItem.kioskCode} đã nhận lệnh nhưng phản hồi kết quả trễ hạn. Để đảm bảo an toàn không phun lặp, đơn ${checkoutOrderId} đã được ghi nhận để nhân viên kiểm tra và hỗ trợ hoàn tiền.`;
-
                 setCheckoutStatus("UNCERTAIN");
-                setCheckoutErrorReason(uncertainReason);
-
+                setCheckoutErrorReason(
+                    lang === "en"
+                        ? `Device timed out after ACK (${cmdUuid}). No auto-retry to avoid double spray. Held for OM verification.`
+                        : `Máy quá hạn phản hồi sau khi nhận lệnh (${cmdUuid}). Không tự xịt lại để tránh xịt lặp; giữ trạng thái chờ OM đối soát.`
+                );
                 upsertOrderAndAlertsToStorage({
                     id: checkoutOrderId,
-                    time: "Uncertain — Pending Verification",
+                    time: lang === "en" ? "Unconfirmed result" : "Chưa xác nhận kết quả",
                     kiosk: checkoutItem.kioskCode,
                     slotNumber: checkoutItem.slotNumber,
                     brand: checkoutItem.brand,
@@ -1378,13 +1360,7 @@ export default function ScentStationLandingPage() {
                     failureReason: "MQTT_RESULT_TIMEOUT_UNCERTAIN",
                     requiresHumanReview: true,
                 });
-
-                triggerToast(
-                    lang === "en"
-                        ? `Status unconfirmed for ${checkoutOrderId}. Logged for support verification.`
-                        : `Chưa xác nhận kết quả phun cho đơn ${checkoutOrderId}. Đã ghi nhận để đối soát.`,
-                    "warning"
-                );
+                triggerToast(lang === "en" ? `Result uncertain. Logged for OM.` : `Kết quả chưa xác nhận. Đã chuyển đối soát.`, "warning");
                 return;
             }
 
@@ -1397,7 +1373,6 @@ export default function ScentStationLandingPage() {
             const qtyAfter = Number(Math.max(0, qtyBefore - 0.12).toFixed(2));
             const thresholdMl = checkoutItem.lowStockThresholdMl || 15;
 
-            // 1. Chỉ trừ -0.12ml trên đúng chiếc máy kioskCode đang thực hiện lệnh phun
             const updatedKiosks = kiosks.map((k) => {
                 if (k.code.toLowerCase() !== kKey) return k;
                 return {
@@ -1405,21 +1380,16 @@ export default function ScentStationLandingPage() {
                     todaySprays: (k.todaySprays || 0) + 1,
                     todayRevenue: (k.todayRevenue || 0) + price,
                     slots: k.slots.map((sl) =>
-                        isExactFragranceMatch(sl.fragranceName, perfumeName)
-                            ? { ...sl, remainingMl: qtyAfter }
-                            : sl
+                        isExactFragranceMatch(sl.fragranceName, perfumeName) ? { ...sl, remainingMl: qtyAfter } : sl
                     ),
                 };
             });
             setKiosks(updatedKiosks);
             localStorage.setItem(MACHINES_STORAGE_KEY, JSON.stringify(updatedKiosks));
 
-            // 2. Cập nhật đúng máy kKey trong KIOSK_PER_UNIT_STOCK_KEY
             try {
                 const rawMatrix = localStorage.getItem(KIOSK_PER_UNIT_STOCK_KEY);
-                const perKioskMatrix: Record<string, Record<string, number>> = rawMatrix
-                    ? JSON.parse(rawMatrix)
-                    : {};
+                const perKioskMatrix: Record<string, Record<string, number>> = rawMatrix ? JSON.parse(rawMatrix) : {};
                 if (!perKioskMatrix[kKey]) perKioskMatrix[kKey] = {};
                 perKioskMatrix[kKey][pKey] = qtyAfter;
                 localStorage.setItem(KIOSK_PER_UNIT_STOCK_KEY, JSON.stringify(perKioskMatrix));
@@ -1427,23 +1397,18 @@ export default function ScentStationLandingPage() {
                 // Safe fallback
             }
 
-            // 3. Cập nhật state catalog tại chỗ
             const updatedCatalog = catalog.map((c) => {
                 if (!isExactFragranceMatch(c.name, perfumeName)) return c;
                 return {
                     ...c,
-                    remainingVolumeMl:
-                        c.kioskCode.toLowerCase() === kKey ? qtyAfter : c.remainingVolumeMl,
+                    remainingVolumeMl: c.kioskCode.toLowerCase() === kKey ? qtyAfter : c.remainingVolumeMl,
                     assignedMachines: c.assignedMachines?.map((am) =>
-                        am.kioskCode.toLowerCase() === kKey
-                            ? { ...am, remainingVolumeMl: qtyAfter }
-                            : am
+                        am.kioskCode.toLowerCase() === kKey ? { ...am, remainingVolumeMl: qtyAfter } : am
                     ),
                 };
             });
             setCatalog(updatedCatalog);
 
-            // 4. Đồng bộ sang PRODUCTS_STORAGE_KEY (Cập nhật cả liveExtraSprays, samplingSessions30d & đúng trạm kKey trong assignedMachines)
             const rawProds = localStorage.getItem(PRODUCTS_STORAGE_KEY);
             if (rawProds) {
                 const parsedProds = JSON.parse(rawProds);
@@ -1469,7 +1434,6 @@ export default function ScentStationLandingPage() {
                 }
             }
 
-            // 5. Ghi lịch sử biến động tồn kho (SALE)
             try {
                 const rawMovements = localStorage.getItem(INVENTORY_MOVEMENTS_KEY);
                 const movements = rawMovements ? JSON.parse(rawMovements) : [];
@@ -1485,7 +1449,7 @@ export default function ScentStationLandingPage() {
                     quantityBeforeMl: qtyBefore,
                     quantityAfterMl: qtyAfter,
                     deltaMl: -0.12,
-                    reason: `Customer sampling order (${checkoutOrderId})`,
+                    reason: lang === "en" ? `Dispense order (${checkoutOrderId})` : `Đơn xịt (${checkoutOrderId})`,
                     timestamp: new Date().toISOString(),
                 });
                 localStorage.setItem(INVENTORY_MOVEMENTS_KEY, JSON.stringify(movements.slice(0, 300)));
@@ -1496,7 +1460,7 @@ export default function ScentStationLandingPage() {
             const nowIso = new Date().toISOString();
             upsertOrderAndAlertsToStorage({
                 id: checkoutOrderId,
-                time: `Completed (${kioskCode})`,
+                time: lang === "en" ? `Completed (${kioskCode})` : `Hoàn tất (${kioskCode})`,
                 kiosk: kioskCode,
                 slotNumber: checkoutItem.slotNumber,
                 brand: checkoutItem.brand,
@@ -1549,9 +1513,7 @@ export default function ScentStationLandingPage() {
             setCheckoutStatus("DISPENSED");
 
             triggerToast(
-                lang === "en"
-                    ? `Fragrance dispensed! Enjoy your ${perfumeName} sample.`
-                    : `Đã xịt hoàn tất! Chúc bạn có trải nghiệm tuyệt vời với ${perfumeName}.`,
+                lang === "en" ? `Dispensed ${perfumeName} (-0.12ml).` : `Đã xịt ${perfumeName} (-0.12ml).`,
                 "success"
             );
         } finally {
@@ -1568,9 +1530,7 @@ export default function ScentStationLandingPage() {
             window.dispatchEvent(new Event("scentstation-sync"));
         }
         triggerToast(
-            lang === "en"
-                ? "All station telemetry and fragrance levels have been refreshed."
-                : "Đã làm mới toàn bộ dữ liệu trạm Kiosk và dung tích nước hoa.",
+            lang === "en" ? "Station data refreshed." : "Đã làm mới dữ liệu trạm.",
             "success"
         );
     }, [lang, loadAndSyncStorageData, triggerToast]);
@@ -1581,6 +1541,7 @@ export default function ScentStationLandingPage() {
 
     return (
         <div className={`${styles.landingViewport} notranslate`} translate="no">
+            {/* GIỮ VIDEO NỀN */}
             <div className={styles.videoStage} aria-hidden="true">
                 <video
                     ref={videoRef}
@@ -1607,29 +1568,29 @@ export default function ScentStationLandingPage() {
                         <span className={styles.brandTitle} translate="no">
                             ScentStation
                         </span>
-                        <span className={styles.brandSub}>
-                            {lang === "en"
-                                ? "Haute Parfumerie & Automated Sampling Boutiques"
-                                : "Hệ Thống Trải Nghiệm Nước Hoa Tự Động Cao Cấp"}
-                        </span>
                     </div>
 
                     <nav className={styles.navLinks}>
                         <a href="#maisons" className={styles.navLinkItem}>
-                            {lang === "en" ? "Partner Maisons" : "Thương Hiệu"}
+                            {lang === "en" ? "Brands" : "Thương hiệu"}
                         </a>
                         <a href="#collection" className={styles.navLinkItem}>
-                            {lang === "en" ? "Fragrance Vault" : "Bộ Sưu Tập Mùi Hương"}
+                            {lang === "en" ? "Catalog" : "Danh mục mùi"}
                         </a>
                         <a href="#kiosks" className={styles.navLinkItem}>
-                            {lang === "en" ? "Boutique Stations" : "Trạm Trải Nghiệm"}
+                            {lang === "en" ? "Stations" : "Danh sách trạm"}
                         </a>
                         <button
                             type="button"
                             onClick={() => router.push(`/kiosk/${selectedKioskCode}`)}
                             className={styles.navLinkItem}
+                            title={
+                                lang === "en"
+                                    ? "Open customer touchscreen view"
+                                    : "Mở giao diện cảm ứng dành cho khách tại trạm"
+                            }
                         >
-                            {lang === "en" ? "Touchscreen Kiosk Mode" : "Giao Diện Màn Hình Kiosk"}
+                            {lang === "en" ? "Kiosk Screen" : "Màn hình Kiosk"}
                         </button>
                     </nav>
 
@@ -1638,19 +1599,24 @@ export default function ScentStationLandingPage() {
                             type="button"
                             onClick={() => setIsMuted(!isMuted)}
                             className={styles.iconGhostBtn}
-                            title={isMuted ? "Unmute Ambient Audio" : "Mute Ambient Audio"}
+                            title={
+                                lang === "en"
+                                    ? isMuted
+                                        ? "Unmute background audio"
+                                        : "Mute background audio"
+                                    : isMuted
+                                        ? "Bật âm thanh nền"
+                                        : "Tắt âm thanh nền"
+                            }
                         >
-                            {isMuted ? (
-                                <VolumeX size={15} color="#94A3B8" />
-                            ) : (
-                                <Volume2 size={15} color="#D4AF37" />
-                            )}
+                            {isMuted ? <VolumeX size={15} color="#94A3B8" /> : <Volume2 size={15} color="#D4AF37" />}
                         </button>
 
                         <button
                             type="button"
                             onClick={handleToggleLanguage}
                             className={styles.iconGhostBtn}
+                            title={lang === "en" ? "Switch to Vietnamese" : "Chuyển sang Tiếng Anh"}
                         >
                             <Globe size={14} color="#D4AF37" />
                             <span>{lang === "en" ? "EN" : "VI"}</span>
@@ -1661,13 +1627,13 @@ export default function ScentStationLandingPage() {
                             onClick={() => router.push(portalTargetRoute)}
                             className={styles.loginPrimaryBtn}
                         >
-                            {activeSessionUser ? <LayoutDashboard size={16} /> : <LogIn size={16} />}
+                            {activeSessionUser ? <LayoutDashboard size={15} /> : <LogIn size={15} />}
                             <span>
                                 {activeSessionUser
                                     ? `${activeSessionUser.fullName} (${activeSessionUser.roleCode})`
                                     : lang === "en"
-                                        ? "Partner Sign In"
-                                        : "Đăng Nhập Quản Trị"}
+                                        ? "Staff Sign In"
+                                        : "Đăng nhập quản trị"}
                             </span>
                         </button>
                     </div>
@@ -1681,138 +1647,108 @@ export default function ScentStationLandingPage() {
                             <span className={styles.pulseDot} />
                             <span>
                                 {lang === "en"
-                                    ? `LIVE NETWORK • ${onlineKiosksCount} OF ${kiosks.length} BOUTIQUE STATIONS READY`
-                                    : `TRỰC TUYẾN • ${onlineKiosksCount}/${kiosks.length} TRẠM TRẢI NGHIỆM ĐANG SẴN SÀNG`}
+                                    ? `${onlineKiosksCount}/${kiosks.length} stations online`
+                                    : `${onlineKiosksCount}/${kiosks.length} trạm đang hoạt động`}
                             </span>
                         </div>
 
                         <h1 className={styles.heroHeadline}>
-                            {lang === "en"
-                                ? "Where Haute Parfumerie Meets Intelligent Retail"
-                                : "Nơi Nghệ Thuật Hương Thơm Giao Thoa Công Nghệ Tinh Hoa"}
+                            {lang === "en" ? "ScentStation Kiosk Network" : "Hệ thống trạm Kiosk ScentStation"}
                         </h1>
 
                         <p className={styles.heroLead}>
                             {lang === "en"
-                                ? "Explore iconic creations from the world's most prestigious fragrance houses. Select your scent, scan to pay seamlessly via VietQR, and experience an instant calibrated mist at our flagship stations."
-                                : "Khám phá những tuyệt tác mùi hương từ các nhà chế tác danh tiếng thế giới. Chọn mùi hương yêu thích, thanh toán chạm nhẹ qua mã QR và tận hưởng làn hương định lượng chuẩn xác ngay tại trạm."}
+                                ? "Inspect live slot levels, test QR payment & dispensing flows (0.12ml/spray), or sign in to the management portal."
+                                : "Theo dõi dung tích từng khoang máy, kiểm thử luồng thanh toán QR & phun định lượng (0.12ml/lần), hoặc đăng nhập vào trang quản trị."}
                         </p>
 
                         <div className={styles.ctaButtonGroup}>
-                            <a href="#collection" className={styles.ctaGoldHeroBtn}>
-                                <Sparkles size={18} />
+                            <button
+                                type="button"
+                                onClick={() => router.push(portalTargetRoute)}
+                                className={styles.ctaGoldHeroBtn}
+                            >
+                                {activeSessionUser ? <LayoutDashboard size={16} /> : <LogIn size={16} />}
                                 <span>
-                                    {lang === "en"
-                                        ? "Explore Fragrance Collection"
-                                        : "Khám Phá Bộ Sưu Tập Hương Thơm"}
+                                    {activeSessionUser
+                                        ? lang === "en"
+                                            ? "Open Portal"
+                                            : "Vào trang quản trị"
+                                        : lang === "en"
+                                            ? "Staff Sign In"
+                                            : "Đăng nhập quản trị"}
                                 </span>
-                            </a>
+                            </button>
 
                             <button
                                 type="button"
                                 onClick={() => router.push(`/kiosk/${selectedKioskCode}`)}
                                 className={styles.ctaGlassSecondaryBtn}
+                                title={
+                                    lang === "en"
+                                        ? "Opens anonymous customer UI for the selected station"
+                                        : "Mở giao diện cảm ứng ẩn danh dành cho khách tại trạm đang chọn"
+                                }
                             >
-                                <QrCode size={18} color="#D4AF37" />
-                                <span>
-                                    {lang === "en"
-                                        ? "Open Fullscreen Kiosk Display"
-                                        : "Mở Giao Diện Kiosk Toàn Màn Hình"}
-                                </span>
+                                <QrCode size={16} color="#D4AF37" />
+                                <span>{lang === "en" ? "Open Kiosk Screen" : "Mở màn hình Kiosk"}</span>
                             </button>
                         </div>
 
                         <div className={styles.heroStatsRow}>
                             <div
                                 className={styles.heroStatCard}
-                                onClick={() => {
-                                    const el = document.getElementById("maisons");
-                                    el?.scrollIntoView({ behavior: "smooth" });
-                                }}
+                                onClick={() => document.getElementById("maisons")?.scrollIntoView({ behavior: "smooth" })}
                             >
-                                <div className={styles.heroStatNum} translate="no">
-                                    {unique21Brands.length} Maisons
-                                </div>
-                                <div className={styles.heroStatLabel}>
-                                    {lang === "en" ? "Authorized Luxury Houses" : "Thương Hiệu Cao Cấp"}
-                                </div>
+                                <div className={styles.heroStatNum}>{unique21Brands.length}</div>
+                                <div className={styles.heroStatLabel}>{lang === "en" ? "Brands" : "Thương hiệu"}</div>
                             </div>
 
                             <div
                                 className={styles.heroStatCard}
-                                onClick={() => {
-                                    const el = document.getElementById("collection");
-                                    el?.scrollIntoView({ behavior: "smooth" });
-                                }}
+                                onClick={() => document.getElementById("collection")?.scrollIntoView({ behavior: "smooth" })}
                             >
-                                <div className={styles.heroStatNum} translate="no">
-                                    {catalog.length} Scents
-                                </div>
-                                <div className={styles.heroStatLabel}>
-                                    {lang === "en" ? "Active Signatures" : "Mùi Hương Đang Mở Bán"}
-                                </div>
+                                <div className={styles.heroStatNum}>{catalog.length}</div>
+                                <div className={styles.heroStatLabel}>{lang === "en" ? "Active Scents" : "Mùi đang mở bán"}</div>
                             </div>
 
                             <div
                                 className={styles.heroStatCard}
-                                onClick={() => {
-                                    const el = document.getElementById("kiosks");
-                                    el?.scrollIntoView({ behavior: "smooth" });
-                                }}
+                                onClick={() => document.getElementById("kiosks")?.scrollIntoView({ behavior: "smooth" })}
                             >
-                                <div className={styles.heroStatNum} translate="no">
-                                    {onlineKiosksCount}/{kiosks.length} Active
+                                <div className={styles.heroStatNum}>
+                                    {onlineKiosksCount}/{kiosks.length}
                                 </div>
-                                <div className={styles.heroStatLabel}>
-                                    {lang === "en" ? "Flagship Locations" : "Trạm Kiosk Hoạt Động"}
-                                </div>
+                                <div className={styles.heroStatLabel}>{lang === "en" ? "Stations Online" : "Trạm hoạt động"}</div>
                             </div>
 
                             {activeSessionUser ? (
-                                <div
-                                    className={styles.heroStatCard}
-                                    onClick={() => handlePortalNavigation("/reports")}
-                                >
-                                    <div className={styles.heroStatNum} translate="no">
-                                        {(fleetTotalRevenue / 1000000).toFixed(2)}M VND
+                                <div className={styles.heroStatCard} onClick={() => handlePortalNavigation("/reports")}>
+                                    <div className={styles.heroStatNum}>
+                                        {lang === "en"
+                                            ? `${(fleetTotalRevenue / 1000000).toFixed(2)}M VND`
+                                            : `${(fleetTotalRevenue / 1000000).toFixed(2)} Tr đ`}
                                     </div>
                                     <div className={styles.heroStatLabel}>
                                         {lang === "en"
-                                            ? `${fleetTotalSprays} Sprays Today`
-                                            : `${fleetTotalSprays} Lượt Phun Hôm Nay`}
+                                            ? `${fleetTotalSprays} sprays today`
+                                            : `${fleetTotalSprays} lượt xịt hôm nay`}
                                     </div>
                                 </div>
                             ) : (
-                                <div
-                                    className={styles.heroStatCard}
-                                    onClick={() => {
-                                        const el = document.getElementById("collection");
-                                        el?.scrollIntoView({ behavior: "smooth" });
-                                    }}
-                                >
-                                    <div className={styles.heroStatNum} translate="no">
-                                        0.12 ml
-                                    </div>
-                                    <div className={styles.heroStatLabel}>
-                                        {lang === "en" ? "Calibrated Mist Dosage" : "Định Lượng Phun Chuẩn"}
-                                    </div>
+                                <div className={styles.heroStatCard}>
+                                    <div className={styles.heroStatNum}>0.12 ml</div>
+                                    <div className={styles.heroStatLabel}>{lang === "en" ? "Dosage / spray" : "Định lượng / lần xịt"}</div>
                                 </div>
                             )}
                         </div>
                     </div>
 
+                    {/* BẢNG KIỂM TRA TRẠM TRỰC TIẾP */}
                     <div className={styles.liveConsoleCard}>
                         <div className={styles.consoleHeader}>
-                            <div>
-                                <span className={styles.consoleEyebrow}>
-                                    {lang === "en"
-                                        ? "INTERACTIVE STATION PREVIEW"
-                                        : "TRẠM TRẢI NGHIỆM TRỰC TUYẾN"}
-                                </span>
-                                <h3 className={styles.consoleTitle}>{activeKiosk.locationName}</h3>
-                            </div>
+                            <h3 className={styles.consoleTitle}>{activeKiosk.locationName}</h3>
                             <span
-                                translate="no"
                                 className={`${styles.statusBadge} ${
                                     activeKiosk.status === "ONLINE"
                                         ? styles.statusOnline
@@ -1823,20 +1759,12 @@ export default function ScentStationLandingPage() {
                             >
                                 ●{" "}
                                 {activeKiosk.status === "ONLINE"
-                                    ? lang === "en"
-                                        ? `Ready • ${activeKiosk.chamberTemp}`
-                                        : `Sẵn sàng • ${activeKiosk.chamberTemp}`
-                                    : activeKiosk.status === "MAINTENANCE"
-                                        ? lang === "en"
-                                            ? "In Maintenance"
-                                            : "Đang bảo trì"
-                                        : lang === "en"
-                                            ? "Offline"
-                                            : "Tạm ngưng"}
+                                    ? `${formatKioskStatusLabel(activeKiosk.status, lang)} • ${activeKiosk.chamberTemp}`
+                                    : formatKioskStatusLabel(activeKiosk.status, lang)}
                             </span>
                         </div>
 
-                        <div className={styles.kioskDropdownWrapper} ref={kioskDropdownRef} translate="no">
+                        <div className={styles.kioskDropdownWrapper} ref={kioskDropdownRef}>
                             <button
                                 type="button"
                                 onClick={() => setIsKioskDropdownOpen((prev) => !prev)}
@@ -1856,15 +1784,13 @@ export default function ScentStationLandingPage() {
                                     />
                                     <div className={styles.kioskTriggerText}>
                                         <span className={styles.kioskTriggerPrimary}>
-                                            {activeKiosk.locationName}{" "}
-                                            <span style={{ color: "#F5E6AD" }}>({activeKiosk.brand})</span>
+                                            {activeKiosk.code} — {activeKiosk.locationName}
                                         </span>
                                         <span className={styles.kioskTriggerSecondary}>
-                                            {activeKiosk.address}
+                                            {getLocalizedAddress(activeKiosk, lang)}
                                         </span>
                                     </div>
                                 </div>
-
                                 <ChevronDown
                                     size={17}
                                     className={`${styles.kioskDropdownChevron} ${
@@ -1901,14 +1827,15 @@ export default function ScentStationLandingPage() {
                                                     />
                                                     <div className={styles.kioskOptionInfo}>
                                                         <div className={styles.kioskOptionTitle}>
-                                                            <span>{k.locationName}</span>
-                                                            <span className={styles.kioskOptionBrand}>({k.brand})</span>
+                                                            <span>{k.code}</span>
+                                                            <span className={styles.kioskOptionBrand}>({k.locationName})</span>
                                                             {isSelected && <Check size={13} color="#D4AF37" />}
                                                         </div>
-                                                        <div className={styles.kioskOptionLocation}>{k.address}</div>
+                                                        <div className={styles.kioskOptionLocation}>
+                                                            {getLocalizedAddress(k, lang)}
+                                                        </div>
                                                     </div>
                                                 </div>
-
                                                 <span
                                                     className={`${styles.kioskOptionBadge} ${
                                                         k.status === "ONLINE"
@@ -1918,7 +1845,7 @@ export default function ScentStationLandingPage() {
                                                                 : styles.statusOffline
                                                     }`}
                                                 >
-                                                    {k.status}
+                                                    {formatKioskStatusLabel(k.status, lang)}
                                                 </span>
                                             </button>
                                         );
@@ -1929,11 +1856,11 @@ export default function ScentStationLandingPage() {
 
                         {activeKiosk.connectionStatus === "OFFLINE" && (
                             <div className={styles.staleWarningBanner}>
-                                <AlertTriangle size={14} color="#F87171" style={{ flexShrink: 0 }} />
+                                <AlertTriangle size={15} color="#F87171" style={{ flexShrink: 0 }} />
                                 <span>
                                     {lang === "en"
-                                        ? "This station is currently offline. Displayed fragrance volumes reflect the last recorded readings."
-                                        : "Trạm hiện đang ngoại tuyến. Mức dung tích hiển thị bên dưới là số liệu ghi nhận lần cuối."}
+                                        ? "Station offline: displayed volumes are last recorded values, not real-time."
+                                        : "Trạm mất kết nối: mức dung tích hiển thị là dữ liệu ghi nhận lần cuối, không phải thời gian thực."}
                                 </span>
                             </div>
                         )}
@@ -1948,40 +1875,22 @@ export default function ScentStationLandingPage() {
                                     DEFAULT_34_CATALOG.find((c) => isExactFragranceMatch(c.name, sl.fragranceName)) ||
                                     DEFAULT_34_CATALOG[0];
                                 const effectiveSlotPrice =
-                                    typeof sl.pricePerSpray === "number"
-                                        ? sl.pricePerSpray
-                                        : matchedCatalog.pricePerSpray;
+                                    typeof sl.pricePerSpray === "number" ? sl.pricePerSpray : matchedCatalog.pricePerSpray;
                                 const pct = Math.round((sl.remainingMl / sl.capacityMl) * 100);
                                 const isSlotEmpty = sl.remainingMl < 0.12;
-                                const isSlotProductInactive =
-                                    sl.productStatus && sl.productStatus !== "ACTIVE";
+                                const isSlotProductInactive = sl.productStatus && sl.productStatus !== "ACTIVE";
                                 const readiness = getKioskReadiness(activeKiosk.code);
-                                const isSlotBlocked =
-                                    isSlotEmpty || !readiness.ready || Boolean(isSlotProductInactive);
+                                const isSlotBlocked = isSlotEmpty || !readiness.ready || Boolean(isSlotProductInactive);
 
                                 return (
                                     <div key={sl.slotLabel} className={styles.slotPreviewItem}>
                                         <div style={{ flex: 1, minWidth: 0, paddingRight: "0.75rem" }}>
-                                            <div
-                                                translate="no"
-                                                style={{
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    gap: "0.45rem",
-                                                    fontSize: "0.7rem",
-                                                    color: "#D4AF37",
-                                                    fontWeight: 700,
-                                                    fontFamily: "Space Grotesk, monospace",
-                                                }}
-                                            >
-                                                <span>{sl.slotLabel.toUpperCase()}</span>
-                                                <span>•</span>
-                                                <span>{sl.brand}</span>
+                                            <div style={{ fontSize: "0.74rem", color: "#D4AF37", fontWeight: 700 }}>
+                                                {formatSlotLabel(sl.slotLabel, lang)} • {sl.brand}
                                             </div>
                                             <div
-                                                translate="no"
                                                 style={{
-                                                    fontSize: "0.9rem",
+                                                    fontSize: "0.92rem",
                                                     fontWeight: 700,
                                                     color: isSlotProductInactive ? "#94A3B8" : "#FFF",
                                                     margin: "0.1rem 0",
@@ -1989,15 +1898,8 @@ export default function ScentStationLandingPage() {
                                             >
                                                 {sl.fragranceName}
                                             </div>
-                                            <div
-                                                translate="no"
-                                                style={{
-                                                    fontSize: "0.7rem",
-                                                    color: "#94A3B8",
-                                                    fontFamily: "Space Grotesk, monospace",
-                                                }}
-                                            >
-                                                {lang === "en" ? "Level: " : "Dung tích: "}
+                                            <div style={{ fontSize: "0.76rem", color: "#94A3B8" }}>
+                                                {lang === "en" ? "Remaining: " : "Còn lại: "}
                                                 <strong
                                                     style={{
                                                         color: isSlotEmpty || isSlotProductInactive
@@ -2013,16 +1915,7 @@ export default function ScentStationLandingPage() {
                                         </div>
 
                                         <div style={{ textAlign: "right", flexShrink: 0 }}>
-                                            <div
-                                                translate="no"
-                                                style={{
-                                                    fontSize: "0.86rem",
-                                                    fontWeight: 700,
-                                                    color: "#F5E6AD",
-                                                    fontFamily: "Space Grotesk, monospace",
-                                                    marginBottom: "4px",
-                                                }}
-                                            >
+                                            <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "#F5E6AD", marginBottom: "4px" }}>
                                                 {effectiveSlotPrice.toLocaleString("vi-VN")} VND
                                             </div>
                                             <button
@@ -2045,17 +1938,12 @@ export default function ScentStationLandingPage() {
                                                 className={styles.iconGhostBtn}
                                                 style={{
                                                     padding: "0.35rem 0.75rem",
-                                                    fontSize: "0.72rem",
-                                                    borderColor: isSlotBlocked
-                                                        ? "rgba(248,113,113,0.45)"
-                                                        : undefined,
+                                                    fontSize: "0.76rem",
+                                                    borderColor: isSlotBlocked ? "rgba(248,113,113,0.45)" : undefined,
                                                     color: isSlotBlocked ? "#F87171" : undefined,
                                                 }}
                                             >
-                                                <Zap
-                                                    size={12}
-                                                    color={isSlotBlocked ? "#F87171" : "#D4AF37"}
-                                                />
+                                                <Zap size={12} color={isSlotBlocked ? "#F87171" : "#D4AF37"} />
                                                 <span>
                                                     {isSlotProductInactive
                                                         ? lang === "en"
@@ -2063,13 +1951,13 @@ export default function ScentStationLandingPage() {
                                                             : "Tạm ẩn"
                                                         : isSlotEmpty
                                                             ? lang === "en"
-                                                                ? "Sold Out"
+                                                                ? "Empty"
                                                                 : "Hết bình"
                                                             : !readiness.ready
                                                                 ? readiness.label
                                                                 : lang === "en"
-                                                                    ? "Sample Now"
-                                                                    : "Thử Hương"}
+                                                                    ? "Test QR"
+                                                                    : "Thử QR"}
                                                 </span>
                                             </button>
                                         </div>
@@ -2085,57 +1973,39 @@ export default function ScentStationLandingPage() {
                                 className={styles.loginPrimaryBtn}
                                 style={{ flex: 1 }}
                             >
-                                <Cpu size={16} />
-                                <span>
-                                    {lang === "en"
-                                        ? "Experience on Station Screen"
-                                        : "Trải Nghiệm Trên Màn Hình Trạm"}
-                                </span>
+                                <Cpu size={15} />
+                                <span>{lang === "en" ? "Open Kiosk UI" : "Mở giao diện Kiosk"}</span>
                             </button>
 
                             {activeSessionUser && (
                                 <button
                                     type="button"
-                                    onClick={() =>
-                                        handlePortalNavigation(`/machines?machineId=${activeKiosk.code}`)
-                                    }
+                                    onClick={() => handlePortalNavigation(`/machines?machineId=${activeKiosk.code}`)}
                                     className={styles.iconGhostBtn}
                                 >
                                     <ShieldCheck size={14} color="#D4AF37" />
-                                    <span>{lang === "en" ? "Configure" : "Quản trị"}</span>
+                                    <span>{lang === "en" ? "Manage" : "Quản lý máy"}</span>
                                 </button>
                             )}
                         </div>
                     </div>
                 </section>
 
+                {/* LỌC THEO THƯƠNG HIỆU */}
                 <section id="maisons" className={styles.sectionBlock}>
                     <div className={styles.sectionHeader}>
-                        <div>
-                            <span className={styles.sectionEyebrow}>
-                                {lang === "en"
-                                    ? `${unique21Brands.length} PRESTIGE FRAGRANCE HOUSES`
-                                    : `${unique21Brands.length} NHÀ CHẾ TÁC HƯƠNG THƠM DANH TIẾNG`}
-                            </span>
-                            <h2 className={styles.sectionTitle}>
-                                {lang === "en"
-                                    ? "Authorized Partner Maisons"
-                                    : "Thương Hiệu Nước Hoa Đối Tác Chính Hãng"}
-                            </h2>
-                        </div>
+                        <h2 className={styles.sectionTitle}>
+                            {lang === "en" ? `Brands (${unique21Brands.length})` : `Thương hiệu (${unique21Brands.length})`}
+                        </h2>
                     </div>
 
-                    <div className={styles.brandsRibbon} translate="no">
+                    <div className={styles.brandsRibbon}>
                         <button
                             type="button"
                             onClick={() => setSelectedBrand("ALL")}
-                            className={`${styles.brandPillBtn} ${
-                                selectedBrand === "ALL" ? styles.brandPillBtnActive : ""
-                            }`}
+                            className={`${styles.brandPillBtn} ${selectedBrand === "ALL" ? styles.brandPillBtnActive : ""}`}
                         >
-                            {lang === "en"
-                                ? `All Maisons (${catalog.length})`
-                                : `Tất Cả Thương Hiệu (${catalog.length})`}
+                            {lang === "en" ? `All (${catalog.length})` : `Tất cả (${catalog.length})`}
                         </button>
                         {unique21Brands.map((brandName) => {
                             const count = catalog.filter((c) => c.brand === brandName).length;
@@ -2143,12 +2013,8 @@ export default function ScentStationLandingPage() {
                                 <button
                                     key={brandName}
                                     type="button"
-                                    onClick={() =>
-                                        setSelectedBrand(selectedBrand === brandName ? "ALL" : brandName)
-                                    }
-                                    className={`${styles.brandPillBtn} ${
-                                        selectedBrand === brandName ? styles.brandPillBtnActive : ""
-                                    }`}
+                                    onClick={() => setSelectedBrand(selectedBrand === brandName ? "ALL" : brandName)}
+                                    className={`${styles.brandPillBtn} ${selectedBrand === brandName ? styles.brandPillBtnActive : ""}`}
                                 >
                                     {brandName} ({count})
                                 </button>
@@ -2157,54 +2023,38 @@ export default function ScentStationLandingPage() {
                     </div>
                 </section>
 
-                <section id="collection" className={styles.sectionBlock} style={{ marginTop: "2rem" }}>
+                {/* DANH MỤC MÙI HƯƠNG */}
+                <section id="collection" className={styles.sectionBlock}>
                     <div className={styles.sectionHeader}>
-                        <div>
-                            <span className={styles.sectionEyebrow}>
-                                {lang === "en"
-                                    ? `${catalog.length} ACTIVE MASTERPIECES • INSTANT QR SAMPLING`
-                                    : `${catalog.length} TUYỆT TÁC ĐANG MỞ BÁN • QUÉT MÃ QR TRẢI NGHIỆM NGAY`}
-                            </span>
-                            <h2 className={styles.sectionTitle}>
-                                {lang === "en"
-                                    ? "Signature Olfactory Collection"
-                                    : "Bộ Sưu Tập Hương Thơm Tuyển Chọn"}
-                            </h2>
-                        </div>
+                        <h2 className={styles.sectionTitle}>
+                            {lang === "en" ? `Active Catalog (${catalog.length})` : `Danh mục đang mở bán (${catalog.length})`}
+                        </h2>
 
                         <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
                             <button
                                 type="button"
                                 onClick={() => setFilterBySelectedKiosk(!filterBySelectedKiosk)}
-                                className={`${styles.iconGhostBtn} ${
-                                    filterBySelectedKiosk ? styles.brandPillBtnActive : ""
-                                }`}
+                                className={`${styles.iconGhostBtn} ${filterBySelectedKiosk ? styles.brandPillBtnActive : ""}`}
                             >
                                 <Filter size={13} color="#D4AF37" />
                                 <span>
                                     {filterBySelectedKiosk
-                                        ? lang === "en"
-                                            ? `Showing Station: ${activeKiosk.locationName}`
-                                            : `Đang lọc theo: ${activeKiosk.locationName}`
+                                        ? `${lang === "en" ? "Station" : "Trạm"}: ${activeKiosk.code}`
                                         : lang === "en"
                                             ? "Filter by Selected Station"
-                                            : "Chỉ Hiện Mùi Hương Tại Trạm Đang Chọn"}
+                                            : "Lọc theo trạm đang chọn"}
                                 </span>
                             </button>
 
-                            <button
-                                type="button"
-                                onClick={() => setShowAll34(!showAll34)}
-                                className={styles.iconGhostBtn}
-                            >
+                            <button type="button" onClick={() => setShowAll34(!showAll34)} className={styles.iconGhostBtn}>
                                 <span>
                                     {isAutoExpanded
                                         ? lang === "en"
-                                            ? "Show Featured (12 Scents)"
-                                            : "Thu Gọn (12 Mùi Hương Nổi Bật)"
+                                            ? "Show 12"
+                                            : "Thu gọn (12)"
                                         : lang === "en"
-                                            ? `View All ${catalog.length} Scents`
-                                            : `Xem Toàn Bộ ${catalog.length} Mùi Hương`}
+                                            ? `Show All (${catalog.length})`
+                                            : `Xem tất cả (${catalog.length})`}
                                 </span>
                             </button>
                         </div>
@@ -2219,8 +2069,8 @@ export default function ScentStationLandingPage() {
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder={
                                     lang === "en"
-                                        ? "Search by fragrance name, maison (Chanel, Creed, Dior, Le Labo) or scent notes..."
-                                        : "Tìm theo tên nước hoa, thương hiệu (Chanel, Creed, Dior, Le Labo) hoặc nốt hương..."
+                                        ? "Search fragrance, SKU, brand, or station..."
+                                        : "Tìm tên nước hoa, mã SKU, thương hiệu, trạm..."
                                 }
                                 className={styles.searchInput}
                             />
@@ -2228,12 +2078,8 @@ export default function ScentStationLandingPage() {
                                 <button
                                     type="button"
                                     onClick={() => setSearchQuery("")}
-                                    style={{
-                                        background: "none",
-                                        border: "none",
-                                        color: "#94A3B8",
-                                        cursor: "pointer",
-                                    }}
+                                    style={{ background: "none", border: "none", color: "#94A3B8", cursor: "pointer" }}
+                                    title={lang === "en" ? "Clear search" : "Xóa tìm kiếm"}
                                 >
                                     <X size={14} />
                                 </button>
@@ -2246,15 +2092,9 @@ export default function ScentStationLandingPage() {
                                     key={cat}
                                     type="button"
                                     onClick={() => setSelectedCategory(cat)}
-                                    className={`${styles.filterTabBtn} ${
-                                        selectedCategory === cat ? styles.filterTabBtnActive : ""
-                                    }`}
+                                    className={`${styles.filterTabBtn} ${selectedCategory === cat ? styles.filterTabBtnActive : ""}`}
                                 >
-                                    {cat === "ALL"
-                                        ? lang === "en"
-                                            ? `All (${categoryCounts.ALL})`
-                                            : `Tất cả (${categoryCounts.ALL})`
-                                        : `${cat} (${categoryCounts[cat]})`}
+                                    {formatCategoryLabel(cat, lang)} ({categoryCounts[cat]})
                                 </button>
                             ))}
                         </div>
@@ -2262,14 +2102,9 @@ export default function ScentStationLandingPage() {
 
                     {filteredPerfumes.length === 0 ? (
                         <div className={styles.emptyCatalogState}>
-                            <div style={{ fontSize: "1.05rem", fontWeight: 700, color: "#F5E6AD", marginBottom: "0.4rem" }}>
-                                {lang === "en" ? "No Matching Fragrances Found" : "Không Tìm Thấy Mùi Hương Phù Hợp"}
+                            <div style={{ fontSize: "1rem", fontWeight: 700, color: "#F5E6AD", marginBottom: "0.5rem" }}>
+                                {lang === "en" ? "No matching fragrances" : "Không có mùi hương phù hợp"}
                             </div>
-                            <p style={{ fontSize: "0.84rem", color: "#94A3B8", margin: "0 0 1.1rem 0" }}>
-                                {lang === "en"
-                                    ? "Try clearing your search keyword or switching to all stations."
-                                    : "Vui lòng thử từ khóa khác hoặc mở rộng bộ lọc cho tất cả các trạm."}
-                            </p>
                             <button
                                 type="button"
                                 onClick={() => {
@@ -2281,15 +2116,13 @@ export default function ScentStationLandingPage() {
                                 className={styles.loginPrimaryBtn}
                             >
                                 <RefreshCw size={14} />
-                                <span>{lang === "en" ? "Reset Filters" : "Xóa Bộ Lọc"}</span>
+                                <span>{lang === "en" ? "Clear Filters" : "Xóa bộ lọc"}</span>
                             </button>
                         </div>
                     ) : (
                         <div className={styles.productGrid}>
                             {filteredPerfumes.map((prod) => {
-                                const pct = Math.round(
-                                    (prod.remainingVolumeMl / prod.bottleVolumeMl) * 100
-                                );
+                                const pct = Math.round((prod.remainingVolumeMl / prod.bottleVolumeMl) * 100);
                                 const isEmpty = prod.remainingVolumeMl < 0.12;
                                 const isLow = prod.remainingVolumeMl <= prod.lowStockThresholdMl;
                                 const kioskReadiness = getKioskReadiness(prod.kioskCode);
@@ -2298,9 +2131,7 @@ export default function ScentStationLandingPage() {
                                 return (
                                     <div
                                         key={`${prod.skuCode}-${prod.slotNumber}`}
-                                        className={`${styles.productCard} ${
-                                            !isSelectable ? styles.productCardUnavailable : ""
-                                        }`}
+                                        className={`${styles.productCard} ${!isSelectable ? styles.productCardUnavailable : ""}`}
                                     >
                                         <div>
                                             <div className={styles.productTopRow}>
@@ -2308,101 +2139,44 @@ export default function ScentStationLandingPage() {
                                                     <img src={prod.image} alt={prod.name} />
                                                 </div>
                                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                                    <div
-                                                        style={{
-                                                            display: "flex",
-                                                            justifyContent: "space-between",
-                                                            alignItems: "center",
-                                                            marginBottom: "0.2rem",
-                                                        }}
-                                                    >
-                                                        <span
-                                                            translate="no"
-                                                            style={{
-                                                                fontSize: "0.68rem",
-                                                                fontWeight: 700,
-                                                                color: "#D4AF37",
-                                                                textTransform: "uppercase",
-                                                                fontFamily: "Space Grotesk, monospace",
-                                                            }}
-                                                        >
+                                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.15rem" }}>
+                                                        <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "#D4AF37" }}>
                                                             {prod.brand}
                                                         </span>
                                                         <span
-                                                            translate="no"
                                                             style={{
-                                                                fontSize: "0.64rem",
+                                                                fontSize: "0.7rem",
                                                                 padding: "0.14rem 0.5rem",
                                                                 borderRadius: "6px",
-                                                                background: !isSelectable
-                                                                    ? "rgba(248,113,113,0.18)"
-                                                                    : "rgba(212,175,55,0.14)",
+                                                                background: !isSelectable ? "rgba(248,113,113,0.18)" : "rgba(212,175,55,0.14)",
                                                                 color: !isSelectable ? "#F87171" : "#F5E6AD",
-                                                                fontFamily: "Space Grotesk, monospace",
                                                                 fontWeight: 700,
                                                             }}
                                                         >
                                                             {isEmpty
                                                                 ? lang === "en"
-                                                                    ? "SOLD OUT"
+                                                                    ? "EMPTY"
                                                                     : "HẾT BÌNH"
                                                                 : !kioskReadiness.ready
                                                                     ? kioskReadiness.label.toUpperCase()
                                                                     : prod.physicalSlotLabel
-                                                                        ? prod.physicalSlotLabel.toUpperCase()
-                                                                        : getPhysicalSlotLabel(
-                                                                            prod.kioskCode,
-                                                                            prod.name,
-                                                                            prod.slotNumber
-                                                                        )}
+                                                                        ? formatSlotLabel(prod.physicalSlotLabel, lang)
+                                                                        : getPhysicalSlotLabel(prod.kioskCode, prod.name, prod.slotNumber)}
                                                         </span>
                                                     </div>
 
-                                                    <h3
-                                                        translate="no"
-                                                        style={{
-                                                            margin: 0,
-                                                            fontSize: "1.02rem",
-                                                            fontWeight: 700,
-                                                            color: "#FFF",
-                                                            whiteSpace: "nowrap",
-                                                            overflow: "hidden",
-                                                            textOverflow: "ellipsis",
-                                                        }}
-                                                    >
+                                                    <h3 style={{ margin: 0, fontSize: "0.98rem", fontWeight: 700, color: "#FFF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                                                         {prod.name}
                                                     </h3>
-                                                    <div
-                                                        style={{
-                                                            fontSize: "0.72rem",
-                                                            color: "#94A3B8",
-                                                            marginTop: "2px",
-                                                        }}
-                                                    >
-                                                        {prod.category} • {prod.location}
+                                                    <div style={{ fontSize: "0.76rem", color: "#94A3B8", marginTop: "2px" }}>
+                                                        {prod.kioskCode} • {formatCatalogLocation(prod.location, lang)}
                                                     </div>
                                                 </div>
                                             </div>
 
-                                            <div
-                                                style={{
-                                                    display: "flex",
-                                                    justifyContent: "space-between",
-                                                    fontSize: "0.72rem",
-                                                    fontFamily: "Space Grotesk, monospace",
-                                                }}
-                                            >
-                                                <span style={{ color: "#CBD5E1" }}>{prod.family}</span>
-                                                <strong
-                                                    translate="no"
-                                                    style={{
-                                                        color: isEmpty
-                                                            ? "#F87171"
-                                                            : isLow
-                                                                ? "#FBBF24"
-                                                                : "#34D399",
-                                                    }}
-                                                >
+                                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem" }}>
+                                                <span style={{ color: "#94A3B8" }}>{formatCategoryLabel(prod.category, lang)}</span>
+                                                <strong style={{ color: isEmpty ? "#F87171" : isLow ? "#FBBF24" : "#34D399" }}>
                                                     {prod.remainingVolumeMl}ml / {prod.bottleVolumeMl}ml ({pct}%)
                                                 </strong>
                                             </div>
@@ -2411,54 +2185,26 @@ export default function ScentStationLandingPage() {
                                                     className={styles.volumeFill}
                                                     style={{
                                                         width: `${pct}%`,
-                                                        background: isEmpty
-                                                            ? "#F87171"
-                                                            : isLow
-                                                                ? "#FBBF24"
-                                                                : "linear-gradient(90deg, #D4AF37, #34D399)",
+                                                        background: isEmpty ? "#F87171" : isLow ? "#FBBF24" : "#34D399",
                                                     }}
                                                 />
                                             </div>
-
-                                            <p
-                                                style={{
-                                                    fontSize: "0.76rem",
-                                                    color: "#94A3B8",
-                                                    margin: "0 0 0.9rem 0",
-                                                    lineHeight: 1.45,
-                                                }}
-                                            >
-                                                ✦ {prod.notes}
-                                            </p>
                                         </div>
 
                                         <div
                                             style={{
                                                 borderTop: "1px solid rgba(255,255,255,0.08)",
-                                                paddingTop: "0.85rem",
+                                                paddingTop: "0.75rem",
                                                 display: "flex",
                                                 justifyContent: "space-between",
                                                 alignItems: "center",
                                             }}
                                         >
-                                            <div translate="no">
-                                                <span
-                                                    style={{
-                                                        fontSize: "0.64rem",
-                                                        color: "#94A3B8",
-                                                        display: "block",
-                                                        fontFamily: "Space Grotesk, monospace",
-                                                    }}
-                                                >
-                                                    {lang === "en" ? "1 CALIBRATED SPRAY (0.12ML)" : "1 LẦN XỊT TIÊU CHUẨN (0.12ML)"}
+                                            <div>
+                                                <span style={{ fontSize: "0.7rem", color: "#94A3B8", display: "block" }}>
+                                                    0.12ml / {lang === "en" ? "spray" : "lần xịt"}
                                                 </span>
-                                                <strong
-                                                    style={{
-                                                        fontSize: "0.96rem",
-                                                        color: "#F5E6AD",
-                                                        fontFamily: "Space Grotesk, monospace",
-                                                    }}
-                                                >
+                                                <strong style={{ fontSize: "0.96rem", color: "#F5E6AD" }}>
                                                     {prod.pricePerSpray.toLocaleString("vi-VN")} VND
                                                 </strong>
                                             </div>
@@ -2469,28 +2215,24 @@ export default function ScentStationLandingPage() {
                                                 onClick={() => handleOpenPaymentGateway(prod, prod.kioskCode)}
                                                 className={styles.loginPrimaryBtn}
                                                 style={{
-                                                    padding: "0.52rem 1rem",
-                                                    fontSize: "0.76rem",
-                                                    background: !isSelectable
-                                                        ? "rgba(248,113,113,0.18)"
-                                                        : undefined,
+                                                    padding: "0.48rem 0.9rem",
+                                                    fontSize: "0.8rem",
+                                                    background: !isSelectable ? "rgba(248,113,113,0.18)" : undefined,
                                                     color: !isSelectable ? "#F87171" : undefined,
-                                                    borderColor: !isSelectable
-                                                        ? "rgba(248,113,113,0.4)"
-                                                        : undefined,
+                                                    borderColor: !isSelectable ? "rgba(248,113,113,0.4)" : undefined,
                                                 }}
                                             >
                                                 {isSelectable ? <QrCode size={14} /> : <AlertOctagon size={14} />}
                                                 <span>
                                                     {isEmpty
                                                         ? lang === "en"
-                                                            ? "Sold Out"
+                                                            ? "Empty"
                                                             : "Hết bình"
                                                         : !kioskReadiness.ready
                                                             ? kioskReadiness.label
                                                             : lang === "en"
-                                                                ? "Sample via QR"
-                                                                : "Chọn & Quét QR"}
+                                                                ? "QR Test"
+                                                                : "Quét QR"}
                                                 </span>
                                             </button>
                                         </div>
@@ -2501,32 +2243,10 @@ export default function ScentStationLandingPage() {
                     )}
 
                     <div className={styles.catalogFooterBar}>
-                        <div style={{ fontSize: "0.82rem", color: "#CBD5E1" }}>
-                            {lang === "en" ? (
-                                <>
-                                    Showing{" "}
-                                    <strong style={{ color: "#F5E6AD" }}>
-                                        {filteredPerfumes.length}
-                                    </strong>{" "}
-                                    of{" "}
-                                    <strong style={{ color: "#F5E6AD" }}>
-                                        {totalMatchedPerfumes.length}
-                                    </strong>{" "}
-                                    active fragrances
-                                </>
-                            ) : (
-                                <>
-                                    Đang hiển thị{" "}
-                                    <strong style={{ color: "#F5E6AD" }}>
-                                        {filteredPerfumes.length}
-                                    </strong>{" "}
-                                    trên tổng số{" "}
-                                    <strong style={{ color: "#F5E6AD" }}>
-                                        {totalMatchedPerfumes.length}
-                                    </strong>{" "}
-                                    mùi hương đang mở bán
-                                </>
-                            )}
+                        <div style={{ fontSize: "0.84rem", color: "#CBD5E1" }}>
+                            {lang === "en"
+                                ? `Showing ${filteredPerfumes.length} / ${totalMatchedPerfumes.length} scents`
+                                : `Hiển thị ${filteredPerfumes.length} / ${totalMatchedPerfumes.length} mùi`}
                         </div>
 
                         {totalMatchedPerfumes.length > 12 && (
@@ -2541,37 +2261,28 @@ export default function ScentStationLandingPage() {
                                     }
                                 }}
                                 className={styles.loginPrimaryBtn}
-                                style={{ padding: "0.58rem 1.25rem", fontSize: "0.78rem" }}
+                                style={{ padding: "0.52rem 1.1rem", fontSize: "0.82rem" }}
                             >
-                                <Sparkles size={14} />
                                 <span>
                                     {isAutoExpanded
                                         ? lang === "en"
-                                            ? "Show Featured Selection (12)"
-                                            : "Thu gọn về 12 mùi hương tiêu biểu"
+                                            ? "Show 12"
+                                            : "Thu gọn (12)"
                                         : lang === "en"
-                                            ? `Explore All ${totalMatchedPerfumes.length} Fragrances`
-                                            : `Khám phá trọn bộ ${totalMatchedPerfumes.length} mùi hương`}
+                                            ? `View all (${totalMatchedPerfumes.length})`
+                                            : `Xem tất cả (${totalMatchedPerfumes.length})`}
                                 </span>
                             </button>
                         )}
                     </div>
                 </section>
 
+                {/* DANH SÁCH 8 TRẠM KIOSK */}
                 <section id="kiosks" className={styles.sectionBlock}>
                     <div className={styles.sectionHeader}>
-                        <div>
-                            <span className={styles.sectionEyebrow}>
-                                {lang === "en"
-                                    ? "NATIONWIDE SAMPLING BOUTIQUES"
-                                    : "MẠNG LƯỚI TRẠM TRẢI NGHIỆM TOÀN QUỐC"}
-                            </span>
-                            <h2 className={styles.sectionTitle}>
-                                {lang === "en"
-                                    ? "Flagship Sampling Kiosk Locations"
-                                    : "Hệ Thống 8 Trạm Kiosk Trải Nghiệm"}
-                            </h2>
-                        </div>
+                        <h2 className={styles.sectionTitle}>
+                            {lang === "en" ? `Stations (${kiosks.length})` : `Danh sách trạm (${kiosks.length})`}
+                        </h2>
                     </div>
 
                     <div className={styles.kioskGrid}>
@@ -2580,34 +2291,15 @@ export default function ScentStationLandingPage() {
                             return (
                                 <div
                                     key={k.code}
-                                    className={`${styles.kioskCard} ${
-                                        isSelected ? styles.kioskCardSelected : ""
-                                    }`}
+                                    className={`${styles.kioskCard} ${isSelected ? styles.kioskCardSelected : ""}`}
                                     onClick={() => {
                                         setSelectedKioskCode(k.code);
                                         window.scrollTo({ top: 0, behavior: "smooth" });
                                     }}
                                 >
-                                    <div
-                                        style={{
-                                            display: "flex",
-                                            justifyContent: "space-between",
-                                            alignItems: "center",
-                                            marginBottom: "0.45rem",
-                                        }}
-                                    >
-                                        <strong
-                                            translate="no"
-                                            style={{
-                                                fontFamily: "Space Grotesk, monospace",
-                                                color: "#F5E6AD",
-                                                fontSize: "0.84rem",
-                                            }}
-                                        >
-                                            {k.brand} Flagship
-                                        </strong>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
+                                        <strong style={{ color: "#F5E6AD", fontSize: "0.86rem" }}>{k.code}</strong>
                                         <span
-                                            translate="no"
                                             className={`${styles.statusBadge} ${
                                                 k.status === "ONLINE"
                                                     ? styles.statusOnline
@@ -2616,48 +2308,35 @@ export default function ScentStationLandingPage() {
                                                         : styles.statusOffline
                                             }`}
                                         >
-                                            ●{" "}
-                                            {k.status === "ONLINE"
-                                                ? lang === "en"
-                                                    ? "Available"
-                                                    : "Sẵn sàng"
-                                                : k.status === "MAINTENANCE"
-                                                    ? lang === "en"
-                                                        ? "Maintenance"
-                                                        : "Bảo trì"
-                                                    : lang === "en"
-                                                        ? "Offline"
-                                                        : "Tạm ngưng"}
+                                            ● {formatKioskStatusLabel(k.status, lang)}
                                         </span>
                                     </div>
-                                    <h3 style={{ margin: "0 0 0.25rem 0", fontSize: "1rem", color: "#FFF" }}>
+                                    <h3 style={{ margin: "0 0 0.25rem 0", fontSize: "0.98rem", color: "#FFF" }}>
                                         {k.locationName}
                                     </h3>
-                                    <p style={{ fontSize: "0.76rem", color: "#94A3B8", margin: "0 0 0.65rem 0" }}>
-                                        <MapPin
-                                            size={13}
-                                            color="#D4AF37"
-                                            style={{ display: "inline", marginRight: "4px" }}
-                                        />
-                                        {k.address}
+                                    <p style={{ fontSize: "0.78rem", color: "#94A3B8", margin: "0 0 0.6rem 0" }}>
+                                        <MapPin size={13} color="#D4AF37" style={{ display: "inline", marginRight: "4px" }} />
+                                        {getLocalizedAddress(k, lang)}
                                     </p>
                                     <div
-                                        translate="no"
                                         style={{
                                             display: "flex",
                                             justifyContent: "space-between",
-                                            fontSize: "0.72rem",
+                                            fontSize: "0.76rem",
                                             color: "#CBD5E1",
-                                            borderTop: "1px solid rgba(255,255,255,0.07)",
-                                            paddingTop: "0.55rem",
-                                            fontFamily: "Space Grotesk, monospace",
+                                            borderTop: "1px solid rgba(255,255,255,0.08)",
+                                            paddingTop: "0.5rem",
                                         }}
                                     >
-                                        <span>4 Fragrance Chambers</span>
+                                        <span>
+                                            {lang === "en" ? `4 slots • ${k.brand}` : `4 khoang • ${k.brand}`}
+                                        </span>
                                         <span style={{ color: "#D4AF37" }}>
                                             {activeSessionUser
-                                                ? `${k.todaySprays} sprays • ${k.todayRevenue.toLocaleString("vi-VN")}đ`
-                                                : `Chamber Temp: ${k.chamberTemp}`}
+                                                ? lang === "en"
+                                                    ? `${k.todaySprays} sprays • ${k.todayRevenue.toLocaleString("en-US")} VND`
+                                                    : `${k.todaySprays} lượt xịt • ${k.todayRevenue.toLocaleString("vi-VN")}đ`
+                                                : k.chamberTemp}
                                         </span>
                                     </div>
                                 </div>
@@ -2667,72 +2346,38 @@ export default function ScentStationLandingPage() {
                 </section>
             </main>
 
+            {/* MODAL THANH TOÁN QR */}
             {checkoutItem && (() => {
                 const physicalSlotLabel = checkoutItem.physicalSlotLabel
-                    ? checkoutItem.physicalSlotLabel.toUpperCase()
-                    : getPhysicalSlotLabel(
-                        checkoutItem.kioskCode,
-                        checkoutItem.name,
-                        checkoutItem.slotNumber
-                    );
+                    ? formatSlotLabel(checkoutItem.physicalSlotLabel, lang)
+                    : getPhysicalSlotLabel(checkoutItem.kioskCode, checkoutItem.name, checkoutItem.slotNumber);
                 const timerPct = Math.round((checkoutSecondsLeft / 120) * 100);
 
                 return (
                     <div
                         className={styles.modalBackdrop}
                         onClick={() => {
-                            if (checkoutStatus !== "PAID" && checkoutStatus !== "DISPENSING") {
-                                setCheckoutItem(null);
-                            }
+                            if (checkoutStatus !== "PAID" && checkoutStatus !== "DISPENSING") setCheckoutItem(null);
                         }}
                     >
                         <div className={styles.modalDialog} onClick={(e) => e.stopPropagation()}>
-                            <div
-                                style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "flex-start",
-                                    marginBottom: "0.75rem",
-                                }}
-                            >
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.8rem" }}>
                                 <div>
-                                    <span
-                                        translate="no"
-                                        style={{
-                                            fontSize: "0.66rem",
-                                            color: "#D4AF37",
-                                            fontWeight: 700,
-                                            letterSpacing: "0.14em",
-                                            fontFamily: "Space Grotesk, monospace",
-                                            display: "block",
-                                        }}
-                                    >
-                                        INSTANT FRAGRANCE EXPERIENCE • {checkoutOrderId}
-                                    </span>
-                                    <h3
-                                        style={{
-                                            margin: "0.15rem 0 0 0",
-                                            color: "#FFF",
-                                            fontSize: "1.18rem",
-                                            fontFamily: "Bodoni Moda, Georgia, serif",
-                                            fontWeight: 600,
-                                        }}
-                                    >
-                                        {lang === "en"
-                                            ? "Digital QR Sampling Checkout"
-                                            : "Thanh Toán Trải Nghiệm Nước Hoa Tự Động"}
+                                    <h3 style={{ margin: 0, color: "#FFF", fontSize: "1.12rem", fontWeight: 700 }}>
+                                        {lang === "en" ? "QR Payment & Dispense" : "Thanh toán QR & Phun định lượng"} ({checkoutOrderId})
                                     </h3>
                                 </div>
                                 <button
                                     type="button"
                                     disabled={checkoutStatus === "PAID" || checkoutStatus === "DISPENSING"}
                                     onClick={() => setCheckoutItem(null)}
+                                    title={lang === "en" ? "Close" : "Đóng"}
                                     style={{
-                                        background: "rgba(255,255,255,0.05)",
+                                        background: "rgba(255,255,255,0.06)",
                                         border: "1px solid rgba(255,255,255,0.12)",
                                         borderRadius: "8px",
                                         padding: "0.3rem",
-                                        color: "#94A3B8",
+                                        color: "#CBD5E1",
                                         cursor: "pointer",
                                         display: "flex",
                                     }}
@@ -2741,68 +2386,33 @@ export default function ScentStationLandingPage() {
                                 </button>
                             </div>
 
-                            <div className={styles.stateStepper} translate="no">
-                                <div
-                                    className={`${styles.stepItem} ${
-                                        checkoutStatus === "PENDING"
-                                            ? styles.stepItemActive
-                                            : checkoutStatus === "PAID" ||
-                                            checkoutStatus === "DISPENSING" ||
-                                            checkoutStatus === "DISPENSED"
-                                                ? styles.stepItemDone
-                                                : styles.stepItemError
-                                    }`}
-                                >
+                            <div className={styles.stateStepper}>
+                                <div className={`${styles.stepItem} ${checkoutStatus === "PENDING" ? styles.stepItemActive : checkoutStatus === "PAID" || checkoutStatus === "DISPENSING" || checkoutStatus === "DISPENSED" ? styles.stepItemDone : styles.stepItemError}`}>
                                     <span>01</span>
                                     <span>
                                         {checkoutStatus === "CANCELLED" || checkoutStatus === "EXPIRED"
-                                            ? checkoutStatus
-                                            : "SCAN QR"}
+                                            ? formatOrderStatusLabel(checkoutStatus, lang)
+                                            : lang === "en"
+                                                ? "QR"
+                                                : "Mã QR"}
                                     </span>
                                 </div>
-                                <div
-                                    className={`${styles.stepItem} ${
-                                        checkoutStatus === "PAID"
-                                            ? styles.stepItemActive
-                                            : checkoutStatus === "DISPENSING" ||
-                                            checkoutStatus === "DISPENSED" ||
-                                            checkoutStatus === "FAILED" ||
-                                            checkoutStatus === "UNCERTAIN"
-                                                ? styles.stepItemDone
-                                                : ""
-                                    }`}
-                                >
+                                <div className={`${styles.stepItem} ${checkoutStatus === "PAID" ? styles.stepItemActive : checkoutStatus === "DISPENSING" || checkoutStatus === "DISPENSED" || checkoutStatus === "FAILED" || checkoutStatus === "UNCERTAIN" ? styles.stepItemDone : ""}`}>
                                     <span>02</span>
-                                    <span>VERIFIED</span>
+                                    <span>{lang === "en" ? "PAID" : "ĐÃ TRẢ"}</span>
                                 </div>
-                                <div
-                                    className={`${styles.stepItem} ${
-                                        checkoutStatus === "DISPENSING"
-                                            ? styles.stepItemActive
-                                            : checkoutStatus === "DISPENSED"
-                                                ? styles.stepItemDone
-                                                : checkoutStatus === "FAILED" || checkoutStatus === "UNCERTAIN"
-                                                    ? styles.stepItemError
-                                                    : ""
-                                    }`}
-                                >
+                                <div className={`${styles.stepItem} ${checkoutStatus === "DISPENSING" ? styles.stepItemActive : checkoutStatus === "DISPENSED" ? styles.stepItemDone : checkoutStatus === "FAILED" || checkoutStatus === "UNCERTAIN" ? styles.stepItemError : ""}`}>
                                     <span>03</span>
-                                    <span>SPRAYING</span>
+                                    <span>{lang === "en" ? "SPRAY" : "PHUN"}</span>
                                 </div>
-                                <div
-                                    className={`${styles.stepItem} ${
-                                        checkoutStatus === "DISPENSED"
-                                            ? styles.stepItemDone
-                                            : checkoutStatus === "FAILED" || checkoutStatus === "UNCERTAIN"
-                                                ? styles.stepItemError
-                                                : ""
-                                    }`}
-                                >
+                                <div className={`${styles.stepItem} ${checkoutStatus === "DISPENSED" ? styles.stepItemDone : checkoutStatus === "FAILED" || checkoutStatus === "UNCERTAIN" ? styles.stepItemError : ""}`}>
                                     <span>04</span>
                                     <span>
                                         {checkoutStatus === "FAILED" || checkoutStatus === "UNCERTAIN"
-                                            ? checkoutStatus
-                                            : "COMPLETE"}
+                                            ? formatOrderStatusLabel(checkoutStatus, lang)
+                                            : lang === "en"
+                                                ? "DONE"
+                                                : "XONG"}
                                     </span>
                                 </div>
                             </div>
@@ -2812,61 +2422,16 @@ export default function ScentStationLandingPage() {
                                     <img src={checkoutItem.image} alt={checkoutItem.name} />
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div
-                                        translate="no"
-                                        style={{
-                                            fontSize: "0.66rem",
-                                            fontWeight: 700,
-                                            color: "#D4AF37",
-                                            textTransform: "uppercase",
-                                            fontFamily: "Space Grotesk, monospace",
-                                        }}
-                                    >
-                                        {checkoutItem.brand}
-                                    </div>
-                                    <div
-                                        translate="no"
-                                        style={{
-                                            fontSize: "1.02rem",
-                                            fontWeight: 700,
-                                            color: "#FFF",
-                                            whiteSpace: "nowrap",
-                                            overflow: "hidden",
-                                            textOverflow: "ellipsis",
-                                        }}
-                                    >
+                                    <div style={{ fontSize: "0.74rem", fontWeight: 700, color: "#D4AF37" }}>{checkoutItem.brand}</div>
+                                    <div style={{ fontSize: "0.98rem", fontWeight: 700, color: "#FFF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                                         {checkoutItem.name}
                                     </div>
-                                    <div
-                                        translate="no"
-                                        style={{
-                                            fontSize: "0.72rem",
-                                            color: "#94A3B8",
-                                            fontFamily: "Space Grotesk, monospace",
-                                        }}
-                                    >
-                                        {checkoutItem.location} •{" "}
-                                        <strong style={{ color: "#34D399" }}>{physicalSlotLabel}</strong>
+                                    <div style={{ fontSize: "0.76rem", color: "#94A3B8" }}>
+                                        {checkoutItem.kioskCode} • <strong style={{ color: "#34D399" }}>{physicalSlotLabel}</strong>
                                     </div>
                                 </div>
-                                <div style={{ textAlign: "right", flexShrink: 0 }} translate="no">
-                                    <span
-                                        style={{
-                                            fontSize: "0.62rem",
-                                            color: "#94A3B8",
-                                            display: "block",
-                                            fontFamily: "Space Grotesk, monospace",
-                                        }}
-                                    >
-                                        TOTAL AMOUNT
-                                    </span>
-                                    <strong
-                                        style={{
-                                            fontSize: "1.1rem",
-                                            color: "#F5E6AD",
-                                            fontFamily: "Space Grotesk, monospace",
-                                        }}
-                                    >
+                                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                                    <strong style={{ fontSize: "1.05rem", color: "#F5E6AD" }}>
                                         {checkoutPriceSnapshot.toLocaleString("vi-VN")} VND
                                     </strong>
                                 </div>
@@ -2874,65 +2439,34 @@ export default function ScentStationLandingPage() {
 
                             {(checkoutStatus === "PAID" || checkoutStatus === "DISPENSING") && (
                                 <div className={styles.wristPreparationBanner}>
-                                    <div style={{ fontWeight: 700, color: "#F5E6AD", marginBottom: "0.2rem" }}>
-                                        {lang === "en"
-                                            ? "✨ Payment Confirmed — Position Your Wrist or Scent Strip Now"
-                                            : "✨ Đã Xác Nhận Thanh Toán — Vui Lòng Đưa Cổ Tay Hoặc Giấy Thử Vào Buồng Xịt"}
-                                    </div>
-                                    <div>
-                                        {lang === "en"
-                                            ? `Place your wrist or test strip at the spraying nozzle of ${physicalSlotLabel}. Dispensing 1 calibrated spray (0.12ml)...`
-                                            : `Đặt cổ tay hoặc que thử mùi vào vị trí vòi phun của ${physicalSlotLabel}. Hệ thống đang phun 1 định lượng chuẩn (0.12ml)...`}
-                                    </div>
+                                    {lang === "en"
+                                        ? `Payment verified. Dispensing 1 spray (0.12ml) at ${physicalSlotLabel}...`
+                                        : `Đã xác nhận thanh toán. Đang phun 1 định lượng (0.12ml) tại ${physicalSlotLabel}...`}
                                 </div>
                             )}
 
                             {checkoutStatus === "PENDING" && (
-                                <div className={styles.methodTabsGrid} translate="no">
-                                    {(
-                                        [
-                                            { code: "VIETQR", desc: "NAPAS 24/7 QR" },
-                                            { code: "MOMO", desc: "MoMo E-Wallet" },
-                                            { code: "VNPAY", desc: "VNPay QR Gateway" },
-                                        ] as const
-                                    ).map((m) => (
+                                <div className={styles.methodTabsGrid}>
+                                    {(["VIETQR", "MOMO", "VNPAY"] as const).map((code) => (
                                         <button
-                                            key={m.code}
+                                            key={code}
                                             type="button"
-                                            onClick={() => handleSelectPaymentMethod(m.code)}
-                                            className={`${styles.methodTabBtn} ${
-                                                checkoutMethod === m.code ? styles.methodTabBtnActive : ""
-                                            }`}
+                                            onClick={() => handleSelectPaymentMethod(code)}
+                                            className={`${styles.methodTabBtn} ${checkoutMethod === code ? styles.methodTabBtnActive : ""}`}
                                         >
-                                            <span>{m.code}</span>
-                                            <span style={{ fontSize: "0.6rem", fontWeight: 500, opacity: 0.8 }}>
-                                                {m.desc}
-                                            </span>
+                                            <span>{code}</span>
                                         </button>
                                     ))}
                                 </div>
                             )}
 
                             {checkoutStatus === "PENDING" && paymentAttemptError && (
-                                <div
-                                    style={{
-                                        padding: "0.65rem 0.85rem",
-                                        borderRadius: "12px",
-                                        marginBottom: "0.85rem",
-                                        background: "rgba(245, 158, 11, 0.14)",
-                                        border: "1px solid rgba(245, 158, 11, 0.45)",
-                                        color: "#FDE68A",
-                                        fontSize: "0.74rem",
-                                        lineHeight: 1.45,
-                                    }}
-                                >
+                                <div style={{ padding: "0.65rem 0.85rem", borderRadius: "10px", marginBottom: "0.85rem", background: "rgba(245, 158, 11, 0.14)", border: "1px solid rgba(245, 158, 11, 0.45)", color: "#FDE68A", fontSize: "0.8rem" }}>
                                     {paymentAttemptError}
                                 </div>
                             )}
 
-                            {(checkoutStatus === "PENDING" ||
-                                checkoutStatus === "PAID" ||
-                                checkoutStatus === "DISPENSING") && (
+                            {(checkoutStatus === "PENDING" || checkoutStatus === "PAID" || checkoutStatus === "DISPENSING") && (
                                 <>
                                     <div className={styles.qrShowcaseBox}>
                                         <div className={styles.qrFrame}>
@@ -2940,70 +2474,35 @@ export default function ScentStationLandingPage() {
                                                 src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
                                                     `SCENTSTATION_PAY|${checkoutOrderId}|${checkoutMethod}|${checkoutItem.skuCode}|${checkoutItem.kioskCode}|${checkoutPriceSnapshot}VND`
                                                 )}`}
-                                                alt="Payment QR Code"
-                                                width={140}
-                                                height={140}
+                                                alt={lang === "en" ? "Payment QR Code" : "Mã QR thanh toán"}
+                                                width={136}
+                                                height={136}
                                                 style={{ display: "block" }}
                                             />
                                         </div>
 
                                         <div className={styles.invoiceMetaList}>
                                             <div className={styles.invoiceMetaRow}>
-                                                <span style={{ color: "#94A3B8" }}>
-                                                    {lang === "en" ? "Reference:" : "Mã tham chiếu:"}
-                                                </span>
-                                                <strong
-                                                    translate="no"
-                                                    style={{ color: "#F8FAFC", fontFamily: "Space Grotesk, monospace" }}
-                                                >
-                                                    PAY-{checkoutMethod}-{checkoutOrderId.slice(-4)}
-                                                </strong>
+                                                <span style={{ color: "#94A3B8" }}>{lang === "en" ? "Ref:" : "Mã GD:"}</span>
+                                                <strong>PAY-{checkoutMethod}-{checkoutOrderId.slice(-4)}</strong>
                                             </div>
                                             <div className={styles.invoiceMetaRow}>
-                                                <span style={{ color: "#94A3B8" }}>
-                                                    {lang === "en" ? "Calibrated Dosage:" : "Định lượng phun:"}
-                                                </span>
-                                                <strong
-                                                    translate="no"
-                                                    style={{ color: "#F5E6AD", fontFamily: "Space Grotesk, monospace" }}
-                                                >
-                                                    1 Spray (0.12ml)
-                                                </strong>
-                                            </div>
-                                            <div className={styles.invoiceMetaRow}>
-                                                <span style={{ color: "#94A3B8" }}>
-                                                    {lang === "en" ? "Chamber Status:" : "Buồng xịt:"}
-                                                </span>
-                                                <strong
-                                                    translate="no"
-                                                    style={{ color: "#34D399", fontFamily: "Space Grotesk, monospace" }}
-                                                >
-                                                    {lang === "en" ? "Safety Verified" : "An toàn sẵn sàng"}
-                                                </strong>
+                                                <span style={{ color: "#94A3B8" }}>{lang === "en" ? "Dosage:" : "Định lượng:"}</span>
+                                                <strong style={{ color: "#F5E6AD" }}>0.12 ml</strong>
                                             </div>
                                             <div style={{ marginTop: "0.2rem" }}>
-                                                <div
-                                                    style={{
-                                                        display: "flex",
-                                                        justifyContent: "space-between",
-                                                        fontSize: "0.7rem",
-                                                        fontFamily: "Space Grotesk, monospace",
-                                                        color: checkoutStatus === "PENDING" ? "#FBBF24" : "#34D399",
-                                                    }}
-                                                >
+                                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem", color: checkoutStatus === "PENDING" ? "#FBBF24" : "#34D399" }}>
                                                     <span>
-                                                        <Lock size={11} style={{ display: "inline", marginRight: "4px" }} />
+                                                        <Lock size={12} style={{ display: "inline", marginRight: "4px" }} />
                                                         {checkoutStatus === "PENDING"
                                                             ? lang === "en"
-                                                                ? "Awaiting QR Scan"
-                                                                : "Đang chờ quét mã QR"
+                                                                ? "Waiting payment"
+                                                                : "Chờ thanh toán"
                                                             : lang === "en"
-                                                                ? "Payment Verified"
-                                                                : "Đã xác nhận thanh toán"}
+                                                                ? "Verified"
+                                                                : "Đã xác nhận"}
                                                     </span>
-                                                    {checkoutStatus === "PENDING" && (
-                                                        <strong>{checkoutSecondsLeft}s</strong>
-                                                    )}
+                                                    {checkoutStatus === "PENDING" && <strong>{checkoutSecondsLeft}s</strong>}
                                                 </div>
                                                 {checkoutStatus === "PENDING" ? (
                                                     <div className={styles.countdownBarTrack}>
@@ -3011,24 +2510,12 @@ export default function ScentStationLandingPage() {
                                                             className={styles.countdownBarFill}
                                                             style={{
                                                                 width: `${timerPct}%`,
-                                                                background:
-                                                                    checkoutSecondsLeft <= 25
-                                                                        ? "#F87171"
-                                                                        : "linear-gradient(90deg, #D4AF37, #34D399)",
+                                                                background: checkoutSecondsLeft <= 25 ? "#F87171" : "#34D399",
                                                             }}
                                                         />
                                                     </div>
                                                 ) : (
-                                                    <div
-                                                        style={{
-                                                            fontSize: "0.7rem",
-                                                            color: "#34D399",
-                                                            marginTop: "4px",
-                                                            fontFamily: "Space Grotesk, monospace",
-                                                        }}
-                                                    >
-                                                        {mqttTelemetryStep}
-                                                    </div>
+                                                    <div style={{ fontSize: "0.76rem", color: "#34D399", marginTop: "4px" }}>{mqttTelemetryStep}</div>
                                                 )}
                                             </div>
                                         </div>
@@ -3038,21 +2525,19 @@ export default function ScentStationLandingPage() {
                                         <button
                                             type="button"
                                             disabled={checkoutStatus !== "PENDING"}
-                                            onClick={() =>
-                                                handleProcessOrderScenario("WEBHOOK_PAID_AND_DISPENSED")
-                                            }
+                                            onClick={() => handleProcessOrderScenario("WEBHOOK_PAID_AND_DISPENSED")}
                                             className={styles.loginPrimaryBtn}
-                                            style={{ flex: 1.6, padding: "0.78rem 1rem" }}
+                                            style={{ flex: 1.6, padding: "0.72rem 1rem" }}
                                         >
-                                            <CheckCircle2 size={16} />
+                                            <CheckCircle2 size={15} />
                                             <span>
                                                 {checkoutStatus !== "PENDING"
                                                     ? lang === "en"
-                                                        ? "Dispensing Fragrance..."
-                                                        : "Đang phun nước hoa..."
+                                                        ? "Dispensing..."
+                                                        : "Đang phun..."
                                                     : lang === "en"
-                                                        ? "I Have Scanned & Paid"
-                                                        : "Xác Nhận Đã Quét Mã QR"}
+                                                        ? "Confirm Paid"
+                                                        : "Xác nhận đã thanh toán"}
                                             </span>
                                         </button>
 
@@ -3061,91 +2546,66 @@ export default function ScentStationLandingPage() {
                                             disabled={checkoutStatus !== "PENDING"}
                                             onClick={() => handleProcessOrderScenario("CUSTOMER_CANCEL")}
                                             className={styles.iconGhostBtn}
-                                            style={{ flex: 0.7, padding: "0.78rem 0.85rem" }}
+                                            style={{ flex: 0.7, padding: "0.72rem 0.85rem" }}
                                         >
                                             <Ban size={14} color="#F87171" />
-                                            <span>{lang === "en" ? "Cancel" : "Hủy đơn"}</span>
+                                            <span>{lang === "en" ? "Cancel" : "Hủy"}</span>
                                         </button>
                                     </div>
 
-                                    <div style={{ marginTop: "0.85rem", textAlign: "right" }}>
+                                    <div style={{ marginTop: "0.75rem", textAlign: "right" }}>
                                         <button
                                             type="button"
                                             onClick={() => setShowDiagnosticsDrawer(!showDiagnosticsDrawer)}
                                             className={styles.diagnosticToggleBtn}
                                         >
                                             <SlidersHorizontal size={12} />
-                                            <span>
-                                                {lang === "en"
-                                                    ? "Hardware & Payment Simulation"
-                                                    : "Mô phỏng tình huống phần cứng"}
-                                            </span>
+                                            <span>{lang === "en" ? "Test error scenarios" : "Mô phỏng lỗi phần cứng / thanh toán"}</span>
                                         </button>
                                     </div>
 
                                     {showDiagnosticsDrawer && (
                                         <div className={styles.simulatorDrawer}>
                                             <div className={styles.simulatorHeader}>
-                                                <span>
-                                                    {lang === "en"
-                                                        ? "Diagnostic Scenario Testing"
-                                                        : "Kiểm Thử Kịch Bản Ngoại Lệ"}
-                                                </span>
+                                                {lang === "en"
+                                                    ? "Simulates edge cases; never auto-retries spray if status is uncertain."
+                                                    : "Kiểm thử ngoại lệ (không tự phun lại nếu kết quả chưa xác nhận)."}
                                             </div>
-
                                             <div className={styles.simulatorGrid}>
                                                 <button
                                                     type="button"
                                                     disabled={checkoutStatus !== "PENDING"}
-                                                    onClick={() =>
-                                                        handleProcessOrderScenario("PAYMENT_ATTEMPT_FAILED")
-                                                    }
+                                                    onClick={() => handleProcessOrderScenario("PAYMENT_ATTEMPT_FAILED")}
                                                     className={styles.simScenarioBtn}
                                                     style={{ borderColor: "rgba(251, 191, 36, 0.4)", color: "#FDE68A" }}
                                                 >
-                                                    <AlertTriangle size={14} color="#FBBF24" style={{ flexShrink: 0 }} />
-                                                    <span>
-                                                        {lang === "en"
-                                                            ? "Simulate Declined Payment"
-                                                            : "Giả lập lỗi thanh toán ngân hàng"}
-                                                    </span>
+                                                    <AlertTriangle size={14} color="#FBBF24" />
+                                                    <span>{lang === "en" ? "Payment Declined" : "Lỗi thanh toán"}</span>
                                                 </button>
 
                                                 <button
                                                     type="button"
                                                     disabled={checkoutStatus !== "PENDING"}
-                                                    onClick={() =>
-                                                        handleProcessOrderScenario("SAFETY_INTERLOCK_FAILED_AFTER_PAID")
-                                                    }
+                                                    onClick={() => handleProcessOrderScenario("SAFETY_INTERLOCK_FAILED_AFTER_PAID")}
                                                     className={styles.simScenarioBtn}
                                                     style={{ borderColor: "rgba(248, 113, 113, 0.4)", color: "#FCA5A5" }}
                                                 >
-                                                    <AlertOctagon size={14} color="#F87171" style={{ flexShrink: 0 }} />
-                                                    <span>
-                                                        {lang === "en"
-                                                            ? "Simulate Safety Interlock Fault"
-                                                            : "Giả lập lỗi cảm biến buồng xịt"}
-                                                    </span>
+                                                    <AlertOctagon size={14} color="#F87171" />
+                                                    <span>{lang === "en" ? "Safety Interlock Fault" : "Lỗi cảm biến an toàn"}</span>
                                                 </button>
 
                                                 <button
                                                     type="button"
                                                     disabled={checkoutStatus !== "PENDING"}
-                                                    onClick={() =>
-                                                        handleProcessOrderScenario("DEVICE_TIMEOUT_UNCERTAIN")
-                                                    }
+                                                    onClick={() => handleProcessOrderScenario("DEVICE_TIMEOUT_UNCERTAIN")}
                                                     className={styles.simScenarioBtn}
-                                                    style={{
-                                                        gridColumn: "1 / -1",
-                                                        borderColor: "rgba(192, 132, 252, 0.4)",
-                                                        color: "#E9D5FF",
-                                                    }}
+                                                    style={{ gridColumn: "1 / -1", borderColor: "rgba(192, 132, 252, 0.4)", color: "#E9D5FF" }}
                                                 >
-                                                    <HelpCircle size={14} color="#C084FC" style={{ flexShrink: 0 }} />
+                                                    <HelpCircle size={14} color="#C084FC" />
                                                     <span>
                                                         {lang === "en"
-                                                            ? "Simulate Connection Timeout During Spray (Uncertain State)"
-                                                            : "Giả lập mất kết nối sau khi nhận lệnh (Trạng thái chờ đối soát)"}
+                                                            ? "Timeout After ACK (Uncertain)"
+                                                            : "Quá hạn phản hồi sau nhận lệnh (Chờ đối soát)"}
                                                     </span>
                                                 </button>
                                             </div>
@@ -3154,117 +2614,61 @@ export default function ScentStationLandingPage() {
                                 </>
                             )}
 
-                            {checkoutStatus !== "PENDING" &&
-                                checkoutStatus !== "PAID" &&
-                                checkoutStatus !== "DISPENSING" && (
-                                    <div style={{ marginTop: "0.4rem" }}>
-                                        <div
-                                            style={{
-                                                padding: "1rem",
-                                                borderRadius: "14px",
-                                                marginBottom: "1rem",
-                                                background:
-                                                    checkoutStatus === "DISPENSED"
-                                                        ? "rgba(52,211,153,0.12)"
-                                                        : checkoutStatus === "UNCERTAIN"
-                                                            ? "rgba(192,132,252,0.14)"
-                                                            : "rgba(248,113,113,0.14)",
-                                                border: `1px solid ${
-                                                    checkoutStatus === "DISPENSED"
-                                                        ? "rgba(52,211,153,0.45)"
-                                                        : checkoutStatus === "UNCERTAIN"
-                                                            ? "rgba(192,132,252,0.45)"
-                                                            : "rgba(248,113,113,0.45)"
-                                                }`,
-                                                color:
-                                                    checkoutStatus === "DISPENSED"
-                                                        ? "#34D399"
-                                                        : checkoutStatus === "UNCERTAIN"
-                                                            ? "#D8B4FE"
-                                                            : "#FCA5A5",
-                                                fontSize: "0.82rem",
-                                                lineHeight: 1.55,
-                                            }}
-                                        >
-                                            {checkoutStatus === "DISPENSED" ? (
-                                                <>
-                                                    <strong>
-                                                        {lang === "en"
-                                                            ? "✓ Fragrance Dispensed Successfully"
-                                                            : "✓ Đã Phun Nước Hoa Hoàn Tất"}
-                                                    </strong>
-                                                    <div style={{ marginTop: "0.35rem", color: "#E2E8F0" }}>
-                                                        {lang === "en" ? (
-                                                            <>
-                                                                Thank you for experiencing{" "}
-                                                                <strong>{checkoutItem.name}</strong> at{" "}
-                                                                <strong>{checkoutItem.location}</strong> (
-                                                                {physicalSlotLabel}). Receipt Reference:{" "}
-                                                                <strong>{checkoutOrderId}</strong> (
-                                                                {checkoutPriceSnapshot.toLocaleString("vi-VN")} VND).
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                Cảm ơn bạn đã trải nghiệm{" "}
-                                                                <strong>{checkoutItem.name}</strong> tại{" "}
-                                                                <strong>{checkoutItem.location}</strong> (
-                                                                {physicalSlotLabel}). Mã biên nhận:{" "}
-                                                                <strong>{checkoutOrderId}</strong> (
-                                                                {checkoutPriceSnapshot.toLocaleString("vi-VN")} VND).
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <strong>
-                                                        {lang === "en"
-                                                            ? `✕ Session Status: ${checkoutStatus}`
-                                                            : `✕ Trạng Thái Đơn Hàng: ${checkoutStatus}`}
-                                                    </strong>
-                                                    <div style={{ marginTop: "0.35rem", color: "#FEE2E2" }}>
-                                                        {checkoutErrorReason}
-                                                    </div>
-                                                </>
-                                            )}
-                                        </div>
+                            {checkoutStatus !== "PENDING" && checkoutStatus !== "PAID" && checkoutStatus !== "DISPENSING" && (
+                                <div style={{ marginTop: "0.4rem" }}>
+                                    <div
+                                        style={{
+                                            padding: "0.9rem",
+                                            borderRadius: "12px",
+                                            marginBottom: "0.9rem",
+                                            background: checkoutStatus === "DISPENSED" ? "rgba(52,211,153,0.12)" : checkoutStatus === "UNCERTAIN" ? "rgba(192,132,252,0.14)" : "rgba(248,113,113,0.14)",
+                                            border: `1px solid ${checkoutStatus === "DISPENSED" ? "rgba(52,211,153,0.45)" : checkoutStatus === "UNCERTAIN" ? "rgba(192,132,252,0.45)" : "rgba(248,113,113,0.45)"}`,
+                                            color: checkoutStatus === "DISPENSED" ? "#34D399" : checkoutStatus === "UNCERTAIN" ? "#D8B4FE" : "#FCA5A5",
+                                            fontSize: "0.84rem",
+                                            lineHeight: 1.5,
+                                        }}
+                                    >
+                                        {checkoutStatus === "DISPENSED" ? (
+                                            <strong>
+                                                ✓ {formatOrderStatusLabel(checkoutStatus, lang)} — {checkoutOrderId} ({checkoutPriceSnapshot.toLocaleString("vi-VN")} VND)
+                                            </strong>
+                                        ) : (
+                                            <>
+                                                <strong>✕ {formatOrderStatusLabel(checkoutStatus, lang)}</strong>
+                                                <div style={{ marginTop: "0.3rem", color: "#FEE2E2" }}>{checkoutErrorReason}</div>
+                                            </>
+                                        )}
+                                    </div>
 
-                                        <div style={{ display: "flex", gap: "0.6rem" }}>
-                                            {(checkoutStatus === "CANCELLED" ||
-                                                checkoutStatus === "EXPIRED") && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        handleOpenPaymentGateway(checkoutItem, checkoutItem.kioskCode)
-                                                    }
-                                                    className={styles.loginPrimaryBtn}
-                                                    style={{ flex: 1 }}
-                                                >
-                                                    <RefreshCw size={14} />
-                                                    <span>
-                                                        {lang === "en" ? "Try Again" : "Tạo Lại Mã QR"}
-                                                    </span>
-                                                </button>
-                                            )}
+                                    <div style={{ display: "flex", gap: "0.6rem" }}>
+                                        {(checkoutStatus === "CANCELLED" || checkoutStatus === "EXPIRED") && (
                                             <button
                                                 type="button"
-                                                onClick={() => setCheckoutItem(null)}
-                                                className={styles.iconGhostBtn}
-                                                style={{ flex: 1, padding: "0.7rem" }}
+                                                onClick={() => handleOpenPaymentGateway(checkoutItem, checkoutItem.kioskCode)}
+                                                className={styles.loginPrimaryBtn}
+                                                style={{ flex: 1 }}
                                             >
-                                                <span>
-                                                    {checkoutStatus === "DISPENSED"
-                                                        ? lang === "en"
-                                                            ? `Done (${autoCloseSeconds}s)`
-                                                            : `Hoàn tất (${autoCloseSeconds}s)`
-                                                        : lang === "en"
-                                                            ? "Close Window"
-                                                            : "Đóng Cửa Sổ"}
-                                                </span>
+                                                <RefreshCw size={14} />
+                                                <span>{lang === "en" ? "Retry" : "Tạo lại QR"}</span>
                                             </button>
-                                        </div>
+                                        )}
+                                        <button
+                                            type="button"
+                                            onClick={() => setCheckoutItem(null)}
+                                            className={styles.iconGhostBtn}
+                                            style={{ flex: 1, padding: "0.65rem" }}
+                                        >
+                                            <span>
+                                                {checkoutStatus === "DISPENSED"
+                                                    ? `${lang === "en" ? "Done" : "Đóng"} (${autoCloseSeconds}s)`
+                                                    : lang === "en"
+                                                        ? "Close"
+                                                        : "Đóng"}
+                                            </span>
+                                        </button>
                                     </div>
-                                )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 );
@@ -3281,11 +2685,11 @@ export default function ScentStationLandingPage() {
                     }`}
                 >
                     {toastState.variant === "error" ? (
-                        <AlertOctagon size={17} color="#F87171" style={{ flexShrink: 0, marginTop: "2px" }} />
+                        <AlertOctagon size={16} color="#F87171" style={{ flexShrink: 0, marginTop: "2px" }} />
                     ) : toastState.variant === "warning" ? (
-                        <AlertTriangle size={17} color="#FBBF24" style={{ flexShrink: 0, marginTop: "2px" }} />
+                        <AlertTriangle size={16} color="#FBBF24" style={{ flexShrink: 0, marginTop: "2px" }} />
                     ) : (
-                        <CheckCircle2 size={17} color="#34D399" style={{ flexShrink: 0, marginTop: "2px" }} />
+                        <CheckCircle2 size={16} color="#34D399" style={{ flexShrink: 0, marginTop: "2px" }} />
                     )}
                     <span>{toastState.msg}</span>
                 </div>
@@ -3293,19 +2697,10 @@ export default function ScentStationLandingPage() {
 
             <footer className={styles.footerBar}>
                 <div className={styles.footerInner}>
-                    <div>
-                        <strong>SCENTSTATION</strong> •{" "}
-                        {lang === "en"
-                            ? "Luxury Automated Fragrance Sampling Network"
-                            : "Mạng Lưới Trải Nghiệm Nước Hoa Tự Động Cao Cấp"}
-                    </div>
+                    <strong>SCENTSTATION</strong>
                     <div className={styles.footerLinks}>
-                        <button
-                            type="button"
-                            onClick={handleResetDemoState}
-                            className={styles.footerTextBtn}
-                        >
-                            {lang === "en" ? "Refresh Station Telemetry" : "Làm Mới Dữ Liệu Trạm"}
+                        <button type="button" onClick={handleResetDemoState} className={styles.footerTextBtn}>
+                            {lang === "en" ? "Reset Station Data" : "Làm mới dữ liệu trạm"}
                         </button>
                         <span>•</span>
                         <button
@@ -3315,10 +2710,12 @@ export default function ScentStationLandingPage() {
                             style={{ color: "#D4AF37" }}
                         >
                             {activeSessionUser
-                                ? `${activeSessionUser.roleCode} Management Portal`
+                                ? lang === "en"
+                                    ? `${activeSessionUser.roleCode} Portal`
+                                    : `Cổng quản trị (${activeSessionUser.roleCode})`
                                 : lang === "en"
-                                    ? "Partner & Staff Sign In"
-                                    : "Cổng Đăng Nhập Nội Bộ"}
+                                    ? "Staff Sign In"
+                                    : "Đăng nhập nội bộ"}
                         </button>
                     </div>
                 </div>
