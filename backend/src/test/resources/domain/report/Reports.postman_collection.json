@@ -1,0 +1,612 @@
+{
+  "info": {
+    "name": "ScentStation Reports - 30-day seed acceptance",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Requires seed-30-days.sql loaded once into a development database with its default current-date anchor, plus an existing PSA account. Set psaEmail/psaPassword, then run in order. Creates one uniquely named Viewer fixture. JSON transaction names match Kim Tuyen's confirmed schema."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "psaEmail",
+      "value": "psa@scentstation.local"
+    },
+    {
+      "key": "psaPassword",
+      "value": ""
+    },
+    {
+      "key": "viewerPassword",
+      "value": "Reports-demo-password"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 PSA login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{psaEmail}}\",\n  \"password\": \"{{psaPassword}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "if (pm.response.code < 300) pm.collectionVariables.set(\"psaToken\", pm.response.json().token);",
+              "pm.collectionVariables.set(\"runId\", Date.now().toString());"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Find 30-day seed brands",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{psaToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/brands"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "const all = pm.response.json(); const a = all.find(b => b.name === \"REPORT-SEED-A\"), b = all.find(b => b.name === \"REPORT-SEED-B\"); pm.test(\"Seed brands exist\", () => { pm.expect(a).to.exist; pm.expect(b).to.exist; }); if(a && b) { pm.collectionVariables.set(\"brandA\", a.id); pm.collectionVariables.set(\"brandB\", b.id); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 Machines by raw status",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{psaToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/reports/machines?brandId={{brandA}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Six current machine states\", () => { const r = pm.response.json(); pm.expect(r.totalMachines).to.eql(6); pm.expect(Object.values(r.statusCounts).reduce((a,b) => a+b,0)).to.eql(6); [\"MAINTENANCE\",\"DISABLED\",\"ERROR\"].forEach(s => pm.expect(r.statusCounts[s]).to.eql(1)); pm.expect(r.statusCounts.ONLINE + r.statusCounts.OFFLINE + r.statusCounts.UNSTABLE).to.eql(3); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 Orders use Kim Tuyen schema",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{psaToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/reports/orders?brandId={{brandA}}&size=1"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"30-day order count and approved fields\", () => { const r = pm.response.json(); pm.expect(r.totalOrders).to.eql(120); pm.expect(r.items[0]).to.have.all.keys(\"orderId\",\"createdAt\",\"kioskCode\",\"brandName\",\"productName\",\"volumeMl\",\"amount\",\"currency\",\"status\"); pm.expect([\"PENDING\",\"PAID\",\"DISPENSING\",\"DISPENSED\",\"FAILED\",\"UNCERTAIN\",\"CANCELLED\",\"EXPIRED\",\"REFUNDED\"]).to.include(r.items[0].status); pm.expect(r.dispenseSuccessRate).to.eql(33.33); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Revenue DAY",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{psaToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/reports/revenue?brandId={{brandA}}&groupBy=DAY"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Seed revenue matches\", () => { const r = pm.response.json(); pm.expect(r.amount).to.eql(1200000); pm.expect(r.grossAmount).to.eql(2100000); pm.expect(r.refundedAmount).to.eql(900000); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Revenue WEEK",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{psaToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/reports/revenue?brandId={{brandA}}&groupBy=WEEK"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Seed revenue matches\", () => { const r = pm.response.json(); pm.expect(r.amount).to.eql(1200000); pm.expect(r.grossAmount).to.eql(2100000); pm.expect(r.refundedAmount).to.eql(900000); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Revenue MONTH",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{psaToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/reports/revenue?brandId={{brandA}}&groupBy=MONTH"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Seed revenue matches\", () => { const r = pm.response.json(); pm.expect(r.amount).to.eql(1200000); pm.expect(r.grossAmount).to.eql(2100000); pm.expect(r.refundedAmount).to.eql(900000); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 Best-selling products",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{psaToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/reports/products?brandId={{brandA}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Order price snapshot used\", () => { const row = pm.response.json().items[0]; pm.expect(row.productName).to.eql('Rose, \"Fresh\"'); pm.expect(row.soldCount).to.eql(30); pm.expect(row.amount).to.eql(600000); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 Low-stock slots",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{psaToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/reports/inventory?brandId={{brandA}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Two low slots\", () => pm.expect(pm.response.json().items.length).to.eql(2));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 PSA platform report",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{psaToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/reports/revenue"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Platform scope\", () => { const r = pm.response.json(); pm.expect(r.filters.scope).to.eql(\"PLATFORM\"); pm.expect(r.amount).to.be.at.least(2700000); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 Create Viewer fixture",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{psaToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/users",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"brandId\": \"{{brandA}}\",\n  \"email\": \"report-viewer-{{runId}}@example.com\",\n  \"fullName\": \"Reports Demo Viewer\",\n  \"password\": \"{{viewerPassword}}\",\n  \"roles\": [\n    \"VIEWER\"\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 Viewer login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"report-viewer-{{runId}}@example.com\",\n  \"password\": \"{{viewerPassword}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "if (pm.response.code < 300) pm.collectionVariables.set(\"viewerToken\", pm.response.json().token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 Viewer reads machines",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{viewerToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/reports/machines"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 Viewer reads revenue",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{viewerToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/reports/revenue"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 Viewer reads orders",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{viewerToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/reports/orders"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 Viewer reads products",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{viewerToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/reports/products"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 Viewer reads inventory",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{viewerToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/reports/inventory"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 Viewer cannot escape brand",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{viewerToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/reports/orders?brandId={{brandB}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 403\", () => pm.response.to.have.status(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 Viewer cannot write reports",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{viewerToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/reports/orders",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 403\", () => pm.response.to.have.status(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 Viewer cannot export",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{viewerToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/reports/orders?format=csv"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 403\", () => pm.response.to.have.status(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15 Supervisor CSV uses full scope and approved headers",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{psaToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/reports/orders?brandId={{brandA}}&format=csv&size=1"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"CSV includes all 120 orders\", () => { const text = pm.response.text(); pm.expect(text).to.include('\"orderId\",\"createdAt\",\"kioskCode\",\"brandName\",\"productName\",\"volumeMl\",\"amount\",\"currency\",\"status\"'); pm.expect(text.trim().split(/\\r?\\n/).length).to.eql(121); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "16 Invalid dates rejected",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{viewerToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/reports/orders?from=2024-07-02&to=2024-07-01"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

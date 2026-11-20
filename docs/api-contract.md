@@ -134,3 +134,17 @@ refunded twice. A refused request is recorded in the audit log.
 
 > Add the remaining endpoints as you build them. For each one record the path,
 > the request body, the response body, and who owns it.
+
+## Dashboard / Reports — Hoai Anh / Kim Tuyen (FR9)
+
+Confirmed transaction fields: `orderId`, `createdAt`, `kioskCode`, `brandName`,
+`productName`, `volumeMl`, `amount`, `currency`, `status`. Status is the original
+backend enum; frontend translates the display label.
+
+GET `/api/reports/machines`, `/revenue`, `/orders`, `/products`, `/inventory`.
+Filters: `brandId`, `machineId`, `productId`, `locationId`, inclusive `from`/`to`.
+Revenue supports `groupBy=DAY|WEEK|MONTH`; all five support `format=csv` for
+authorised exporters. Viewer reads scoped JSON without write/export access.
+Only PSA may query the whole platform. See the
+[confirmed report contract](reports-api-contract.md) for all fields, calculations,
+date boundaries, export columns and the expected 30-day seed totals.
