@@ -16,15 +16,16 @@
 
 N2 verifies how the Backend handles abnormal conditions encountered by a Kiosk while executing commands.
 
-The Simulator is used to reproduce five fault scenarios:
+The Simulator is used to verify one normal baseline and reproduce five fault scenarios:
 
-| Fault Mode | Simulated scenario | Verification goals |
+| Mode | Simulated scenario | Verification goals |
 |---|---|---|
 | `reject` | Device rejects a command | Order fails, inventory is not deducted, and an incident is created |
 | `interlock` | Device rejects a command because a safety condition is not met (door open) | Order fails with a recorded reason, device status is updated, and an alert is created |
 | `silent` | Device does not send a dispense result | Order becomes `UNCERTAIN`; the command is not retried automatically |
 | `duplicate` | Device sends a duplicate result | Inventory and transactions are recorded only once |
 | `offline` | Simulator stops sending heartbeats | Backend marks the machine `OFFLINE` and rejects new Order requests |
+| `none` | Device handles a command normally | Order becomes `DISPENSED`, one command succeeds, and one dose is deducted |
 
 The tests verify that the Backend handles Order status, inventory, transactions, incidents/alerts, and device status correctly in each scenario.
 
@@ -184,11 +185,11 @@ This command reads the status and failure reason of the Order whose ID is stored
 
 **Usage:** Run this command for each Fault Mode after allowing the Backend enough time to process the result or reach the applicable timeout. Expected statuses are listed in Section 4.
 
-For each mode in Section 4, save the screenshot after collecting the relevant logs and check results, using the filename specified for that mode. Save all screenshots in `docs/evidence/N2/`, created in Step 3.1.
+For each fault mode in Section 4, save the screenshot after collecting the relevant logs and check results, using the filename specified for that mode. Save these screenshots in `docs/evidence/N2/`, created in Step 3.1. The `none` baseline screenshot is saved in `docs/N2_Report/` as specified in its test section.
 
 ---
 
-## 4. Execute Each Fault Mode
+## 4. Execute Fault Modes and the Normal Baseline
 
 Run the modes below in order in Terminal 3. Between modes, press `Ctrl+C` to stop the Simulator before starting the next mode. Run only one Simulator for `ma-device-001` at a time.
 
@@ -742,6 +743,97 @@ Command summary:
 | New Payment | Not created |
 
 Required evidence: `N2-offline.png` should show the machine status as `OFFLINE`, the rejected HTTP response, and unchanged Order/Payment counts.
+
+---
+
+### 4.6. Baseline Test: None
+
+**Test ID:** `N2-NONE`
+**Mode:** `none`
+
+**Objective:** Verify that the normal Simulator-to-Backend command flow dispenses successfully and deducts inventory once.
+
+#### Step 1. Start the Simulator
+
+**Terminal 3:**
+
+Stop any previously running Simulator with `Ctrl+C`, then start normal mode:
+
+```bash
+java -jar /c/1.UTH/nam3HK1/Java/LapTrinhJava/simulator/target/simulator.jar --device=ma-device-001 --fault=none
+```
+
+**Expected result:** The Simulator starts with `fault=none`, connects to MQTT, and continues sending heartbeats.
+
+#### Step 2. Verify Device Readiness
+
+After the Simulator reports that it has connected to MQTT, check the menu in Terminal 1:
+
+```bash
+curl -sS http://localhost:8080/api/kiosk/machines/ma-device-001/menu
+```
+
+Continue only if the response shows `deviceId` as `ma-device-001`, `status` as `ONLINE`, and slot 1 as `"available":true`. If these conditions are not met, do not create an Order; see the recovery instructions in Section 5.
+
+#### Step 3. Create and Pay for an Order
+
+**Terminal 1:**
+
+Run the function defined in Section 3.5 and record the printed `ORDER_ID`:
+
+```bash
+create_and_pay_order
+```
+
+#### Step 4. Check Order Status
+
+**Terminal 1:**
+
+Run the Order-status command in [Section 3.6](#36-check-order-status) after the Backend has processed the result.
+
+**Expected result:** `status` is `DISPENSED`.
+
+#### Step 5. Check the Command and Inventory
+
+**Terminal 1:**
+
+```bash
+docker exec scent-db psql -U scent -d scentstation -c \
+"SELECT o.order_id, o.status, COUNT(dc.command_id) AS command_count,
+        BOOL_AND(dc.status = 'SUCCEEDED') AS all_commands_succeeded,
+        BOOL_AND(dc.inventory_applied) AS inventory_applied
+ FROM orders o
+ JOIN dispense_commands dc ON dc.order_id = o.order_id
+ WHERE o.order_id = $ORDER_ID
+ GROUP BY o.order_id, o.status;"
+```
+
+**Expected result:** One command exists, it succeeded, the Order is `DISPENSED`, and `inventory_applied` is `t`.
+
+Check that inventory was deducted exactly once:
+
+```bash
+docker exec scent-db psql -U scent -d scentstation -c \
+"SELECT COUNT(*) AS dispense_movement_count,
+        COALESCE(SUM(-im.quantity), 0) AS total_deducted_ml
+ FROM inventory_movements im
+ JOIN dispense_commands dc ON dc.command_id = im.command_id
+ WHERE dc.order_id = $ORDER_ID AND im.movement_type = 'DISPENSE';"
+```
+
+**Expected result:** `dispense_movement_count` is `1`; `total_deducted_ml` equals the dose for the command.
+
+#### Expected Results
+
+| Criterion | Expected result |
+|---|---|
+| Simulator mode | `none` |
+| Order status | `DISPENSED` |
+| Successful command count | One |
+| `inventory_applied` | `t` |
+| Inventory deduction | One `DISPENSE` movement for one dose |
+
+Save the baseline screenshot as `docs/evidence/N2/N2-none.png`. It should show the Simulator log and the corresponding Order/Database results. This baseline evidence is additional to the five required fault-mode screenshots in Section 6.
 
 ---
 
