@@ -1,37 +1,17 @@
-/*
- * Entity and repository files belong to Tra My (tasks M1, M2).
- */
 package vn.edu.uth.scentstation.domain.inventory;
 
-import jakarta.persistence.AttributeOverride;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.time.LocalDate;
-import org.hibernate.annotations.Filter;
+import jakarta.persistence.*;
+
 import vn.edu.uth.scentstation.common.BaseEntity;
 import vn.edu.uth.scentstation.domain.brand.Brand;
 import vn.edu.uth.scentstation.domain.catalog.Product;
 
-/**
- * One delivery of a product, from which bottles are filled (FR6.1).
- *
- * <p>Written with the schema so a bottle can point at its batch. The receiving
- * and quarantine behaviour around it is task A3.
- */
+import java.time.LocalDate;
+
+/** One receipt of a fixed number of bottles of one product (FR6.1). */
 @Entity
 @Table(name = "inventory_batches")
-@AttributeOverride(name = "id", column = @Column(name = "batch_id"))
-@Filter(name = "brandFilter", condition = "brand_id = :brandId")
 public class InventoryBatch extends BaseEntity {
-
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "brand_id", nullable = false)
     private Brand brand;
@@ -43,18 +23,14 @@ public class InventoryBatch extends BaseEntity {
     @Column(name = "batch_number", nullable = false, length = 80)
     private String batchNumber;
 
-    @Column(name = "quantity_received", nullable = false, precision = 10, scale = 3)
-    private BigDecimal quantityReceived;
+    @Column(nullable = false)
+    private int quantity;
 
-    @Column(name = "received_at", nullable = false)
-    private Instant receivedAt;
+    @Column(name = "received_date", nullable = false)
+    private LocalDate receivedDate;
 
-    @Column(name = "expiration_date")
-    private LocalDate expirationDate;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private BatchStatus status;
+    @Column(name = "expiry_date")
+    private LocalDate expiryDate;
 
     public Brand getBrand() {
         return brand;
@@ -80,35 +56,27 @@ public class InventoryBatch extends BaseEntity {
         this.batchNumber = batchNumber;
     }
 
-    public BigDecimal getQuantityReceived() {
-        return quantityReceived;
+    public int getQuantity() {
+        return quantity;
     }
 
-    public void setQuantityReceived(BigDecimal quantityReceived) {
-        this.quantityReceived = quantityReceived;
+    public void setQuantity(int quantity) {
+        this.quantity = quantity;
     }
 
-    public Instant getReceivedAt() {
-        return receivedAt;
+    public LocalDate getReceivedDate() {
+        return receivedDate;
     }
 
-    public void setReceivedAt(Instant receivedAt) {
-        this.receivedAt = receivedAt;
+    public void setReceivedDate(LocalDate receivedDate) {
+        this.receivedDate = receivedDate;
     }
 
-    public LocalDate getExpirationDate() {
-        return expirationDate;
+    public LocalDate getExpiryDate() {
+        return expiryDate;
     }
 
-    public void setExpirationDate(LocalDate expirationDate) {
-        this.expirationDate = expirationDate;
-    }
-
-    public BatchStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(BatchStatus status) {
-        this.status = status;
+    public void setExpiryDate(LocalDate expiryDate) {
+        this.expiryDate = expiryDate;
     }
 }
