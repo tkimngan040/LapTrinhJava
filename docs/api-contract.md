@@ -208,3 +208,19 @@ all brands; BA/OM/Inventory Staff/Viewer read their own brand.
 Consumption failures roll back stock/history/success changes, then place the
 customer order in UNCERTAIN in a separate transaction and pause its slot for
 human reconciliation. Duplicate results do not retry that held command.
+
+## Alert actions and maintenance — FR7 / FR8
+
+Alert types now include OFFLINE, LOW_STOCK, DOOR_OPEN, LEAK and DISPENSE_FAILED.
+GET `/api/alerts` returns all active states (OPEN/ACKNOWLEDGED/ASSIGNED); false
+`activeOnly` includes resolved rows. Technician reads are also permitted.
+PATCH `/api/alerts/{id}/acknowledge`, `/assign`, `/resolve`, `/reopen` provide
+scoped lifecycle actions with actor/timestamps. Critical alerts auto-link a
+maintenance ticket.
+
+GET/POST `/api/maintenance/tickets`, GET `/{id}`, PATCH `/{id}/assign`,
+POST `/{id}/start`, PATCH `/{id}/repair`, POST `/{id}/test`, and POST `/{id}/close`
+implement the technical service workflow. Closure requires a recorded repair
+and an actual successful diagnostic command after that repair. See the
+[alert/maintenance contract](maintenance-api-contract.md) for JSON bodies, enum
+values, role/assignee guards, deduplication keys and safety rules.
