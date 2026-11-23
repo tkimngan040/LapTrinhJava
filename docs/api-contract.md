@@ -191,3 +191,20 @@ exhausted batches, incompatible/unusable bottles or a slot not ready for service
 `SLOT_ALREADY_OCCUPIED` is returned for a second installation, including when the
 attached bottle is nearly empty or empty. Migration V3 retains the database
 constraint `uq_bottle_active_slot` and extends it to all attached states.
+
+## Confirmed consumption and LOW_STOCK — A4 / L5
+
+See [the internal callback contract](inventory-command-contract.md). The selected
+signature is `void deductForCommand(DispenseCommand command)`, matching the L5
+caller. There is no public stock-deduction endpoint. Confirmed diagnostics use
+DIAGNOSTIC movements and no sale order.
+
+`GET /api/alerts` returns open LOW_STOCK alerts; `?activeOnly=false` includes
+resolved alerts. Rows contain `id`, `alertType`, `status`, `bottleId`, `machineId`,
+`slotId`, `remainingQuantityMl`, `thresholdMl`, `message`, `createdAt` and optional
+`resolvedAt`. Quantity and threshold are snapshots at alert creation. PSA reads
+all brands; BA/OM/Inventory Staff/Viewer read their own brand.
+
+Consumption failures roll back stock/history/success changes, then place the
+customer order in UNCERTAIN in a separate transaction and pause its slot for
+human reconciliation. Duplicate results do not retry that held command.
