@@ -224,3 +224,33 @@ implement the technical service workflow. Closure requires a recorded repair
 and an actual successful diagnostic command after that repair. See the
 [alert/maintenance contract](maintenance-api-contract.md) for JSON bodies, enum
 values, role/assignee guards, deduplication keys and safety rules.
+
+## Audit and catalogue changes — FR10 / BR11 / BR12
+
+PSA searches `GET /api/audit-logs` with actor/brand/machine/action/target/time/severity
+filters and pagination. There are no audit mutation endpoints. V6 also rejects
+SQL UPDATE/DELETE/TRUNCATE on the audit ledger. `@Auditable` persists safe before/after
+snapshots in the business transaction; successful/denied login snapshots exclude
+passwords and tokens.
+
+PSA/BA/OM may PATCH `/api/products/{id}/price` and `/api/slots/{id}/price` with
+`{"price":25000}`, or `/api/slots/{id}/product` with `{"productId":12}` within
+their scope. Slot reassignment requires a paused, empty slot and no outstanding
+command. See the [audit contract](audit-api-contract.md) for the JSON response,
+all filters, covered actions, security rules and remaining refund/trace scope.
+
+## Refunds and manual review — FR3.13 / FR10 / BR11
+
+PSA/BA/OM may POST `/api/orders/{id}/refunds` with `requestKey` and mandatory
+`reason`. Requests are queued durably, scoped to the order's brand and deduplicated.
+GET `/api/refunds`, GET `/{id}` and POST `/{id}/retry` expose the request lifecycle.
+POST `/api/refunds/webhook` verifies a provider HMAC and the exact request/attempt/
+amount/currency before recording success. Only then do order/payment become REFUNDED.
+The enabled development provider exposes POST `/api/dev/refunds/{id}/simulate`;
+its separate evidence ledger and normal callback path are used for acceptance.
+
+POST `/api/orders/{id}/review` records an authorised, reasoned decision for an
+UNCERTAIN order. A verified success applies stock to the original command once;
+failure permits refund. Neither path issues another command. See the
+[refund/review contract](refunds-api-contract.md) and
+[complete screenshot acceptance](all-screenshot-acceptance.md).

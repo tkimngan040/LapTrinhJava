@@ -1,80 +1,101 @@
 package vn.edu.uth.scentstation.domain.audit;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.time.Clock;
-import java.util.Map;
+
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.*;
+import org.springframework.web.context.request.*;
+
+import vn.edu.uth.scentstation.common.ApiException;
 import vn.edu.uth.scentstation.security.AuthenticatedUser;
 
-/**
- * Writes the audit trail (BR11, BR12).
- *
- * <p>Two entry points, because two things must hold:
- * <ul>
- *   <li>{@link #record} joins the caller's transaction, so an action and its
- *       audit line are saved together or not at all;</li>
- *   <li>{@link #recordRejected} runs in its own transaction, so a request that
- *       was refused still leaves a line behind even though the caller rolls
- *       back (UC-16 exception E6).</li>
- * </ul>
- */
+import java.util.*;
+
 @Service
 public class AuditService {
+    private final AuditLogRepository logs;
+    private final JdbcTemplate jdbc;
+    private final ObjectMapper json;
 
-    private final AuditLogRepository repository;
-    private final ObjectMapper objectMapper;
-    private final Clock clock;
-
-    public AuditService(AuditLogRepository repository, ObjectMapper objectMapper, Clock clock) {
-        this.repository = repository;
-        this.objectMapper = objectMapper;
-        this.clock = clock;
+    public AuditService(AuditLogRepository logs, JdbcTemplate jdbc, ObjectMapper json) {
+        this.logs = logs;
+        this.jdbc = jdbc;
+        this.json = json;
     }
 
-    @Transactional
-    public void record(AuthenticatedUser actor, Long brandId, String action,
-                       String entityType, Long entityId,
-                       Map<String, Object> before, Map<String, Object> after,
-                       String sourceIp) {
-        write(actor, brandId, action, entityType, entityId, before, after, sourceIp);
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void append(
+            AuthenticatedUser actor,
+            AuditSnapshotRepository.Snapshot target,
+            String action,
+            AuditTarget type,
+            JsonNode before,
+            JsonNode after,
+            String reason) {
+        Long actorId = actor == null ? target.operatorId() : actor.userId();
+        String identifier = actor == null ? "SYSTEM" : actor.email();
+        if (actor == null && actorId != null) {
+            List<String> names =
+                    jdbc.queryForList("SELECT email FROM users WHERE id=?", String.class, actorId);
+            if (!names.isEmpty()) identifier = names.getFirst();
+        }
+        logs.append(
+                actorId,
+                identifier,
+                target.brandId(),
+                action,
+                type.name(),
+                target.id(),
+                target.machineId(),
+                source(),
+                "INFO",
+                before,
+                after,
+                reason);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void recordRejected(AuthenticatedUser actor, Long brandId, String action,
-                               String entityType, Long entityId, String why,
-                               String sourceIp) {
-        write(actor, brandId, action + "_REJECTED", entityType, entityId,
-                null, Map.of("reason", why), sourceIp);
+    public void deniedLogin(String email, String code) {
+        String identifier = email.strip().toLowerCase(Locale.ROOT);
+        List<Map<String, Object>> users =
+                jdbc.queryForList("SELECT id,brand_id FROM users WHERE lower(email)=?", identifier);
+        Long actor = users.isEmpty() ? null : ((Number) users.getFirst().get("id")).longValue();
+        Long brand =
+                users.isEmpty() || users.getFirst().get("brand_id") == null
+                        ? null
+                        : ((Number) users.getFirst().get("brand_id")).longValue();
+        logs.append(
+                null,
+                identifier,
+                brand,
+                "LOGIN_DENIED",
+                "USER",
+                actor,
+                null,
+                source(),
+                "WARNING",
+                null,
+                json.valueToTree(
+                        Map.of("outcome", "DENIED", "code", code, "identityVerified", false)),
+                null);
     }
 
-    private void write(AuthenticatedUser actor, Long brandId, String action,
-                       String entityType, Long entityId,
-                       Map<String, Object> before, Map<String, Object> after,
-                       String sourceIp) {
-        AuditLog line = new AuditLog();
-        line.setBrandId(brandId);
-        line.setUserId(actor == null ? null : actor.userId());
-        line.setAction(action);
-        line.setEntityType(entityType);
-        line.setEntityId(entityId);
-        line.setOldValues(json(before));
-        line.setNewValues(json(after));
-        line.setSourceIp(sourceIp);
-        line.setCreatedAt(clock.instant());
-        repository.save(line);
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasRole('PLATFORM_SUPER_ADMIN')")
+    public AuditLogRepository.Page search(AuditController.Filter f) {
+        if (f.getFrom() != null && f.getTo() != null && !f.getFrom().isBefore(f.getTo()))
+            throw ApiException.badRequest("INVALID_AUDIT_FILTER", "from must precede to");
+        return logs.search(f);
     }
 
-    private String json(Map<String, Object> values) {
-        if (values == null) {
-            return null;
+    static String source() {
+        if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes a) {
+            String value = a.getRequest().getMethod() + " " + a.getRequest().getRequestURI();
+            return value.substring(0, Math.min(255, value.length()));
         }
-        try {
-            return objectMapper.writeValueAsString(values);
-        } catch (JsonProcessingException ex) {
-            throw new IllegalStateException("Audit values could not be serialised", ex);
-        }
+        return "APPLICATION";
     }
 }
