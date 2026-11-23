@@ -8,26 +8,24 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * The four checks a device runs before it actuates anything, in the order
- * Report section 2.9.3 step 8 gives them.
+ * The four checks a device runs before it actuates anything, in the order Report section 2.9.3 step
+ * 8 gives them.
  *
  * <ol>
- *   <li>the HMAC signature — a command that cannot be authenticated is refused
- *       and never actuated (BR7);</li>
- *   <li>the device id — a command addressed elsewhere is refused, so one
- *       machine can never spray on another's behalf (FR4.6);</li>
- *   <li>expiry and the idempotency key — a stale or already-seen command is
- *       refused, which is what stops a replayed command from spraying twice
- *       (BR7, NFR3.4);</li>
- *   <li>the safety interlocks — door, maintenance mode, slot volume, critical
- *       error (BR8, FR4.7).</li>
+ *   <li>the HMAC signature — a command that cannot be authenticated is refused and never actuated
+ *       (BR7);
+ *   <li>the device id — a command addressed elsewhere is refused, so one machine can never spray on
+ *       another's behalf (FR4.6);
+ *   <li>expiry and the idempotency key — a stale or already-seen command is refused, which is what
+ *       stops a replayed command from spraying twice (BR7, NFR3.4);
+ *   <li>the safety interlocks — door, maintenance mode, slot volume, critical error (BR8, FR4.7).
  * </ol>
  *
- * <p>The order is not arbitrary. Authenticity comes first because an unsigned
- * command's own fields cannot be trusted to answer any of the later questions.
+ * <p>The order is not arbitrary. Authenticity comes first because an unsigned command's own fields
+ * cannot be trusted to answer any of the later questions.
  *
- * <p>Deliberately free of MQTT and JSON libraries: it takes a map and returns a
- * verdict, so it can be unit tested with nothing but a JDK.
+ * <p>Deliberately free of MQTT and JSON libraries: it takes a map and returns a verdict, so it can
+ * be unit tested with nothing but a JDK.
  */
 public class CommandVerifier {
 
@@ -46,8 +44,7 @@ public class CommandVerifier {
     private final String deviceId;
     private final CommandSigner signer;
     private final SafetyInterlock interlock;
-    private final Set<String> seenKeys =
-            Collections.synchronizedSet(new LinkedHashSet<>());
+    private final Set<String> seenKeys = Collections.synchronizedSet(new LinkedHashSet<>());
 
     public CommandVerifier(String deviceId, CommandSigner signer, SafetyInterlock interlock) {
         this.deviceId = deviceId;
@@ -94,7 +91,10 @@ public class CommandVerifier {
         }
         int slotNumber = intOf(command.get("slotNumber"), -1);
         int doseMl = intOf(command.get("doseMl"), 1);
-        String blocked = interlock.blockingReason(slotNumber, doseMl);
+        String purpose = String.valueOf(command.getOrDefault("purpose", "CUSTOMER"));
+        if (!purpose.equals("CUSTOMER") && !purpose.equals("DIAGNOSTIC"))
+            return Verdict.refuse("UNKNOWN_PURPOSE");
+        String blocked = interlock.blockingReason(slotNumber, doseMl, purpose.equals("DIAGNOSTIC"));
         if (blocked != null) {
             return Verdict.refuse(blocked);
         }

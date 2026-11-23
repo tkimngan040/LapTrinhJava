@@ -134,3 +134,93 @@ refunded twice. A refused request is recorded in the audit log.
 
 > Add the remaining endpoints as you build them. For each one record the path,
 > the request body, the response body, and who owns it.
+
+## Inventory — Hoai Anh (FR6.1–6.4, FR6.11–6.13)
+
+All paths below start with `/api/inventory`. PSA, BA, Operations Manager and
+Inventory Staff may manage inventory. Brand users are restricted to their own
+brand, including lookups by ID. Manual adjustments require PSA, BA or Operations
+Manager, plus a nonblank reason. Viewer/Technician/Customer cannot write inventory.
+
+| Method | Path | Request | Response |
+| --- | --- | --- | --- |
+| GET | `/batches` | — | `BatchResponse[]` |
+| POST | `/batches` | `{ "productId": 1, "batchNumber": "LOT-001", "quantity": 2, "receivedDate": "2026-11-14", "expiryDate": "2027-11-14" }` | 201 `BatchResponse` |
+| GET | `/bottles` | — | `BottleResponse[]` |
+| POST | `/bottles` | `{ "batchId": 1, "bottleCode": "BTL-001", "initialQuantityMl": 100 }` | 201 `BottleResponse` |
+| PATCH | `/slots/{id}/service` | — | 204; pauses slot before physical service |
+| POST | `/slots/{id}/install` | `{ "bottleId": 1, "initialQuantityMl": 100 }` | `BottleResponse` |
+| POST | `/slots/{id}/replace` | `{ "bottleId": 2, "initialQuantityMl": 100 }` | incoming `BottleResponse` |
+| POST | `/slots/{id}/refill` | `{ "quantityMl": 20, "reason": "Scheduled refill" }` | `BottleResponse` |
+| POST | `/slots/{id}/remove` | — | outgoing `BottleResponse` |
+| PATCH | `/bottles/{id}/adjust` | `{ "remainingQuantityMl": 60, "reason": "Measured reconciliation" }` | `BottleResponse` |
+| PATCH | `/bottles/{id}/status` | `{ "status": "DAMAGED", "reason": "Broken seal" }` | `BottleResponse`; also accepts `EXPIRED` |
+| GET | `/movements?bottleId=1` | optional bottle filter | `MovementResponse[]` |
+
+`BatchResponse`: `id`, `brandId`, `productId`, `batchNumber`, `quantity`,
+`receivedDate`, `expiryDate`. Quantity counts bottles; registration cannot exceed
+the batch's received quantity. Batch number is unique within a brand; bottle code
+is globally unique. Expiry date is optional, but cannot precede receipt.
+
+`BottleResponse`: `id`, `batchId`, `productId`, `bottleCode`, `status`,
+`initialQuantityMl`, `remainingQuantityMl`, `machineId`, `slotId`, `installedAt`,
+`removedAt`, `expiryDate`. States: `AVAILABLE`, `INSTALLED`, `NEARLY_EMPTY`,
+`EMPTY`, `DAMAGED`, `EXPIRED`. Expired batch dates override the displayed state
+and prevent installation/refill. Damage/expiry can be recorded manually; volume
+states follow installation, dispensing, refill and adjustment.
+
+`MovementResponse`: `id`, `movementType`, `bottleId`, `previousBottleId`,
+`newBottleId`, `machineId`, `slotId`, `performedBy`, `performedAt`, `quantityMl`,
+`quantityBeforeMl`, `quantityAfterMl`, `reason`. Null fields are omitted. Legacy
+movements may lack before/after quantities. Device movements have no employee.
+Replacement appends REMOVE and INSTALL with the same old/new bottle IDs in one
+transaction. Refill uses the same bottle for old/new. Transfers preserve bottle
+volume; `quantityMl` records the volume delta, not a count of bottles.
+
+Pause a slot before installation, replacement, refill, removal or installed-bottle
+adjustment/status changes. A machine already in maintenance also permits service.
+Pending/uncertain dispensing must be resolved first. Successful quantity changes
+recalculate slot availability, without changing machine maintenance state.
+The installation baseline must not exceed recorded available volume; refill and
+adjustment cannot exceed that baseline. Positive volumes are integer millilitres.
+
+Errors use the existing `ApiError` JSON shape: 400 for invalid quantities/dates,
+missing adjustment quantity/reason or malformed input; 403 for insufficient role;
+404 for references outside the brand; 409 for occupied slots, duplicate codes,
+exhausted batches, incompatible/unusable bottles or a slot not ready for service.
+`SLOT_ALREADY_OCCUPIED` is returned for a second installation, including when the
+attached bottle is nearly empty or empty. Migration V3 retains the database
+constraint `uq_bottle_active_slot` and extends it to all attached states.
+
+## Confirmed consumption and LOW_STOCK — A4 / L5
+
+See [the internal callback contract](inventory-command-contract.md). The selected
+signature is `void deductForCommand(DispenseCommand command)`, matching the L5
+caller. There is no public stock-deduction endpoint. Confirmed diagnostics use
+DIAGNOSTIC movements and no sale order.
+
+`GET /api/alerts` returns open LOW_STOCK alerts; `?activeOnly=false` includes
+resolved alerts. Rows contain `id`, `alertType`, `status`, `bottleId`, `machineId`,
+`slotId`, `remainingQuantityMl`, `thresholdMl`, `message`, `createdAt` and optional
+`resolvedAt`. Quantity and threshold are snapshots at alert creation. PSA reads
+all brands; BA/OM/Inventory Staff/Viewer read their own brand.
+
+Consumption failures roll back stock/history/success changes, then place the
+customer order in UNCERTAIN in a separate transaction and pause its slot for
+human reconciliation. Duplicate results do not retry that held command.
+
+## Alert actions and maintenance — FR7 / FR8
+
+Alert types now include OFFLINE, LOW_STOCK, DOOR_OPEN, LEAK and DISPENSE_FAILED.
+GET `/api/alerts` returns all active states (OPEN/ACKNOWLEDGED/ASSIGNED); false
+`activeOnly` includes resolved rows. Technician reads are also permitted.
+PATCH `/api/alerts/{id}/acknowledge`, `/assign`, `/resolve`, `/reopen` provide
+scoped lifecycle actions with actor/timestamps. Critical alerts auto-link a
+maintenance ticket.
+
+GET/POST `/api/maintenance/tickets`, GET `/{id}`, PATCH `/{id}/assign`,
+POST `/{id}/start`, PATCH `/{id}/repair`, POST `/{id}/test`, and POST `/{id}/close`
+implement the technical service workflow. Closure requires a recorded repair
+and an actual successful diagnostic command after that repair. See the
+[alert/maintenance contract](maintenance-api-contract.md) for JSON bodies, enum
+values, role/assignee guards, deduplication keys and safety rules.

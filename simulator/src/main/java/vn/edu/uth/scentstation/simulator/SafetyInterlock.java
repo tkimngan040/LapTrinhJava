@@ -1,17 +1,14 @@
 package vn.edu.uth.scentstation.simulator;
 
 /**
- * The physical conditions a real kiosk checks before it drives the pump
- * (BR8, FR4.7).
+ * The physical conditions a real kiosk checks before it drives the pump (BR8, FR4.7).
  *
- * <p>On hardware these are sensor readings. Here they are fields, which is the
- * point: a test can put the machine into "door open" or "slot empty" in one
- * line, where staging the same thing on a real machine means opening a cabinet
- * at the right moment.
+ * <p>On hardware these are sensor readings. Here they are fields, which is the point: a test can
+ * put the machine into "door open" or "slot empty" in one line, where staging the same thing on a
+ * real machine means opening a cabinet at the right moment.
  *
- * <p>The checks run on the device, not on the backend. A machine that is
- * unsafe must refuse even a perfectly valid, correctly signed command — the
- * backend cannot see the door.
+ * <p>The checks run on the device, not on the backend. A machine that is unsafe must refuse even a
+ * perfectly valid, correctly signed command — the backend cannot see the door.
  */
 public class SafetyInterlock {
 
@@ -21,8 +18,8 @@ public class SafetyInterlock {
     private final int[] remainingMl;
 
     /**
-     * @param slots      how many slots this machine has (at least four, FR2.3)
-     * @param initialMl  starting volume in every slot
+     * @param slots how many slots this machine has (at least four, FR2.3)
+     * @param initialMl starting volume in every slot
      */
     public SafetyInterlock(int slots, int initialMl) {
         this.remainingMl = new int[slots];
@@ -30,18 +27,20 @@ public class SafetyInterlock {
     }
 
     /**
-     * Why this machine may not spray from {@code slotNumber} right now, or null
-     * when it may.
+     * Why this machine may not spray from {@code slotNumber} right now, or null when it may.
      *
-     * <p>Returning the reason rather than a boolean matters: it is what the
-     * refusal carries back to the backend, and what ends up in the order's
-     * failure reason and in the report's test table.
+     * <p>Returning the reason rather than a boolean matters: it is what the refusal carries back to
+     * the backend, and what ends up in the order's failure reason and in the report's test table.
      */
     public String blockingReason(int slotNumber, int doseMl) {
+        return blockingReason(slotNumber, doseMl, false);
+    }
+
+    public String blockingReason(int slotNumber, int doseMl, boolean diagnostic) {
         if (doorOpen) {
             return "DOOR_OPEN";
         }
-        if (maintenanceMode) {
+        if (maintenanceMode && !diagnostic) {
             return "MAINTENANCE_MODE";
         }
         if (criticalError) {
@@ -65,7 +64,8 @@ public class SafetyInterlock {
 
     public int remainingMl(int slotNumber) {
         return slotNumber >= 1 && slotNumber <= remainingMl.length
-                ? remainingMl[slotNumber - 1] : 0;
+                ? remainingMl[slotNumber - 1]
+                : 0;
     }
 
     public int slotCount() {
