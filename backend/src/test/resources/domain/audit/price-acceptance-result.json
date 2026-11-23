@@ -1,0 +1,46 @@
+{
+    "sampleAt":  "2026-11-15T15:14:23.3056645+07:00",
+    "criterion":  "Price change records exact old and new values",
+    "result":  "PASS",
+    "fixture":  {
+                    "brandId":  5,
+                    "productId":  5,
+                    "oldPrice":  20000,
+                    "newPrice":  25000
+                },
+    "priceResponse":  {
+                          "id":  5,
+                          "brandId":  5,
+                          "name":  "Audit acceptance perfume",
+                          "defaultPrice":  25000
+                      },
+    "auditResponse":  {
+                          "content":  [
+                                          {
+                                              "id":  2,
+                                              "actorId":  1,
+                                              "actorIdentifier":  "psa@scentstation.local",
+                                              "brandId":  5,
+                                              "action":  "PRODUCT_PRICE_CHANGED",
+                                              "targetType":  "PRODUCT",
+                                              "targetId":  5,
+                                              "occurredAt":  "2026-11-15T08:14:23.245084Z",
+                                              "source":  "PATCH /api/products/5/price",
+                                              "severity":  "INFO",
+                                              "beforeValues":  {
+                                                                   "name":  "Audit acceptance perfume",
+                                                                   "active":  true,
+                                                                   "defaultPrice":  20000
+                                                               },
+                                              "afterValues":  {
+                                                                  "name":  "Audit acceptance perfume",
+                                                                  "active":  true,
+                                                                  "defaultPrice":  25000
+                                                              }
+                                          }
+                                      ],
+                          "totalElements":  1,
+                          "page":  0,
+                          "size":  50
+                      }
+}

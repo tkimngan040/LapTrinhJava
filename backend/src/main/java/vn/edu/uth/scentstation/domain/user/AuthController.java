@@ -3,6 +3,7 @@ package vn.edu.uth.scentstation.domain.user;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,7 +25,7 @@ public class AuthController {
     }
 
     public record LoginRequest(
-            @NotBlank @Email String username,
+            @NotBlank @Email @Size(max = 160) String username,
             @NotBlank String password) {
     }
 
@@ -40,14 +41,10 @@ public class AuthController {
         return authService.login(request.username(), request.password());
     }
 
-    /**
-     * Signing out is a client-side discard of the token. The endpoint exists so
-     * the frontend has one call to make, and so the action can be audited.
-     * To revoke a token before it expires, increment the account's
-     * token_version instead (FR1.8).
-     */
+    /** Signs out by revoking active account tokens and recording the action. */
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout() {
+    public ResponseEntity<Void> logout(@AuthenticationPrincipal AuthenticatedUser principal) {
+        authService.logout(principal.userId());
         return ResponseEntity.noContent().build();
     }
 

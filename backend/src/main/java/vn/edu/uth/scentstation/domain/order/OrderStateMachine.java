@@ -3,6 +3,7 @@ package vn.edu.uth.scentstation.domain.order;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import vn.edu.uth.scentstation.domain.audit.*;
 
 /**
  * The only place an order status is allowed to change.
@@ -28,6 +29,7 @@ public class OrderStateMachine {
      * @throws IllegalOrderTransitionException when the transition is not in the
      *         map, or when it would leave {@code UNCERTAIN} without review
      */
+    @Auditable(action="ORDER_REFUND_RECORDED",target=AuditTarget.ORDER,id="#p0.id",condition="#p1.name() == 'REFUNDED'")
     public void transition(Order order, OrderStatus next) {
         transition(order, next, null);
     }
@@ -37,6 +39,7 @@ public class OrderStateMachine {
      * even when the order later moves on, so the transaction history explains
      * itself (FR3.12).
      */
+    @Auditable(action="ORDER_REFUND_RECORDED",target=AuditTarget.ORDER,id="#p0.id",condition="#p1.name() == 'REFUNDED'")
     public void transition(Order order, OrderStatus next, String failureReason) {
         OrderStatus current = order.getStatus();
 

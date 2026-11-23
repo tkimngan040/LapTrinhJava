@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.edu.uth.scentstation.common.ApiException;
 import vn.edu.uth.scentstation.security.JwtService;
+import vn.edu.uth.scentstation.domain.audit.*;
 
 import java.util.Optional;
 
@@ -29,6 +30,7 @@ public class AuthService {
         this.jwtService = jwtService;
     }
 
+    @Auditable(action="LOGIN_SUCCEEDED", target=AuditTarget.USER, login=true)
     @Transactional(readOnly = true)
     public AuthController.LoginResponse login(String email, String rawPassword) {
         Optional<User> found = userRepository.findByEmailIgnoreCase(email);
@@ -75,6 +77,12 @@ public class AuthService {
         userRepository.save(user);
         log.info("All sessions revoked for user {} (token version now {})",
                 userId, user.getTokenVersion());
+    }
+
+    @Transactional
+    @Auditable(action="LOGOUT",target=AuditTarget.USER,always=true)
+    public void logout(Long userId) {
+        revokeAllSessions(userId);
     }
 
     private AuthController.UserSummary summary(User user) {
