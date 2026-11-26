@@ -17,7 +17,7 @@ at merge time.
 | `backend/src/test/` | **Kim Ngan** | Tester |
 | `docs/test-plan.md` | **Kim Ngan** | Tester |
 | `docs/api-contract.md` | **everyone** — announce any change | |
-| `Report/03.Implementation and Testing.md` | 3.1 Tra My · 3.2 Long · 3.3 Hoai Anh · 3.4 Kim Tuyen · 3.5–3.7 Kim Ngan | |
+| `Report/03.Implementation and Testing.md` | 3.1 Tra My · 3.2 Long · 3.3 Hoai Anh · 3.4 Kim Tuyen · 3.5 Kim Ngan | |
 | `Report/Diagram_image/Ch3/` | **Kim Tuyen** | screenshots for 3.4 |
 | `Work Log/` | each member edits only their own file | |
 
