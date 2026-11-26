@@ -1,0 +1,114 @@
+--- a/Report/03.Implementation and Testing.md
++++ b/Report/03.Implementation and Testing.md
+@@ -264,20 +264,20 @@
+ 
+ ### 3.3.1. Coverage of FR1–FR10
+ 
+-Table 3.1 compares the code in this repository with [Section 2.1](<02.Analysis and Design.md#21-functional-requirements-fr1-fr10>). **Đã làm** means the group is implemented, **Một phần** means some requirements are implemented, and **Chưa làm** means the operational workflow is still missing. The screens in Section 3.4 illustrate user interactions. Several screens use sample data and browser storage, so they provide UI evidence only for those interactions.
++Table 3.1 compares the code in this repository with [Section 2.1](<02.Analysis and Design.md#21-functional-requirements-fr1-fr10>). **Đã làm** means the requirement group is implemented end to end, **Một phần** means some of its requirements are implemented, and **Chưa làm** means the operational workflow is still missing. One qualification applies to every row and is therefore not repeated in each cell: the backend exposes 77 REST endpoints, but no screen in `frontend/src/app` calls them. The portal and the kiosk read and write browser storage, so Section 3.4 is evidence of interface behaviour and of the interaction design, never of a server round trip. Where a row below reports a feature as implemented, the evidence is the service, the controller and the test named in it.
+ 
+ | Requirement | Status | Implemented features and source evidence |
+ | :--- | :--- | :--- |
+-| **FR1 — Brand, user and access management** | **Một phần** | `AuthController` exposes login, logout and current-user lookup under `/api/auth`. `AuthService`, `JwtAuthenticationFilter` and `SecurityConfig` enforce authentication, role checks and token-version validation. The integration evidence records tenant isolation and Viewer write protection in IT-07 and IT-08. The Users page demonstrates account management with browser-stored data. |
+-| **FR2 — Machine, slot and catalogue management** | **Một phần** | `MachineController` and `ProductController` implement read, create, update and status APIs under `/api/machines` and `/api/products`. `MachineSlotController` lists, updates and changes slot status under `/api/machines/{machineId}/slots`. The database constrains active bottle assignment, and `KioskController` serves `GET /api/kiosk/machines/{deviceId}/menu`. |
+-| **FR3 — Order and payment management** | **Một phần** | `OrderService` and `KioskController` create orders with price and expiry snapshots and expose status and cancellation under `/api/kiosk/orders`. `PaymentService` validates signed callbacks at `POST /api/payments/webhook`, using the simulated provider in development. `ReviewController` and `ReviewService` expose the review queue, manual resolution and simulated refund under `/api/review/orders`. IT-09 remains a recorded failure for duplicate signed callbacks. |
+-| **FR4 — Secure dispensing management** | **Một phần** | `DispenseService` sends a signed, expiring command after payment and handles ACK, result and timeout separately. `CommandVerifier` and `SafetyInterlock` check the command and simulated safety conditions. The recorded IT-01 and IT-05 runs confirm successful dispensing and one stock deduction for duplicate results. See the exception gaps in Section 3.3.3. |
+-| **FR5 — IoT device monitoring and communication** | **Một phần** | `MqttDeviceGateway` and `DeviceMessageHandler` exchange commands and correlate replies. `MachineService` tracks last communication time, moves silent machines offline and logs telemetry and events. `DeviceWatchdog` runs the timeout checks. IT-06 recorded that an offline machine refused a new order. |
+-| **FR6 — Inventory and level monitoring** | **Một phần** | `InventoryService.deductForCommand` applies a confirmed sale once, writes its inventory movement and updates the remaining volume. It marks slots unavailable when they cannot provide another dose. Batch, bottle and movement entities support persistence. The Inventory and Refill pages demonstrate administrative interactions with browser data. |
+-| **FR7 — Alerts and notifications** | **Chưa làm** | The [Alerts page](<../frontend/src/app/(portal)/alerts/page.tsx>) demonstrates alert handling using sample records and browser storage. `AlertRepository` and `IncidentRepository` provide persistence models. Backend alert generation, delivery and operator actions remain unwired. |
+-| **FR8 — Maintenance management** | **Chưa làm** | The [Maintenance page](<../frontend/src/app/(portal)/maintenance/page.tsx>) demonstrates tickets and checklists in browser storage. `MaintenanceTicketRepository` and `MaintenanceTaskRepository` provide persistence models. The backend ticket-to-repair workflow and its post-maintenance service guard remain unwired. |
+-| **FR9 — Dashboard and reporting** | **Một phần** | The [Dashboard](<../frontend/src/app/(portal)/dashboard/page.tsx>) and [Reports page](<../frontend/src/app/(portal)/reports/page.tsx>) render summaries, filters and CSV export from the data available to the browser. The branch has no server-side reporting endpoints for tenant-scoped aggregation. |
+-| **FR10 — Audit and traceability** | **Một phần** | `AuditService` writes database records for the review and refund paths called by `ReviewService`, including denied refund attempts. Orders, payments, dispensing commands, consumption and refunds retain related records. Coverage of other actions, server-side audit search and a unified incident-linked trace remain open. |
++| **FR1 — Brand, user and access management** | **Một phần** | `AuthController` exposes login, logout and current-user lookup under `/api/auth`. `AuthService`, `JwtAuthenticationFilter` and `SecurityConfig` enforce authentication, role checks and token-version revocation. `BrandController` (5 endpoints) and `UserController` (10 endpoints) implement brand and account provisioning, role assignment and the account lifecycle, covered by `UserManagementIntegrationTest`. The integration evidence records tenant isolation and Viewer write protection in IT-07 and IT-08. Per-user location and machine grants, configuration history and time-limited pricing campaigns remain open. |
++| **FR2 — Machine, slot and catalogue management** | **Một phần** | `MachineController` and `ProductController` implement read, create, update and status APIs under `/api/machines` and `/api/products`. `MachineSlotController` lists, updates and changes slot status under `/api/machines/{machineId}/slots`, and `CatalogManagementController` adds the brand-scoped catalogue operations. The database constrains active bottle assignment, and `KioskController` serves `GET /api/kiosk/machines/{deviceId}/menu`. Complete asset history remains open. |
++| **FR3 — Order and payment management** | **Một phần** | `OrderService` and `KioskController` create orders with price and expiry snapshots and expose status and cancellation under `/api/kiosk/orders`. `PaymentService` validates signed callbacks at `POST /api/payments/webhook`, using the simulated provider in development. The refund workflow added by `V7__refund_workflow.sql` is served by `RefundController`, `RefundWebhookController` and `RefundDispatcher`, with the simulated gateway under `/api/dev/refunds`. `ReviewController` and `OrderReviewController` expose the review queue and manual resolution. IT-09 remains a recorded failure for duplicate signed callbacks. |
++| **FR4 — Secure dispensing management** | **Một phần** | `DispenseService` sends a signed, expiring command after payment and handles acknowledgement, result and timeout separately. `CommandVerifier` and `SafetyInterlock` check the command and the simulated safety conditions. The recorded IT-01 and IT-05 runs confirm successful dispensing and one stock deduction for duplicate results. A failed, rejected or timed-out command now raises an alert through `AlertService.raiseDispenseFailure`, called from the four failure paths of `DispenseService`. Production MQTT security and device revocation remain open. |
++| **FR5 — IoT device monitoring and communication** | **Một phần** | `MqttDeviceGateway` and `DeviceMessageHandler` exchange commands and correlate replies through the command's idempotency key. `MachineService` tracks last communication time, moves silent machines offline, logs telemetry and events, and translates device events into machine conditions (`DOOR_OPEN`, `DOOR_CLOSED`, `LEAK`, `LEAK_CLEARED`). `DeviceWatchdog` runs the timeout checks. IT-06 recorded that an offline machine refused a new order. Persisted telemetry history and reconnect buffering remain open. |
++| **FR6 — Inventory and level monitoring** | **Một phần** | `InventoryService.deductForCommand` applies a confirmed sale once, writes its inventory movement and updates the remaining volume, covered by `ConfirmedConsumptionIntegrationTest`. It marks slots unavailable when they cannot provide another dose. `InventoryController` adds 12 endpoints for intake, refill, replacement and adjustment, covered by `InventoryManagementIntegrationTest`. A bottle crossing its threshold raises a low-stock alert through `AlertService.reconcileLowStock`. Measured sensor reconciliation remains open. |
++| **FR7 — Alerts and notifications** | **Một phần** | `AlertService` raises alerts from the three paths by which the system can learn of a fault: a failed dispense (`DispenseService`), a machine condition reported over MQTT (`MachineService`), and a bottle below its threshold (`InventoryService`). An incident key deduplicates repeated reports of one condition, a condition that clears resolves its own alert, and a `CRITICAL` alert creates a maintenance ticket through `MaintenanceService.ensureForCriticalAlert`. `AlertController` exposes list, acknowledge, assign, resolve and reopen under `/api/alerts`. Outbound delivery — email, push or SMS — and escalation by elapsed time remain open: the `Notification` entity and its table exist, and nothing writes to them yet. |
++| **FR8 — Maintenance management** | **Một phần** | `MaintenanceController` implements the ticket lifecycle under `/api/maintenance/tickets`: list, detail, create, assign, start, record repair, run a diagnostic test spray, and close. Two guards enforce the rules of Section 2.9.4 rather than trusting the operator: `requireRepair` refuses a test or a closure before a repair result is recorded, and `requireSafeConditions` refuses them while a `DOOR_OPEN` or `LEAK` condition is still active on the machine. Closure requires a passing diagnostic command, so a ticket cannot be closed on an untested machine. `MaintenanceIntegrationTest` covers the lifecycle. Scheduled preventive maintenance remains open. |
++| **FR9 — Dashboard and reporting** | **Chưa làm** | The [Dashboard](<../frontend/src/app/(portal)/dashboard/page.tsx>) and [Reports page](<../frontend/src/app/(portal)/reports/page.tsx>) render summaries, filters and CSV export from the data available to the browser, so the interface design is complete. There is no server-side reporting code in `main`: the `domain/report` package is empty. `ReportService`, `ReportRepository`, their tenant-scoped filter and `ReportIntegrationTest` exist on the `Dashboard-and-Reports` branch and are not merged at the time of writing. |
++| **FR10 — Audit and traceability** | **Một phần** | `AuditService` and `AuditAspect` record the operations declared by the `@Auditable` annotation, including denied attempts, and `V6__append_only_audit.sql` makes the table append-only in the database rather than by convention. `AuditController` exposes the audit query under `/api/audit-logs`, and `AuditIntegrationTest` covers the recorded paths. A single trace linking an order, its command, its alert and its ticket in one query remains open. |
+ 
+ *Table 3.1. Functional coverage of the implemented prototype.*
+ 
+@@ -291,7 +291,7 @@
+ 
+ ### 3.3.3. Dispensing exception evidence
+ 
+-The following results come from the run recorded on 17 November 2026 in the [integration test plan](../docs/test-plan.md#implementation-and-execution-status). The expected outcomes follow [Section 2.9.4](<02.Analysis and Design.md#294-exception-handling>).
++The results below come from the run recorded on 17 November 2026 in the [integration test plan](../docs/test-plan.md#implementation-and-execution-status). The expected outcomes follow [Section 2.9.4](<02.Analysis and Design.md#294-exception-handling>).
+ 
+ | Test | Observed result | Recorded verdict |
+ | :--- | :--- | :--- |
+@@ -299,13 +299,44 @@
+ | **IT-03 — Safety interlock** | The order was rejected with a reason. The machine remained `ACTIVE`, so the test stopped before the alert assertion. | **Fail** |
+ | **IT-04 — No result** | The command timed out, the order became `UNCERTAIN` and only one command was published. The incident count was zero. | **Fail** |
+ 
++That run predates the alert and maintenance work merged on 24 November, so its
++three failures were one missing feature rather than three defects: order state,
++command state and inventory deduction behaved as specified in every case, and
++what was absent was the durable record a rejected, blocked or timed-out spray is
++supposed to leave behind for human review. `AlertService` now writes that record.
++Section 3.5 reports the test levels against the merged code and is the
++authoritative result; this table is kept, with its date, because the diagnosis it
++produced is what drove the work.
++
+ ### 3.3.4. Not yet implemented
+ 
+-- **FR1–FR2** lack backend brand/user provisioning, account lifecycle management, per-user location and machine grants, complete asset history and time-limited pricing campaigns.
+-- **FR3–FR4** lack live payment/refund providers and external reconciliation. Duplicate signed webhook handling remains unverified by IT-09. A rejection or timeout can reach the correct order state, but durable incident routing is missing in IT-02 and IT-04. The interlock scenario still lacks the required machine status update and alert evidence in IT-03.
+-- **FR4–FR6** lack production MQTT security, complete device identity/revocation checks, an elapsed-time `UNSTABLE` rule, persisted telemetry/event history, and durable buffering and replay. Inventory intake, refill and adjustment lack a server-side workflow. Diagnostic consumption, low-stock alert generation and sensor reconciliation remain open.
+-- **FR7–FR8** lack server-side alert delivery and escalation, automatic incident-to-ticket creation, and maintenance ticket, checklist and diagnostic closure workflows.
+-- **FR9–FR10** lack database-backed tenant reporting and historical operational metrics, comprehensive backend audit coverage, audit search and an end-to-end trace including the incident. Browser demo data and exports establish UI behaviour. Physical dispensing and sensor accuracy remain unverified.
++- **Frontend to backend.** No screen calls the API. This is the single largest
++  gap and it touches every requirement group: the portal demonstrates the
++  interaction design of Section 2.10 against browser storage, while the
++  equivalent server-side operation exists and is tested separately. Joining them
++  is implementation work rather than design work, and `docs/api-contract.md` is
++  what it would follow.
++- **FR1–FR2** lack per-user location and machine grants, complete configuration
++  and asset history, and time-limited pricing campaigns.
++- **FR3–FR4** lack live payment and refund providers and external reconciliation.
++  Duplicate signed webhook handling is recorded as a failure in IT-09 and is not
++  yet re-verified. Production MQTT transport security, device identity
++  revocation and an elapsed-time `UNSTABLE` rule remain open.
++- **FR5–FR6** lack persisted telemetry and event history for trend analysis,
++  durable buffering and replay across a broker disconnect, diagnostic
++  consumption accounting, and reconciliation of measured volume against the
++  sensor reading.
++- **FR7–FR8** lack outbound alert delivery and escalation by elapsed time:
++  alerts are raised, deduplicated and escalated into a ticket in the database,
++  but nothing leaves the system, and the `notifications` table is created and
++  unused. Scheduled preventive maintenance remains open.
++- **FR9** lacks server-side tenant-scoped reporting and historical operational
++  metrics. The code exists on an unmerged branch.
++- **FR10** lacks a single end-to-end trace joining an order, its command, its
++  alert and its maintenance ticket.
++- **Hardware.** Physical dispensing, dosage accuracy and sensor calibration are
++  unverified: the device tier is a simulator, and no part of this project ran
++  against a real kiosk.
+ 
+ These gaps are carried forward to [Section 4.2, Limitations](<04.Conclusion.md#42-limitations>).
+ 
+--- a/Report/04.Conclusion.md
++++ b/Report/04.Conclusion.md
+@@ -10,11 +10,13 @@
+ 
+ | Area | Limitation and practical effect |
+ | :--- | :--- |
+-| **Access and catalogue — FR1–FR2** | Sign-in and role/tenant restrictions cover the implemented APIs. Brand and user administration lacks a server-side workflow. Per-user location and machine grants, complete configuration history and promotional pricing remain open. |
+-| **Payments, dispensing and recovery — FR3–FR4** | The payment and refund providers are simulated. Live provider integration and reconciliation remain open. IT-09 recorded a failure in duplicate signed webhook handling. IT-02 and IT-04 observed the expected order status and found no durable incident. IT-03 stopped at the machine status assertion, before checking the alert. The operator review queue reads order states, which leaves incident persistence outstanding. [Recorded test results](../docs/test-plan.md#implementation-and-execution-status) |
+-| **IoT and inventory — FR4–FR6** | Development MQTT uses plain TCP. The simulator checks signatures and simulated safety conditions. Production device identity, revocation, persistent telemetry and reconnect buffering remain open. Confirmed sale deduction is implemented. Server-side inventory intake/refill/adjustment, diagnostic consumption, low-stock alert generation, and measured sensor reconciliation remain open. Hardware safety and dosage accuracy require physical tests. |
+-| **Alerts and maintenance — FR7–FR8** | Browser screens demonstrate the interactions. The backend still needs alert persistence and delivery, escalation, linked ticket creation and the maintenance workflow with diagnostic closure checks. |
+-| **Reporting and audit — FR9–FR10** | The dashboard and CSV export use browser-side data. Database-backed tenant reports, historical metrics, broad audit coverage, server-side audit search and complete incident-linked transaction tracing remain open. Database audit records currently cover review and refund operations. |
++| **Interface to backend** | The portal and the kiosk run on browser storage; no screen calls the 77 REST endpoints. Every screen in Section 3.4 therefore evidences interaction design, not a completed round trip, and the two halves of the system have never been demonstrated together by a user action. This is the gap a reader should weigh first. |
++| **Access and catalogue — FR1–FR2** | Sign-in, role and tenant restrictions cover the implemented APIs, and brand and account provisioning, role assignment and the account lifecycle are implemented and tested at the API level. Per-user location and machine grants, configuration history and promotional pricing remain open. |
++| **Payments, dispensing and recovery — FR3–FR4** | The payment and refund providers are simulated; live integration and external reconciliation remain open. IT-09 recorded a failure in duplicate signed webhook handling that is not yet re-verified. The operator review queue resolves uncertain orders, and a failed dispense now leaves a persisted alert behind. [Recorded test results](../docs/test-plan.md#implementation-and-execution-status) |
++| **IoT and inventory — FR4–FR6** | Development MQTT uses plain TCP, and the simulator checks signatures and simulated safety conditions. Production device identity, revocation, persistent telemetry and reconnect buffering remain open. Confirmed-sale deduction, intake, refill, replacement and adjustment are implemented and tested. Measured sensor reconciliation and dosage accuracy require physical hardware the project does not have. |
++| **Alerts and maintenance — FR7–FR8** | Alerts are raised from the dispense, device and inventory paths, deduplicated by incident key, and escalated into maintenance tickets whose closure is guarded by a diagnostic test and by the absence of an active door or leak condition. What is missing is outbound delivery: nothing leaves the system, so an operator learns of an alert only by opening the list. The `notifications` table exists and is unused. |
++| **Reporting and audit — FR9–FR10** | The dashboard and CSV export use browser-side data, and `domain/report` is empty in `main`; the server-side reporting code sits on an unmerged branch. Audit records are append-only in the database and cover the annotated operations, but a single incident-linked trace across order, command, alert and ticket remains open. |
++| **Schema history** | Three migration version numbers were issued twice by parallel branches and had to be renumbered after merging, as recorded in Section 3.1.3. Nothing was lost, because the system is not deployed, but the episode is a limitation of the team's process rather than of the product. |
+ 
+ ## 4.3. Future Development
+ 
